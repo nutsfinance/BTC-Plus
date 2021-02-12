@@ -162,4 +162,28 @@ abstract contract BasePool is IPool, Initializable {
             IStrategy(activeStrategy).harvest();
         }
     }
+
+    /**
+     * @dev Used to salvage any ETH deposited to the pool contract by mistake. Only strategist can salvage ETH.
+     * The salvaged ETH is transferred to treasury for futher operation.
+     */
+    function salvage() external onlyStrategist {
+        uint256 amount = address(this).balance;
+        address payable target = payable(BTCPlus(btcPlus).treasury());
+        (bool success, ) = target.call{value: amount}(new bytes(0));
+        require(success, 'ETH salvage failed');
+    }
+
+    /**
+     * @dev Used to salvage any token deposited to the pool contract by mistake. Only strategist can salvage token.
+     * The salvaged token is transferred to treasury for futhuer operation.
+     * @param _token Address of the token to salvage.
+     */
+    function salvageToken(address _token) external onlyStrategist {
+        require(_token != address(0x0), "token not set");
+        require(_token != token, "cannot salvage");
+
+        IERC20Upgradeable target = IERC20Upgradeable(_token);
+        target.safeTransfer(BTCPlus(btcPlus).treasury(), target.balanceOf(address(this)));
+    }
 }
