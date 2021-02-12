@@ -113,6 +113,13 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
+     * @dev Returns the current liquidity ratio of BTC+ pools.
+     */
+    function getLiquidityRatio() public view returns (uint256) {
+        return totalUnderlying().mul(MAX_PERCENT).div(totalSupply());
+    }
+
+    /**
      * @dev Accrues interest to increase index.
      */
     function rebase() public {
@@ -161,10 +168,10 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
      * @dev Data structure for local computation in redeem().
      */
     struct RedeemLocalVars {
+        uint256 totalShares;
+        uint256 redeemAmount;
         uint256 redeemShare;
         uint256 withdrawRatio;
-        uint256 totalSupply;
-        uint256 totalUnderlying;
         uint256 fee;
         address[] tokenList;
         uint256[] tokenAmount;
@@ -172,7 +179,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @dev Redeems BTC+. In the current implementation only proportional redeem is supported.
-     * @param _amount Amount of BTC+ to redeem.
+     * @param _amount Amount of BTC+ to redeem. -1 means redeeming all shares.
      */
     function redeem(uint256 _amount) public nonReentrant {
         require(_amount > 0, "zero amount");
@@ -183,17 +190,25 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         // Using a memory string vars to avoid "Stack too deep"
         RedeemLocalVars memory vars;
 
-        vars.redeemShare = _amount.mul(WAD).div(index);
+        // Special handling of -1 is required here in order to fully redeem all shares, since interest
+        // will be accrued between the redeem transaction is signed and mined.
+        if (_amount == uint256(-1)) {
+            vars.redeemShare = userShare[msg.sender];
+            vars.redeemAmount = vars.redeemShare.mul(index).div(WAD);
+        } else {
+            vars.redeemShare  = _amount.mul(WAD).div(index);
+            vars.redeemAmount = _amount;
+        }
+        
         totalShares = totalShares.sub(vars.redeemShare);
         userShare[msg.sender] = userShare[msg.sender].sub(vars.redeemShare);
 
-        vars.totalUnderlying = totalUnderlying();
-        vars.totalSupply = totalSupply();
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        vars.withdrawRatio = MathUpgradeable.min(vars.totalUnderlying.mul(MAX_PERCENT).div(vars.totalSupply), MAX_PERCENT - redeemFee);
+        vars.withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
         vars.fee = _amount.mul(vars.withdrawRatio).div(MAX_PERCENT);
 
     
+        vars.totalShares = totalShares;
         vars.tokenList = tokens;
         vars.tokenAmount = new uint256[](vars.tokenList.length);
         for (uint256 i = 0; i < vars.tokenList.length; i++) {
@@ -201,11 +216,11 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
             uint256 poolBalance = IPool(pool).balance();
             if (poolBalance == 0)   continue;
 
-            vars.tokenAmount[i] = poolBalance.mul(_amount).mul(vars.withdrawRatio).div(vars.totalSupply).div(MAX_PERCENT);
+            vars.tokenAmount[i] = poolBalance.mul(vars.redeemShare).mul(vars.withdrawRatio).div(vars.totalShares).div(MAX_PERCENT);
             IPool(pool).withdraw(msg.sender, vars.tokenAmount[i]);
         }
 
-        emit Redeemed(msg.sender, vars.tokenList, vars.tokenAmount, vars.redeemShare, _amount, vars.fee);
+        emit Redeemed(msg.sender, vars.tokenList, vars.tokenAmount, vars.redeemShare, vars.redeemAmount, vars.fee);
     }
 
     /**
