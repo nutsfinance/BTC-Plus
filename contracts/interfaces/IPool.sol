@@ -24,19 +24,12 @@ interface IPool {
     function balance() external view returns (uint256);
 
     /**
-     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool.
+     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool, scaled to 18 decimals.
      * If the managed token is an ERC20 BTC token, then it's equal to balance().
      * If the managed token is an ERC20 BTC LP token, then it's equal to balance() * exchange rate.
      * E.g. For renCrv pool, underlyingBalance() = balance() * Curve Ren Pool.get_virtual_price().
      */
     function underlyingBalance() external view returns (uint256);
-
-    /**
-     * @dev Returns the amount of a specific underlying ERC20 BTC.
-     * If the managed token is an ERC20 BTC token, it returns balance() when _token is the managed token and 0 otherwise.
-     * If the managed token is an ERC20 BTC LP token, it returns the balance of each underlying ERC20 BTC that composes the LP token.
-     */
-    function underlyingBalanceOf(address _token) external view returns (uint256);
 
     /**
      * @dev Withdraws managed token from the pool. Only BTC+ can invoke this function.

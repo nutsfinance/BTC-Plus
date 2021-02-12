@@ -29,18 +29,10 @@ contract CurvePool is BasePool {
     }
 
     /**
-     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool.
-     * For Curve ERC20 BTC LP, it's equal to balance() * get_virtual_price().
+     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool, scaled to 18 decimals.
+     * For Curve ERC20 BTC LP, it's equal to balance() * get_virtual_price(). Curve LP is already 18 decimals.
      */
     function underlyingBalance() public view override returns (uint256) {
         return balance().mul(ICurveFi(swap).get_virtual_price()).div(10e18);
-    }
-
-    /**
-     * @dev Returns the amount of a specific underlying ERC20 BTC.
-     * For Curve ERC20 BTC LP, it's the same as underlyingBalance() for underlyingTokens and zero otherwise.
-     */
-    function underlyingBalanceOf(address _token) public view override returns (uint256) {
-        return underlyingTokens[_token] ? underlyingBalance() : 0;
     }
 }
