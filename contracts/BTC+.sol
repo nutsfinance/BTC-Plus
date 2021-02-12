@@ -17,6 +17,8 @@ import "./interfaces/IRebalancer.sol";
  * 
  * Users can mint BTC+ with both ERC20 BTC token or ERC20 BTC LP token. 1 ERC20 BTC mints 1 BTC+.
  * The BTC+ balance increases as interest is accrued with the tokens used to mint BTC+.
+ *
+ * BTC+ contract itself does not hold any asset. All supported assets are held and managed by pools.
  */
 contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -174,7 +176,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         uint256 withdrawRatio;
         uint256 fee;
         address[] tokenList;
-        uint256[] tokenAmount;
+        uint256[] tokenAmounts;
     }
 
     /**
@@ -210,17 +212,17 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     
         vars.totalShares = totalShares;
         vars.tokenList = tokens;
-        vars.tokenAmount = new uint256[](vars.tokenList.length);
+        vars.tokenAmounts = new uint256[](vars.tokenList.length);
         for (uint256 i = 0; i < vars.tokenList.length; i++) {
             address pool = pools[vars.tokenList[i]];
             uint256 poolBalance = IPool(pool).balance();
             if (poolBalance == 0)   continue;
 
-            vars.tokenAmount[i] = poolBalance.mul(vars.redeemShare).mul(vars.withdrawRatio).div(vars.totalShares).div(MAX_PERCENT);
-            IPool(pool).withdraw(msg.sender, vars.tokenAmount[i]);
+            vars.tokenAmounts[i] = poolBalance.mul(vars.redeemShare).mul(vars.withdrawRatio).div(vars.totalShares).div(MAX_PERCENT);
+            IPool(pool).withdraw(msg.sender, vars.tokenAmounts[i]);
         }
 
-        emit Redeemed(msg.sender, vars.tokenList, vars.tokenAmount, vars.redeemShare, vars.redeemAmount, vars.fee);
+        emit Redeemed(msg.sender, vars.tokenList, vars.tokenAmounts, vars.redeemShare, vars.redeemAmount, vars.fee);
     }
 
     /**
@@ -339,6 +341,29 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
         tokens[tokenIndex] = tokens[tokenList.length - 1];
         delete tokens[tokenList.length - 1];
+    }
+
+    /**
+     * @dev Used to salvage any ETH deposited to BTC+ contract by mistake. Only strategist can salvage ETH.
+     * The salvaged ETH is transferred to treasury for futher operation.
+     */
+    function salvage() external onlyStrategist {
+        uint256 amount = address(this).balance;
+        address payable target = payable(treasury);
+        (bool success, ) = target.call{value: amount}(new bytes(0));
+        require(success, 'ETH salvage failed');
+    }
+
+    /**
+     * @dev Used to salvage any token deposited to BTC+ contract by mistake. Only strategist can salvage token.
+     * The salvaged token is transferred to treasury for futhuer operation.
+     * @param _token Address of the token to salvage.
+     */
+    function salvageToken(address _token) external onlyStrategist {
+        require(_token != address(0x0), "token not set");
+
+        IERC20Upgradeable token = IERC20Upgradeable(_token);
+        token.safeTransfer(treasury, token.balanceOf(address(this)));
     }
 
     /**
