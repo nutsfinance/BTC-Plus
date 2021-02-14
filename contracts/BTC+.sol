@@ -34,6 +34,9 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     event RebalancerUpdated(address indexed oldRebalancer, address indexed newBalancer);
     event RedeemFeeUpdated(uint256 oldFee, uint256 newFee);
     event MinLiquidityRatioUpdated(uint256 oldRatio, uint256 newRatio);
+    event MintPausedUpdated(address indexed token, bool paused);
+    event PoolAdded(address indexed token, address indexed pool);
+    event PoolRemoved(address indexed token, address indexed pool);
     event Rebalanced(uint256 underlyingBefore, uint256 underlyingAfter, uint256 supply);
 
     uint256 public constant MAX_PERCENT = 10000; // 0.01%
@@ -51,6 +54,8 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     address[] public tokens;
     // Mapping: Token address => Pool address
     mapping(address => address) public pools;
+    // Mapping: Token address => Whether minting with token is paused
+    mapping(address => bool) public mintPaused;
 
     address public governance;
     mapping(address => bool) public strategists;
@@ -150,6 +155,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         rebase();
         uint256 underlyingBefore = totalUnderlying();
         for (uint256 i = 0; i < _tokens.length; i++) {
+            require(!mintPaused[_tokens[i]], "token paused");
             address pool = pools[_tokens[i]];
             require(pool != address(0x0), "no pool");
             require(_amounts[i] > 0, "zero amount");
@@ -304,6 +310,19 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
+     * @dev Updates the mint paused state of a token.
+     * @param _token Token to update mint paused.
+     * @param _paused Whether minting with that token is paused.
+     */
+    function setMintPaused(address _token, bool _paused) external onlyStrategist {
+        require(pools[_token] != address(0x0), "no pool");
+        require(mintPaused[_token] != _paused, "no change");
+
+        mintPaused[_token] = _paused;
+        emit MintPausedUpdated(_token, _paused);
+    }
+
+    /**
      * @dev Adds a new pool. Only governance can add a new pool.
      * @param _token Managed token of the pool.
      * @param _pool The pool contract address.
@@ -316,6 +335,8 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
         pools[_token] = _pool;
         tokens.push(_token);
+
+        emit PoolAdded(_token, _pool);
     }
 
     /**
@@ -325,7 +346,8 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
      */
     function removePool(address _token) external onlyGovernance {
         require(_token != address(0x0), "token not set");
-        require(pools[_token] != address(0x0), "pool not exists");
+        address pool = pools[_token];
+        require(pool != address(0x0), "pool not exists");
 
         // Loads into memory for faster access
         address[] memory tokenList = tokens;
@@ -341,6 +363,11 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
         tokens[tokenIndex] = tokens[tokenList.length - 1];
         delete tokens[tokenList.length - 1];
+        delete pools[_token];
+        // Delete the mint paused state as well
+        delete mintPaused[_token];
+
+        emit PoolRemoved(_token, pool);
     }
 
     /**
