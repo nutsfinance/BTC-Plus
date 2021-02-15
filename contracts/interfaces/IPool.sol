@@ -24,6 +24,21 @@ interface IPool {
     function balance() external view returns (uint256);
 
     /**
+     * @dev Returns the governance address.
+     */
+    function governance() external view returns (address);
+
+    /**
+     * @dev Returns whether the account is a strategist.
+     */
+    function strategist(address _account) external view returns (bool);
+
+    /**
+     * @dev Returns the treasury address.
+     */
+    function treasury() external view returns (address);
+
+    /**
      * @dev Returns the total amount of ERC20 BTC tokens managed by the pool, scaled to 18 decimals.
      * If the managed token is an ERC20 BTC token, then it's equal to balance().
      * If the managed token is an ERC20 BTC LP token, then it's equal to balance() * exchange rate.

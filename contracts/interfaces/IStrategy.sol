@@ -25,7 +25,7 @@ interface IStrategy {
      * @dev Invest the managed token in strategy to earn yield.
      * Only pool can invoke this function.
      */
-    function invest() external;
+    function deposit() external;
 
     /**
      * @dev Harvest in strategy.

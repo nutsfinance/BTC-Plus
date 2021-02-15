@@ -64,6 +64,27 @@ abstract contract BasePool is IPool, Initializable {
     }
 
     /**
+     * @dev Returns the governance address.
+     */
+    function governance() public view override returns (address) {
+        return BTCPlus(btcPlus).governance();
+    }
+
+    /**
+     * @dev Returns whether the account is a strategist.
+     */
+    function strategist(address _account) public view override returns (bool) {
+        return BTCPlus(btcPlus).strategists(_account);
+    }
+
+    /**
+     * @dev Returns the treasury address.
+     */
+    function treasury() public view override returns (address) {
+        return BTCPlus(btcPlus).treasury();
+    }
+
+    /**
      * @dev Withdraws managed token from the pool. Only BTC+ can invoke this function.
      * @param _receiver Account to receive the token withdraw.
      * @param _amount Amount to withdraw.
@@ -149,7 +170,7 @@ abstract contract BasePool is IPool, Initializable {
         uint256 amount = poolToken.balanceOf(address(this));
         if (amount > 0) {
             poolToken.safeTransfer(activeStrategy, amount);
-            IStrategy(activeStrategy).invest();
+            IStrategy(activeStrategy).deposit();
         }
     }
 
