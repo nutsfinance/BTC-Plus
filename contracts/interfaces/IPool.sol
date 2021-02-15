@@ -52,4 +52,16 @@ interface IPool {
      * @param _amount Amount to withdraw.
      */
     function withdraw(address _receiver, uint256  _amount) external;
+
+    /**
+     * @dev Invest the managed token into strategy to earn yield.
+     * Only BTC+, governance and strategists can invoke this function.
+     */
+    function invest() external;
+
+    /**
+     * @dev Harvest from strategy.
+     * Only BTC+, governance and strategists can invoke this function.
+     */
+    function harvest() external;
 }

@@ -163,7 +163,7 @@ abstract contract BasePool is IPool, Initializable {
      * @dev Invest the managed token into strategy to earn yield.
      * Only BTC+, governance and strategists can invoke this function.
      */
-    function invest() public virtual onlyStrategist {
+    function invest() public virtual override onlyStrategist {
         if (activeStrategy == address(0x0)) return;
 
         IERC20Upgradeable poolToken = IERC20Upgradeable(token);
@@ -178,7 +178,7 @@ abstract contract BasePool is IPool, Initializable {
      * @dev Harvest from strategy.
      * Only BTC+, governance and strategists can invoke this function.
      */
-    function harvest() public virtual onlyStrategist {
+    function harvest() public virtual override onlyStrategist {
         if (activeStrategy != address(0x0)) {
             IStrategy(activeStrategy).harvest();
         }
