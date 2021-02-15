@@ -348,6 +348,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         require(_token != address(0x0), "token not set");
         address pool = pools[_token];
         require(pool != address(0x0), "pool not exists");
+        require(IPool(pool).balance() == 0, "non-zero balance");
 
         // Loads into memory for faster access
         address[] memory tokenList = tokens;
@@ -362,7 +363,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         assert(tokenIndex < tokenList.length);
 
         tokens[tokenIndex] = tokens[tokenList.length - 1];
-        delete tokens[tokenList.length - 1];
+        tokens.pop();
         delete pools[_token];
         // Delete the mint paused state as well
         delete mintPaused[_token];

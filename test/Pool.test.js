@@ -1,4 +1,4 @@
-const { BN, expectRevert, time } = require('@openzeppelin/test-helpers');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const assert = require('assert');
 const Pool = artifacts.require("MockPool");
 const BTCPlus = artifacts.require("BTCPlus");
