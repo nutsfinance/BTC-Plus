@@ -412,4 +412,37 @@ contract("BTC+", async ([owner, treasury, strategist, user1, user2, user3, btcPl
         assert.strictEqual((await btcPlus.totalSupply()).toString(), web3.utils.toWei("60.15"));
         assert.strictEqual((await btcPlus.index()).toString(), web3.utils.toWei("1.203"));
     });
+
+    it("should transfer BTC+", async () => {
+        // Mint 20 token1 to user1
+        await token1.mint(user1, "20000000");
+        await token1.approve(btcPlus.address, "20000000", {from: user1});
+        // Mint 30 token2 to user1
+        await token2.mint(user1, web3.utils.toWei("30"));
+        await token2.approve(btcPlus.address, web3.utils.toWei("30"), {from: user1});
+        // Mint 50 BTC+ to user1
+        await btcPlus.mint([token1.address, token2.address], ["20000000", web3.utils.toWei("30")], {from: user1});
+        // Deposit token1 and token2 into strategies
+        await pool1.invest();
+        await pool2.invest();
+        // Harvest 2 token1 in strategy1
+        await token1.mint(strategy1.address, "2000000");
+        // Harvest 8 token2 in strategy2
+        await token2.mint(strategy2.address, web3.utils.toWei("8"));
+
+        // Mint 6 token2 to user2
+        await token2.mint(user2, web3.utils.toWei("6"));
+        await token2.approve(btcPlus.address, web3.utils.toWei("6"), {from: user2});
+        // Mint 6 BTC+ to user2
+        await btcPlus.mint([token2.address, token1.address], [web3.utils.toWei("6"), 0], {from: user2});
+
+        // Transfer 2.4 BTC+ from user1 to user2
+        await btcPlus.transfer(user2, web3.utils.toWei("2.4"), {from: user1});
+
+        assert.strictEqual((await btcPlus.index()).toString(), web3.utils.toWei("1.2"));
+        assert.strictEqual((await btcPlus.balanceOf(user2)).toString(), web3.utils.toWei("8.4"));
+        assert.strictEqual((await btcPlus.balanceOf(user1)).toString(), web3.utils.toWei("57.6"));
+        assert.strictEqual((await btcPlus.userShare(user2)).toString(), web3.utils.toWei("7"));
+        assert.strictEqual((await btcPlus.userShare(user1)).toString(), web3.utils.toWei("48"));
+    });
 });
