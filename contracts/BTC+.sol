@@ -236,6 +236,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
      * @dev Moves tokens `amount` from `sender` to `recipient`.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual override {
+        // Rebase first to make index up-to-date
         rebase();
         uint256 shareToTransfer = _amount.mul(WAD).div(index);
         userShare[_sender] = userShare[_sender].sub(shareToTransfer, "insufficient share");
