@@ -210,7 +210,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
         vars.withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
-        vars.fee = _amount.mul(vars.withdrawRatio).div(MAX_PERCENT);
+        vars.fee = vars.redeemAmount.mul(vars.withdrawRatio).div(MAX_PERCENT);
 
     
         vars.totalShares = totalShares;
