@@ -158,7 +158,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
             require(!mintPaused[_tokens[i]], "token paused");
             address pool = pools[_tokens[i]];
             require(pool != address(0x0), "no pool");
-            require(_amounts[i] > 0, "zero amount");
+            if (_amounts[i] == 0) continue;
 
             // Transfers the token into pool.
             IERC20Upgradeable(_tokens[i]).safeTransferFrom(msg.sender, pool, _amounts[i]);
@@ -207,9 +207,6 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
             vars.redeemShare  = _amount.mul(WAD).div(index);
             vars.redeemAmount = _amount;
         }
-        
-        totalShares = totalShares.sub(vars.redeemShare);
-        userShare[msg.sender] = userShare[msg.sender].sub(vars.redeemShare);
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
         vars.withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
@@ -227,6 +224,10 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
             vars.tokenAmounts[i] = poolBalance.mul(vars.redeemShare).mul(vars.withdrawRatio).div(vars.totalShares).div(MAX_PERCENT);
             IPool(pool).withdraw(msg.sender, vars.tokenAmounts[i]);
         }
+
+        // Updates the balance
+        totalShares = totalShares.sub(vars.redeemShare);
+        userShare[msg.sender] = userShare[msg.sender].sub(vars.redeemShare);
 
         emit Redeemed(msg.sender, vars.tokenList, vars.tokenAmounts, vars.redeemShare, vars.redeemAmount, vars.fee);
     }
@@ -348,7 +349,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         require(_token != address(0x0), "token not set");
         address pool = pools[_token];
         require(pool != address(0x0), "pool not exists");
-        require(IPool(pool).balance() == 0, "non-zero balance");
+        require(IPool(pool).balance() == 0, "balance not zero");
 
         // Loads into memory for faster access
         address[] memory tokenList = tokens;
