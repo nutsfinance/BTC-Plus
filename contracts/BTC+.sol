@@ -42,6 +42,17 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     uint256 public constant MAX_PERCENT = 10000; // 0.01%
     uint256 public constant WAD = 1e18;
 
+    /**
+     * @dev Struct to represent a rebase hook.
+     */
+    struct Transaction {
+        bool enabled;
+        address destination;
+        bytes data;
+    }
+    // Rebase hooks
+    Transaction[] public transactions;
+
     uint256 public totalShares;
     mapping(address => uint256) public userShare;
     // The exchange rate between total shares and BTC+ total supply. Express in WAD.
@@ -136,6 +147,14 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
             // Index can never decrease
             uint256 newIndex = underlying.mul(WAD).div(totalShares);
             index = newIndex;
+
+            for (uint256 i = 0; i < transactions.length; i++) {
+                Transaction storage transaction = transactions[i];
+                if (transaction.enabled) {
+                    (bool success, ) = transaction.destination.call(transaction.data);
+                    require(success, "rebase hook failed");
+                }
+            }
 
             emit Rebased(oldIndex, newIndex);
         }
@@ -425,6 +444,13 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
+     * @dev Returns the total amount of pools.
+     */
+    function poolSize() external view returns (uint256) {
+        return tokens.length;
+    }
+
+    /**
      * @dev Used to salvage any ETH deposited to BTC+ contract by mistake. Only strategist can salvage ETH.
      * The salvaged ETH is transferred to treasury for futher operation.
      */
@@ -477,5 +503,45 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         require(underlyingAfter < supply.mul(minLiquidityRatio).div(MAX_PERCENT), "too much loss");
 
         emit Rebalanced(underlyingBefore, underlyingAfter, supply);
+    }
+
+    /**
+     * @dev Add a new rebase hook.
+     * @param _destination Destination contract for the reabase hook.
+     * @param _data Transaction payload for the rebase hook.
+     */
+    function addTransaction(address _destination, bytes memory _data) external onlyGovernance {
+        transactions.push(Transaction({enabled: true, destination: _destination, data: _data}));
+    }
+
+    /**
+     * @dev Remove a rebase hook.
+     * @param _index Index of the transaction to remove.
+     */
+    function removeTransaction(uint256 _index) external onlyGovernance {
+        require(_index < transactions.length, "index out of bounds");
+
+        if (_index < transactions.length - 1) {
+            transactions[_index] = transactions[transactions.length - 1];
+        }
+
+        transactions.pop();
+    }
+
+    /**
+     * @dev Updates an existing rebase hook transaction.
+     * @param _index Index of transaction. Transaction ordering may have changed since adding.
+     * @param _enabled True for enabled, false for disabled.
+     */
+    function updateTransaction(uint256 _index, bool _enabled) external onlyGovernance {
+        require(_index < transactions.length, "index must be in range of stored tx list");
+        transactions[_index].enabled = _enabled;
+    }
+
+    /**
+     * @dev Returns the number of rebase hook transactions.
+     */
+    function transactionSize() external view returns (uint256) {
+        return transactions.length;
     }
 }
