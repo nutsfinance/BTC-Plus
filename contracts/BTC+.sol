@@ -41,8 +41,6 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
     uint256 public constant MAX_PERCENT = 10000; // 0.01%
     uint256 public constant WAD = 1e18;
-    uint256 public constant RAY = 1e27;
-    uint256 public constant WAD_RAY_RATIO = 1e9;
 
     uint256 public totalShares;
     mapping(address => uint256) public userShare;
@@ -144,6 +142,26 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
+     * @dev Returns the amount of BTC+ minted with the tokens provided.
+     * @dev _tokens The tokens used to mint BTC+.
+     * @dev _amounts Amount of tokens used to mint BTC+.
+     */
+    function getMintAmount(address[] calldata _tokens, uint256[] calldata _amounts) external view returns(uint256) {
+        require(_tokens.length == _amounts.length, "input mismatch");
+        uint256 amount = 0;
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            require(!mintPaused[_tokens[i]], "token paused");
+            address pool = pools[_tokens[i]];
+            require(pool != address(0x0), "no pool");
+            if (_amounts[i] == 0) continue;
+
+            amount = amount.add(IPool(pool).underlyingBalanceOf(_amounts[i]));
+        }
+
+        return amount;
+    }
+
+    /**
      * @dev Mints BTC+.
      * @dev _tokens The tokens used to mint BTC+. BTC+ must have sufficient allownance on the token.
      * @dev _amounts Amount of tokens used to mint BTC+.
@@ -186,10 +204,42 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
+     * @dev Returns the amount of tokens received in redeeming BTC+.
+     * @param _amount Amounf of BTC+ to redeem.
+     * @return Addresses and amounts of tokens returned as well as fee collected.
+     */
+    function getRedeemAmount(uint256 _amount) external view returns (address[] memory, uint256[] memory, uint256) {
+        require(_amount > 0, "zero amount");
+
+        // Using a memory string vars to avoid "Stack too deep"
+        RedeemLocalVars memory vars;
+
+        vars.redeemShare  = _amount.mul(WAD).div(index);
+        vars.redeemAmount = _amount;
+
+        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
+        vars.withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
+        vars.fee = vars.redeemAmount.mul(MAX_PERCENT.sub(vars.withdrawRatio)).div(MAX_PERCENT);
+    
+        vars.totalShares = totalShares;
+        vars.tokenList = tokens;
+        vars.tokenAmounts = new uint256[](vars.tokenList.length);
+        for (uint256 i = 0; i < vars.tokenList.length; i++) {
+            address pool = pools[vars.tokenList[i]];
+            uint256 poolBalance = IPool(pool).balance();
+            if (poolBalance == 0)   continue;
+
+            vars.tokenAmounts[i] = poolBalance.mul(vars.redeemShare).mul(vars.withdrawRatio).div(vars.totalShares).div(MAX_PERCENT);
+        }
+
+        return (vars.tokenList, vars.tokenAmounts, vars.fee);
+    }
+
+    /**
      * @dev Redeems BTC+. In the current implementation only proportional redeem is supported.
      * @param _amount Amount of BTC+ to redeem. -1 means redeeming all shares.
      */
-    function redeem(uint256 _amount) public nonReentrant {
+    function redeem(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
 
         // Rebase first to make index up-to-date
@@ -210,7 +260,7 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
         vars.withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
-        vars.fee = vars.redeemAmount.mul(vars.withdrawRatio).div(MAX_PERCENT);
+        vars.fee = vars.redeemAmount.mul(MAX_PERCENT.sub(vars.withdrawRatio)).div(MAX_PERCENT);
 
     
         vars.totalShares = totalShares;
