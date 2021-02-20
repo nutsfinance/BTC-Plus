@@ -24,10 +24,12 @@ contract SinglePool is BasePool {
     }
 
     /**
-     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool, scaled to 18 decimals.
-     * For ERC20 BTC token, it's the same as balance() scaled to WAD.
+     * @dev Returns the total amount of ERC20 BTC tokens worth for the specified amount of token managed
+     * by the pool.
+     * @param _amount Amount of the token to convert.
+     * @return The amount of ERC20 BTC tokens worth.
      */
-    function underlyingBalance() public view override returns (uint256) {
-        return balance().mul(ratio);
+    function underlyingBalanceOf(uint256 _amount) public view override returns (uint256) {
+        return _amount.mul(ratio);
     }
 }

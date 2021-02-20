@@ -64,6 +64,24 @@ abstract contract BasePool is IPool, Initializable {
     }
 
     /**
+     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool, scaled to 18 decimals.
+     * If the managed token is an ERC20 BTC token, then it's equal to balance().
+     * If the managed token is an ERC20 BTC LP token, then it's equal to balance() * exchange rate.
+     * E.g. For renCrv pool, underlyingBalance() = balance() * Curve Ren Pool.get_virtual_price().
+     */
+    function underlyingBalance() public view virtual override returns (uint256) {
+        return underlyingBalanceOf(balance());
+    }
+
+    /**
+     * @dev Returns the total amount of ERC20 BTC tokens worth for the specified amount of token managed
+     * by the pool.
+     * @param _amount Amount of the token to convert.
+     * @return The amount of ERC20 BTC tokens worth.
+     */
+    function underlyingBalanceOf(uint256 _amount) public view virtual override returns (uint256);
+
+    /**
      * @dev Returns the governance address.
      */
     function governance() public view override returns (address) {

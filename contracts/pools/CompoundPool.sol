@@ -26,10 +26,12 @@ import "./BasePool.sol";
     }
 
     /**
-     * @dev Returns the total amount of ERC20 BTC tokens managed by the pool.
-     * For Compound ERC20 BTC LP, it's equal to balance() * exchangeRate().
+     * @dev Returns the total amount of ERC20 BTC tokens worth for the specified amount of token managed
+     * by the pool.
+     * @param _amount Amount of the token to convert.
+     * @return The amount of ERC20 BTC tokens worth.
      */
-    function underlyingBalance() public view override returns (uint256) {
-        return balance().mul(ICToken(token).exchangeRateStored()).div(10e18).mul(ratio);
+    function underlyingBalanceOf(uint256 _amount) public view override returns (uint256) {
+        return _amount.mul(ICToken(token).exchangeRateStored()).div(10e18).mul(ratio);
     }
  }

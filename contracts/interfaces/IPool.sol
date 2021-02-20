@@ -47,6 +47,14 @@ interface IPool {
     function underlyingBalance() external view returns (uint256);
 
     /**
+     * @dev Returns the total amount of ERC20 BTC tokens worth for the specified amount of token managed
+     * by the pool.
+     * @param _amount Amount of the token to convert.
+     * @return The amount of ERC20 BTC tokens worth.
+     */
+    function underlyingBalanceOf(uint256 _amount) external view returns (uint256);
+
+    /**
      * @dev Withdraws managed token from the pool. Only BTC+ can invoke this function.
      * @param _receiver Account to receive the token withdraw.
      * @param _amount Amount to withdraw.
