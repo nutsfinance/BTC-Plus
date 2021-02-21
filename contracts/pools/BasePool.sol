@@ -35,18 +35,30 @@ abstract contract BasePool is IPool, Initializable {
         token = _token;
     }
 
-    modifier onlyBTCPlus {
+    function _checkBTCPlus() internal view {
         require(msg.sender == btcPlus, "not btc+");
+    }
+
+    modifier onlyBTCPlus {
+        _checkBTCPlus();
         _;
+    }
+
+    function _checkGovernance() internal view {
+        require(msg.sender == BTCPlus(btcPlus).governance(), "not governance");
     }
 
     modifier onlyGovernance() {
-        require(msg.sender == BTCPlus(btcPlus).governance(), "not governance");
+        _checkGovernance();
         _;
     }
 
-    modifier onlyStrategist {
+    function _checkStrategist() internal view {
         require(msg.sender == BTCPlus(btcPlus).governance() || BTCPlus(btcPlus).strategists(msg.sender), "not strategist");
+    }
+
+    modifier onlyStrategist {
+        _checkStrategist();
         _;
     }
 

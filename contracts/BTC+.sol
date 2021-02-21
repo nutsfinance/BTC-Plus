@@ -90,13 +90,21 @@ contract BTCPlus is ERC20Upgradeable, ReentrancyGuardUpgradeable {
         minLiquidityRatio = 9900;   // Initializes the min liquidity ratio to be 99%.
     }
 
-    modifier onlyGovernance() {
+    function _checkGovernance() internal view {
         require(msg.sender == governance, "not governance");
+    }
+
+    modifier onlyGovernance() {
+        _checkGovernance();
         _;
     }
 
-    modifier onlyStrategist {
+    function _checkStrategist() internal view {
         require(msg.sender == governance || strategists[msg.sender], "not strategist");
+    }
+
+    modifier onlyStrategist {
+        _checkStrategist();
         _;
     }
 

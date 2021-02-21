@@ -30,18 +30,30 @@ abstract contract StrategyBase is IStrategy, Initializable {
         pool = _pool;
     }
 
-    modifier onlyPool {
+    function _checkPool() internal view {
         require(msg.sender == pool, "not pool");
+    }
+
+    modifier onlyPool {
+        _checkPool();
         _;
+    }
+
+    function _checkGovernance() internal view {
+        require(msg.sender == pool || msg.sender == IPool(pool).governance(), "not governance");
     }
 
     modifier onlyGovernance() {
-        require(msg.sender == pool || msg.sender == IPool(pool).governance(), "not governance");
+        _checkGovernance();
         _;
     }
 
-    modifier onlyStrategist() {
+    function _checkStrategist() internal view {
         require(msg.sender == pool || msg.sender == IPool(pool).governance() || IPool(pool).strategist(msg.sender), "not strategist");
+    }
+
+    modifier onlyStrategist() {
+        _checkStrategist();
         _;
     }
 
