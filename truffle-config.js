@@ -38,6 +38,10 @@ module.exports = {
    * $ truffle test --network <network-name>
    */
 
+  api_keys: {
+    etherscan: process.env.ETHERSCAN_KEY
+  },
+
   networks: {
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
@@ -93,6 +97,11 @@ module.exports = {
       // production: true    // Treats this network as if it was a public net. (default: false)
     // }
   },
+
+  plugins: [
+    "solidity-coverage",
+    "truffle-plugin-verify"
+  ],
 
   // Set default mocha options here, use special reporters etc.
   mocha: {
