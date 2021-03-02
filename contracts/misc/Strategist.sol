@@ -40,29 +40,29 @@ contract Strategist is Initializable, OwnableUpgradeable {
         _;
     }
 
-    /**
-     * @dev Perform invest on multiple tokens.
-     */
-    function invest(address[] memory _tokens) public onlyAdmin {
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            address pool = btcPlus.pools(_tokens[i]);
-            require(pool != address(0x0), "no pool");
+    // /**
+    //  * @dev Perform invest on multiple tokens.
+    //  */
+    // function invest(address[] memory _tokens) public onlyAdmin {
+    //     for (uint256 i = 0; i < _tokens.length; i++) {
+    //         address pool = btcPlus.pools(_tokens[i]);
+    //         require(pool != address(0x0), "no pool");
 
-            IPool(pool).invest();
-        }
-    }
+    //         IPool(pool).invest();
+    //     }
+    // }
 
-    /**
-     * @dev Perform havest on multiple tokens.
-     */
-    function harvest(address[] memory _tokens) public onlyAdmin {
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            address pool = btcPlus.pools(_tokens[i]);
-            require(pool != address(0x0), "no pool");
+    // /**
+    //  * @dev Perform havest on multiple tokens.
+    //  */
+    // function harvest(address[] memory _tokens) public onlyAdmin {
+    //     for (uint256 i = 0; i < _tokens.length; i++) {
+    //         address pool = btcPlus.pools(_tokens[i]);
+    //         require(pool != address(0x0), "no pool");
 
-            IPool(pool).harvest();
-        }
-        // Do one round of rebase after havest!
-        btcPlus.rebase();
-    }
+    //         IPool(pool).harvest();
+    //     }
+    //     // Do one round of rebase after havest!
+    //     btcPlus.rebase();
+    // }
 }
