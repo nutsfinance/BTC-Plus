@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
 import "./StrategyCurveBase.sol";
-import "../../interfaces/IPool.sol";
+import "../../interfaces/ISinglePlus.sol";
 import "../../interfaces/curve/ICurveFi.sol";
 import "../../interfaces/curve/ICurveMinter.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
@@ -26,12 +26,12 @@ contract StrategyHbtcCrvCurve is StrategyCurveBase {
     /**
      * @dev Initializes the strategy.
      */
-    function initialize(address _pool) public initializer {
-        __StrategyCurveBase__init(_pool, HBTCCRV_GAUGE, HBTC_SWAP);
+    function initialize(address _plusToken) public initializer {
+        __StrategyCurveBase__init(_plusToken, HBTCCRV_GAUGE, HBTC_SWAP);
     }
     
     /**
-     * @dev Claims CRV from Curve and convert it back to hbtcCRV. Only pool, governance and strategist can harvest.
+     * @dev Claims CRV from Curve and convert it back to hbtcCRV. Only plusToken, governance and strategist can harvest.
      */
     function harvest() public override onlyStrategist {
         // Claims CRV from Curve
@@ -57,7 +57,7 @@ contract StrategyHbtcCrvCurve is StrategyCurveBase {
             IERC20Upgradeable(wbtc).safeApprove(curve, wbtcBalance);
             ICurveFi(curve).add_liquidity([0, wbtcBalance], 0);
         }
-        IERC20Upgradeable token = IERC20Upgradeable(IPool(pool).token());
+        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plusToken).token());
         uint256 tokenBalance = token.balanceOf(address(this));
         if (tokenBalance == 0) {
             return;
@@ -65,7 +65,7 @@ contract StrategyHbtcCrvCurve is StrategyCurveBase {
         uint256 feeAmount = 0;
         if (performanceFee > 0) {
             feeAmount = tokenBalance.mul(performanceFee).div(PERCENT_MAX);
-            token.safeTransfer(IPool(pool).treasury(), feeAmount);
+            token.safeTransfer(ISinglePlus(plusToken).treasury(), feeAmount);
         }
         deposit();
 

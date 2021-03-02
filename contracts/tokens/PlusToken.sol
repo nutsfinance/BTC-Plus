@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
+import "../interfaces/IPlus.sol";
+
 /**
  * @title Plus token base contract.
  *
@@ -16,7 +18,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
  * Single plus token is backed by one ERC20 token and targeted at yield generation.
  * Composite plus token is backed by a basket of ERC20 token and targeted at better basket management.
  */
-abstract contract PlusToken is ERC20Upgradeable {
+abstract contract PlusToken is ERC20Upgradeable, IPlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -48,9 +50,9 @@ abstract contract PlusToken is ERC20Upgradeable {
     // Note: The index will never decrease!
     uint256 public index;
 
-    address public governance;
-    mapping(address => bool) public strategists;
-    address public treasury;
+    address public override governance;
+    mapping(address => bool) public override strategists;
+    address public override treasury;
 
     // Governance parameters
     uint256 public redeemFee;

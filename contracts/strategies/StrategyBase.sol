@@ -5,14 +5,14 @@ import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../interfaces/IPool.sol";
+import "../interfaces/ISinglePlus.sol";
 import "../interfaces/IStrategy.sol";
 
 /**
  * @notice Base contract of Strategy.
  * 
  * This contact defines common properties and functions shared by all strategies.
- * One strategy is bound to one pool and cannot be changed.
+ * One strategy is bound to one plusToken and cannot be changed.
  */
 abstract contract StrategyBase is IStrategy, Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -20,27 +20,26 @@ abstract contract StrategyBase is IStrategy, Initializable {
     event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
     event WithdrawalFeeUpdated(uint256 oldWithdrawFee, uint256 newWithdrawFee);
 
-    address public pool;
+    address public plusToken;
     uint256 public performanceFee;
-    uint256 public withdrawalFee;
     uint256 public constant PERCENT_MAX = 10000;    // 0.01%
 
-    function __StrategyBase_init(address _pool) internal initializer {
-        require(_pool != address(0x0), "pool not set");
-        pool = _pool;
+    function __StrategyBase_init(address _plusToken) internal initializer {
+        require(_plusToken != address(0x0), "plus token not set");
+        plusToken = _plusToken;
     }
 
-    function _checkPool() internal view {
-        require(msg.sender == pool, "not pool");
+    function _checkPlusToken() internal view {
+        require(msg.sender == plusToken, "not plus token");
     }
 
-    modifier onlyPool {
-        _checkPool();
+    modifier onlyPlusToken {
+        _checkPlusToken();
         _;
     }
 
     function _checkGovernance() internal view {
-        require(msg.sender == pool || msg.sender == IPool(pool).governance(), "not governance");
+        require(msg.sender == plusToken || msg.sender == ISinglePlus(plusToken).governance(), "not governance");
     }
 
     modifier onlyGovernance() {
@@ -49,7 +48,7 @@ abstract contract StrategyBase is IStrategy, Initializable {
     }
 
     function _checkStrategist() internal view {
-        require(msg.sender == pool || msg.sender == IPool(pool).governance() || IPool(pool).strategist(msg.sender), "not strategist");
+        require(msg.sender == plusToken || msg.sender == ISinglePlus(plusToken).governance() || ISinglePlus(plusToken).strategists(msg.sender), "not strategist");
     }
 
     modifier onlyStrategist() {
@@ -69,32 +68,21 @@ abstract contract StrategyBase is IStrategy, Initializable {
     }
 
     /**
-     * @dev Updates the withdrawal fee. Only governance can update the withdrawal fee.
-     */
-    function setWithdrawalFee(uint256 _withdrawalFee) public onlyGovernance {
-        require(_withdrawalFee <= PERCENT_MAX, "overflow");
-        uint256 oldWithdrawalFee = withdrawalFee;
-        withdrawalFee = _withdrawalFee;
-
-        emit WithdrawalFeeUpdated(oldWithdrawalFee, _withdrawalFee);
-    }
-
-    /**
-     * @dev Used to salvage any ETH deposited into the pool by mistake.
-     * Only governance or strategist can salvage ETH from the pool.
+     * @dev Used to salvage any ETH deposited into the plusToken by mistake.
+     * Only governance or strategist can salvage ETH from the plusToken.
      * The salvaged ETH is transferred to treasury for futher operation.
      */
     function salvage() public onlyStrategist {
         uint256 amount = address(this).balance;
-        address payable target = payable(IPool(pool).treasury());
+        address payable target = payable(ISinglePlus(plusToken).treasury());
         (bool success, ) = target.call{value: amount}(new bytes(0));
         require(success, 'ETH salvage failed');
     }
 
     /**
-     * @dev Used to salvage any token deposited into the pool by mistake.
+     * @dev Used to salvage any token deposited into the plusToken by mistake.
      * The want token cannot be salvaged.
-     * Only governance or strategist can salvage token from the pool.
+     * Only governance or strategist can salvage token from the plusToken.
      * The salvaged token is transferred to treasury for futhuer operation.
      * @param _tokenAddress Token address to salvage.
      */
@@ -105,7 +93,7 @@ abstract contract StrategyBase is IStrategy, Initializable {
         }
 
         IERC20Upgradeable token = IERC20Upgradeable(_tokenAddress);
-        token.safeTransfer(IPool(pool).treasury(), token.balanceOf(address(this)));
+        token.safeTransfer(ISinglePlus(plusToken).treasury(), token.balanceOf(address(this)));
     }
 
     /**

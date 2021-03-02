@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
 import "../StrategyBase.sol";
+import "../../interfaces/ISinglePlus.sol";
 import "../../interfaces/curve/ICurveGauge.sol";
 
 /**
@@ -30,8 +31,8 @@ abstract contract StrategyCurveBase is StrategyBase {
     address public gauge;
     address public curve;
 
-    function __StrategyCurveBase__init(address _pool, address _gauge, address _curve) internal initializer {
-        __StrategyBase_init(_pool);
+    function __StrategyCurveBase__init(address _plusToken, address _gauge, address _curve) internal initializer {
+        __StrategyBase_init(_plusToken);
 
         require(_gauge != address(0x0), "gauge not set");
         require(_curve != address(0x0), "curve not set");
@@ -43,7 +44,7 @@ abstract contract StrategyCurveBase is StrategyBase {
      * @dev Deposits all renCRV into Curve liquidity gauge to earn CRV.
      */
     function deposit() public override onlyStrategist {
-        IERC20Upgradeable token = IERC20Upgradeable(IPool(pool).token());
+        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plusToken).token());
         uint256 tokenBalance = token.balanceOf(address(this));
         if (tokenBalance > 0) {
             token.safeApprove(gauge, 0);
@@ -53,34 +54,29 @@ abstract contract StrategyCurveBase is StrategyBase {
     }
 
     /**
-     * @dev Withdraw partial funds, normally used with a pool withdrawal
+     * @dev Withdraw partial funds, normally used with a plusToken withdrawal
      */
-    function withdraw(uint256 _amount) public override onlyPool {
-        IERC20Upgradeable token = IERC20Upgradeable(IPool(pool).token());
+    function withdraw(uint256 _amount) public override onlyPlusToken {
+        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plusToken).token());
         uint256 tokenBalance = token.balanceOf(address(this));
         if (tokenBalance < _amount) {
             _amount = _withdrawSome(_amount.sub(tokenBalance));
             _amount = _amount.add(tokenBalance);
         }
-        if (withdrawalFee > 0) {
-            uint256 _feeAmount = _amount.mul(withdrawalFee).div(PERCENT_MAX);
-            token.safeTransfer(IPool(pool).treasury(), _feeAmount);
-            _amount = _amount.sub(_feeAmount);
-        }
 
-        token.safeTransfer(pool, _amount);
+        token.safeTransfer(plusToken, _amount);
     }
 
     /**
      * @dev Withdraw all funds, normally used when migrating strategies
      * No withdrawal fee is charged when withdrawing all assets.
      */
-    function withdrawAll() public override onlyPool returns (uint256 balance) {
+    function withdrawAll() public override onlyPlusToken returns (uint256 balance) {
         ICurveGauge(gauge).withdraw(ICurveGauge(gauge).balanceOf(address(this)));
 
-        IERC20Upgradeable token = IERC20Upgradeable(IPool(pool).token());
+        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plusToken).token());
         balance = token.balanceOf(address(this));
-        token.safeTransfer(pool, balance);
+        token.safeTransfer(plusToken, balance);
     }
 
     /**
@@ -97,7 +93,7 @@ abstract contract StrategyCurveBase is StrategyBase {
      * @dev Returns the amount of tokens deposited in the strategy.
      */
     function balanceOfStrategy() public view returns (uint256) {
-        return IERC20Upgradeable(IPool(pool).token()).balanceOf(address(this));
+        return IERC20Upgradeable(ISinglePlus(plusToken).token()).balanceOf(address(this));
     }
 
     /**
@@ -119,7 +115,7 @@ abstract contract StrategyCurveBase is StrategyBase {
      */
     function _getProtectedTokens() internal virtual override view returns (address[] memory) {
         address[] memory protectedTokens = new address[](3);
-        protectedTokens[0] = IPool(pool).token();
+        protectedTokens[0] = ISinglePlus(plusToken).token();
         protectedTokens[1] = wbtc;
         protectedTokens[2] = crv;
         return protectedTokens;

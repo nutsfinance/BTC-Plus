@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import "../interfaces/IPool.sol";
+import "../interfaces/ISinglePlus.sol";
 import "../strategies/StrategyBase.sol";
 import "./MockToken.sol";
 
@@ -11,9 +11,9 @@ import "./MockToken.sol";
 contract MockStrategy is StrategyBase {
     MockToken token;
 
-    function initialize(address _pool) public initializer {
-        __StrategyBase_init(_pool);
-        token = MockToken(IPool(_pool).token());
+    function initialize(address _plusToken) public initializer {
+        __StrategyBase_init(_plusToken);
+        token = MockToken(ISinglePlus(_plusToken).token());
     }
 
     /**
@@ -32,7 +32,7 @@ contract MockStrategy is StrategyBase {
      * @dev Withdraws a portional amount of assets from the Strategy.
      */
     function withdraw(uint256 _amount) public override {
-        token.transfer(pool, _amount);
+        token.transfer(plusToken, _amount);
     }
 
     /**
@@ -40,7 +40,7 @@ contract MockStrategy is StrategyBase {
      */
     function withdrawAll() public override returns (uint256) {
         uint256 amount = balance();
-        token.transfer(pool, amount);
+        token.transfer(plusToken, amount);
 
         return amount;
     }
