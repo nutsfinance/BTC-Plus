@@ -21,8 +21,6 @@ abstract contract PlusToken is ERC20Upgradeable {
     using SafeMathUpgradeable for uint256;
 
     event Rebased(uint256 oldIndex, uint256 newIndex);
-    event Minted(address indexed user, address[] indexed tokens, uint256[] amounts, uint256 mintShare, uint256 mintAmount);
-    event Redeemed(address indexed user, address[] indexed tokens, uint256[] amounts, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
 
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
     event StrategistUpdated(address indexed strategist, bool allowed);

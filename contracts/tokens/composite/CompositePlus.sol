@@ -17,9 +17,12 @@ import "../PlusToken.sol";
  * A composite plus token is backed by a basket of plus token. The composite plus token,
  * along with its underlying tokens in the basket, should have the same peg.
  */
-abstract contract CompositePlus is PlusToken, ReentrancyGuardUpgradeable {
+contract CompositePlus is PlusToken, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
+
+    event Minted(address indexed user, address[] indexed tokens, uint256[] amounts, uint256 mintShare, uint256 mintAmount);
+    event Redeemed(address indexed user, address[] indexed tokens, uint256[] amounts, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
 
     event RebalancerUpdated(address indexed rebalancer, bool enabled);
     event MinLiquidityRatioUpdated(uint256 oldRatio, uint256 newRatio);
@@ -87,9 +90,9 @@ abstract contract CompositePlus is PlusToken, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Mints BTC+.
-     * @dev _tokens The tokens used to mint BTC+. BTC+ must have sufficient allownance on the token.
-     * @dev _amounts Amount of tokens used to mint BTC+.
+     * @dev Mints composite plus tokens with underlying tokens provided.
+     * @dev _tokens The tokens used to mint the composite plus token. The composite plus token must have sufficient allownance on the token.
+     * @dev _amounts Amount of tokens used to mint the composite plus token.
      */
     function mint(address[] calldata _tokens, uint256[] calldata _amounts) external nonReentrant {
         require(_tokens.length == _amounts.length, "invalid input");
