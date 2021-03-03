@@ -27,6 +27,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
         uint256 oldWorkingBalance, uint256 newWorkingBalance, uint256 newWorkingSupply);
     event Deposited(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
+    event RewardContractUpdated(address indexed oldRewardContract, address indexed newRewardContract, address[] rewardTokens);
 
     uint256 constant TOKENLESS_PRODUCTION = 40;
     uint256 constant WAD = 10**18;
@@ -97,7 +98,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
 
     /**
      * @dev Claims pending rewards and checkpoint rewards for a user.
-     * @param _account Address of the user to checkpoint reward.
+     * @param _account Address of the user to checkpoint reward. Zero means global checkpoint only.
      */
     function _checkpointRewards(address _account) internal {
         uint256 supply = totalSupply();
@@ -121,6 +122,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
             if (diff != 0) {
                 rewardIntegral[rewardList[i]] = newIntegral;
             }
+            if (_account == address(0x0))   continue;
 
             uint256 userIntegral = rewardIntegralOf[rewardList[i]][_account];
             if (userIntegral < newIntegral) {
@@ -275,4 +277,66 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
         emit Withdrawn(msg.sender, _amount);
     }
 
+    /**
+     * @dev Moves tokens `amount` from `sender` to `recipient`.
+     */
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual override {
+        _checkpoint();
+        _checkpointUser(_sender);
+        _checkpointUser(_recipient);
+        _checkpointRewards(_sender);
+        _checkpointRewards(_recipient);
+
+        // Invoke super _transfer to emit Transfer event
+        super._transfer(_sender, _recipient, _amount);
+
+        _updateLiquidityLimit(_sender);
+        _updateLiquidityLimit(_recipient);
+    }
+
+    /*********************************************
+     *
+     *    Governance methods
+     *
+     **********************************************/
+    
+    /**
+     * @dev All liqduiity gauge share the same governance of gauge controller.
+     */
+    function _checkGovernance() internal view {
+        require(msg.sender == IGaugeController(controller).governance(), "not governance");
+    }
+
+    modifier onlyGovernance() {
+        _checkGovernance();
+        _;
+    }
+
+    /**
+     * @dev Updates the reward contract and reward tokens.
+     * @param _rewardContract The new active reward contract.
+     * @param _rewardTokens The reward tokens from the reward contract.
+     */
+    function setRewards(address _rewardContract, address[] memory _rewardTokens) public onlyGovernance {
+        address currentRewardContract = rewardContract;
+        if (currentRewardContract != address(0x0)) {
+            _checkpointRewards(address(0x0));
+            IUniPool(rewardContract).exit();
+
+            IERC20Upgradeable(token).safeApprove(currentRewardContract, 0);
+        }
+
+        if (_rewardContract != address(0x0)) {
+            IERC20Upgradeable(token).safeApprove(_rewardContract, uint256(-1));
+            IUniPool(_rewardContract).stake(totalSupply());
+
+            rewardContract = _rewardContract;
+            rewardTokens = _rewardTokens;
+
+            // Complete an initial checkpoint to make sure that everything works.
+            _checkpointRewards(address(0x0));
+        }
+
+        emit RewardContractUpdated(currentRewardContract, _rewardContract, _rewardTokens);
+    }
 }
