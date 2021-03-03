@@ -23,6 +23,12 @@ contract GaugeController is Initializable {
     using SafeMathUpgradeable for uint256;
 
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
+    event BaseRateUpdated(uint256 oldBaseRate, uint256 newBaseRate);
+    event TokenAdded(address indexed token);
+    event TokenRemoved(address indexed token);
+    event GaugeAdded(address indexed gauge, uint256 gaugeWeight);
+    event GaugeRemoved(address indexed gauge);
+    event GaugeWeightUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight);
 
     uint256 constant WAD = 10 ** 18;
     uint256 constant LOG_10_2 = 301029995663981195;  // log10(2) = 0.301029995663981195
@@ -34,8 +40,12 @@ contract GaugeController is Initializable {
 
     // List of supported SINGLE PLUS tokens
     address[] public tokens;
+    // SINGLE PLUS token address => Whether this single plus is supported
+    mapping(address => bool) public tokenSupported;
     // List of supported liquidity gauges
     address[] public gauges;
+    // Liquidity gauge address => Whether the gauge is supported
+    mapping(address => bool) public gaugeSupported;
     // Liquidity gauge address => Liquidity gauge weight(in WAD)
     // Gauge weight is the multiplier applied to each gauge in computing
     // AC emission rate for invidual gauge. Base weight is WAD.
@@ -106,7 +116,7 @@ contract GaugeController is Initializable {
      * Anyone can call this function so that if the liquidity gauge is exploited by users with short-term
      * large amount of minting, others can restore to the correct mining paramters.
      */
-    function checkpoint() external {
+    function checkpoint() public {
         uint256 totalSupply = 0;
         // Computes the total supply for all supported SINGLE plus tokens
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -144,5 +154,152 @@ contract GaugeController is Initializable {
         for (uint256 i = 0; i < gaugeList.length; i++) {
             IGauge(gaugeList[i]).checkpoint();
         }
+    }
+
+    /*********************************************
+     *
+     *    Governance methods
+     *
+     **********************************************/
+    
+    function _checkGovernance() internal view {
+        require(msg.sender == governance, "not governance");
+    }
+
+    modifier onlyGovernance() {
+        _checkGovernance();
+        _;
+    }
+
+    /**
+     * @dev Updates governance. Only governance can update governance.
+     */
+    function setGovernance(address _governance) external onlyGovernance {
+        address oldGovernance = governance;
+        governance = _governance;
+        emit GovernanceUpdated(oldGovernance, _governance);
+    }
+
+    /**
+     * @dev Updates the AC emission base rate. Only governance can update the base rate.
+     */
+    function setBaseRate(uint256 _baesDayRate) external onlyGovernance {
+        uint256 oldBaseRate = baseRate;
+        baseRate = _baesDayRate / 86400;    // Base rate is in seconds.
+        // Need to checkpoint with the base rate update!
+        checkpoint();
+
+        emit BaseRateUpdated(oldBaseRate, baseRate);
+    }
+
+    /**
+     * @dev Adds a new single plus token to the gauge controller. Only governance can add new single plus.
+     * @param _token The new single plus to add.
+     */
+    function addToken(address _token) external onlyGovernance {
+        require(_token != address(0x0), "token not set");
+        require(!tokenSupported[_token], "token supported");
+
+        tokenSupported[_token] = true;
+        tokens.push(_token);
+
+        // Need to checkpoint with the new token!
+        checkpoint();
+
+        emit TokenAdded(_token);
+    }
+
+    /**
+     * @dev Removes a single plus from gauge controller. Only governance can remove a plus token.
+     * @param _token The plus token to remove from gauge controller.
+     */
+    function removeToken(address _token) external onlyGovernance {
+        require(_token != address(0x0), "token not set");
+        require(tokenSupported[_token], "token not supported");
+
+        uint256 tokenSize = tokens.length;
+        uint256 tokenIndex = tokenSize;
+        for (uint256 i = 0; i < tokenSize; i++) {
+            if (tokens[i] == _token) {
+                tokenIndex = i;
+                break;
+            }
+        }
+        // We must have found the token!
+        assert(tokenIndex < tokenSize);
+
+        tokens[tokenIndex] = tokens[tokenSize - 1];
+        tokens.pop();
+        delete tokenSupported[_token];
+
+        // Need to checkpoint with the token removed!
+        checkpoint();
+
+        emit TokenRemoved(_token);
+    }
+
+    /**
+     * @dev Adds a new liquidity gauge to the gauge controller. Only governance can add new gauge.
+     * @param _gauge The new liquidity gauge to add.
+     * @param _weight Weight of the liquidity gauge.
+     */
+    function addGauge(address _gauge, uint256 _weight) external onlyGovernance {
+        require(_gauge != address(0x0), "gauge not set");
+        require(!gaugeSupported[_gauge], "gauge supported");
+
+        gaugeSupported[_gauge] = true;
+        gaugeWeights[_gauge] = _weight;
+        gauges.push(_gauge);
+
+        // Need to checkpoint with the new token!
+        checkpoint();
+
+        emit GaugeAdded(_gauge, _weight);
+    }
+
+    /**
+     * @dev Removes a liquidity gauge from gauge controller. Only governance can remove a plus token.
+     * @param _gauge The liquidity gauge to remove from gauge controller.
+     */
+    function removeGauge(address _gauge) external onlyGovernance {
+        require(_gauge != address(0x0), "gauge not set");
+        require(gaugeSupported[_gauge], "gauge not supported");
+
+        uint256 gaugeSize = gauges.length;
+        uint256 gaugeIndex = gaugeSize;
+        for (uint256 i = 0; i < gaugeSize; i++) {
+            if (gauges[i] == _gauge) {
+                gaugeIndex = i;
+                break;
+            }
+        }
+        // We must have found the gauge!
+        assert(gaugeIndex < gaugeSize);
+
+        gauges[gaugeIndex] = gauges[gaugeSize - 1];
+        gauges.pop();
+        delete gaugeSupported[_gauge];
+        delete gaugeWeights[_gauge];
+
+        // Need to checkpoint with the token removed!
+        checkpoint();
+
+        emit GaugeRemoved(_gauge);
+    }
+
+    /**
+     * @dev Updates the weight of the liquidity gauge.
+     * @param _gauge Address of the liquidity gauge to update.
+     * @param _weight New weight of the liquidity gauge.
+     */
+    function setGaugeWeight(address _gauge, uint256 _weight) external onlyGovernance {
+        require(gaugeSupported[_gauge], "gauge supported");
+        uint256 oldWeight = gaugeWeights[_gauge];
+        gaugeWeights[_gauge] = _weight;
+
+        // Need to checkpoint with the token removed!
+        checkpoint();
+
+        emit GaugeWeightUpdated(_gauge, oldWeight, _weight);
     }
 }
