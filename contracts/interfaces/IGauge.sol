@@ -12,10 +12,10 @@ interface IGauge {
     function token() external view returns (address);
 
     /**
-     * @dev Returns the total weighted amount of SINGLE plus token staked in the gauge.
-     * If the staked token is a single plus, totalAmount = amount of token staked * token weight.
-     * If the staked token is a composite plus, it should recursively compute the weighted sum of
-     * all single plus in the basket.
+     * @dev Returns the total amount of SINGLE plus token staked in the gauge.
+     * If the staked token is a single plus, totalAmount = amount of token staked.
+     * If the staked token is a composite plus, it should recursively compute the sum of
+     * all single plus staked.
      */
     function totalAmount() external view returns (uint256);
 

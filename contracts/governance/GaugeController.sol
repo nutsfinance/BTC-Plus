@@ -22,6 +22,8 @@ contract GaugeController is Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
+    event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
+
     uint256 constant WAD = 10 ** 18;
     uint256 constant LOG_10_2 = 301029995663981195;  // log10(2) = 0.301029995663981195
     uint256 constant MIN_REWARD_THRESHOLD = 10 * WAD;   // The TVL should be at least 10 BTC in order to start liquidity reward
@@ -29,15 +31,15 @@ contract GaugeController is Initializable {
     address public governance;
     // AC token
     address public reward;
-    // vAC token
-    address public votingEscrow;
 
     // List of supported SINGLE PLUS tokens
     address[] public tokens;
-    // Single plus token address => Token weight(in WAD)
-    mapping(address => uint256) public tokenWeights;
     // List of supported liquidity gauges
     address[] public gauges;
+    // Liquidity gauge address => Liquidity gauge weight(in WAD)
+    // Gauge weight is the multiplier applied to each gauge in computing
+    // AC emission rate for invidual gauge. Base weight is WAD.
+    mapping(address => uint256) public gaugeWeights;
     // Liquidity gauge address => AC emission rate(in WAD)
     mapping(address => uint256) public gaugeRates;
 
@@ -45,23 +47,19 @@ contract GaugeController is Initializable {
     uint256 public baseRate;
     // Global AC emission rate
     uint256 public rate;
-    // Uncomsumed AC emission rate
-    uint256 public unconsumedRate;
-    // Unconsumed AC reward
-    uint256 public unconsumedReward;
+    // Total amount of AC rewarded until the latest checkpoint
+    uint256 public totalReward;
     // Last time the checkpoint is called
     uint256 public lastUpdateTimestamp;
 
     /**
      * @dev Initializes the gauge controller.
      */
-    function initialize(address _reward, address _votingEscrow, uint256 _baseDayRate) public initializer {
+    function initialize(address _reward, uint256 _baseDayRate) public initializer {
         require(_reward != address(0x0), "reward not set");
-        require(_votingEscrow != address(0x0), "voting escrow not set");
         
         governance = msg.sender;
         reward = _reward;
-        votingEscrow = _votingEscrow;
         baseRate = _baseDayRate / 86400;    // Base rate is in seconds
         lastUpdateTimestamp = block.timestamp;
     }
@@ -109,19 +107,19 @@ contract GaugeController is Initializable {
      * large amount of minting, others can restore to the correct mining paramters.
      */
     function checkpoint() external {
-        uint256 total = 0;
-        // Computes the weighted total supply for all supported SINGLE plus tokens
+        uint256 totalSupply = 0;
+        // Computes the total supply for all supported SINGLE plus tokens
         for (uint256 i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            total = total.add(IERC20Upgradeable(token).totalSupply().mul(tokenWeights[token]));
+            totalSupply = totalSupply.add(IERC20Upgradeable(tokens[i]).totalSupply());
         }
-        // Updates the global AC emission rate
-        uint256 newRate = 0;
+        // Computes the AC emission per token. The AC emission rate is determined by TVL, which
+        // is the sum of all single plus total supply.
+        uint256 ratePerToken = 0;
         // The minimum TVL to start liquidity reward is 10
-        if (total > MIN_REWARD_THRESHOLD) {
+        if (totalSupply > MIN_REWARD_THRESHOLD) {
             // rate = baseRate * (log TVL - 1)
             // Minus 18 since the TVL is in WAD
-            newRate = baseRate.mul(_log10(total) - 1 - 18);
+            ratePerToken = baseRate.mul(_log10(totalSupply) - 1 - 18).mul(WAD).div(totalSupply);
         }
 
         // Allocates AC emission rates for each liquidity gauge
@@ -129,17 +127,17 @@ contract GaugeController is Initializable {
         // Loads the gauge list for better performance
         address[] memory gaugeList = gauges;
         for (uint256 i = 0; i < gaugeList.length; i++) {
-            // Each gauge gets AC emission rate in proportion to weighted amount of single plus tokens staked.
-            uint256 newGaugeRate = IGauge(gaugeList[i]).totalAmount().mul(newRate).div(total);
+            // AC emission rate for each gauge is proportional to total amount of SINGLE plus staked times gauge weight.
+            // Divided by WAD since ratePerToken is in WAD
+            uint256 newGaugeRate = IGauge(gaugeList[i]).totalAmount().mul(ratePerToken).mul(gaugeWeights[gaugeList[i]]).div(WAD);
             gaugeRates[gaugeList[i]] = newGaugeRate;
             totalRate = totalRate.add(newGaugeRate);
         }
 
         // Checkpoints gauge controller
-        unconsumedReward = unconsumedReward.add(unconsumedRate.mul(block.timestamp.sub(lastUpdateTimestamp)));
-        unconsumedRate = newRate.sub(totalRate);
+        totalReward = totalReward.add(rate.mul(block.timestamp.sub(lastUpdateTimestamp)));
         lastUpdateTimestamp = block.timestamp;
-        rate = newRate;
+        rate = totalRate;
 
         // Checkpoints each gauge to consume the latest rate
         // We trigger gauge checkpoint after all parameters are updated
