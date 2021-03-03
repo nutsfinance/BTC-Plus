@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
 import "../interfaces/IGauge.sol";
+import "../interfaces/IGaugeController.sol";
 
 /**
  * @title Controller for all liquidity gauges.
@@ -18,25 +19,32 @@ import "../interfaces/IGauge.sol";
  * 2) AC emission allocation among liquidity gauges;
  * 3) AC reward claiming.
  */
-contract GaugeController is Initializable {
+contract GaugeController is Initializable, IGaugeController {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
+    event ClaimerUpdated(address indexed claimer, bool allowed);
     event BaseRateUpdated(uint256 oldBaseRate, uint256 newBaseRate);
     event TokenAdded(address indexed token);
     event TokenRemoved(address indexed token);
     event GaugeAdded(address indexed gauge, uint256 gaugeWeight);
     event GaugeRemoved(address indexed gauge);
     event GaugeWeightUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight);
+    event Checkpointed(uint256 oldRate, uint256 newRate, uint256 totalSupply, uint256 ratePerToken, address[] gauges, uint256[] guageRates);
+    event RewardClaimed(address indexed gauge, address indexed user, uint256 amount);
 
     uint256 constant WAD = 10 ** 18;
     uint256 constant LOG_10_2 = 301029995663981195;  // log10(2) = 0.301029995663981195
+    uint256 constant DAY = 86400;
     uint256 constant MIN_REWARD_THRESHOLD = 10 * WAD;   // The TVL should be at least 10 BTC in order to start liquidity reward
 
-    address public governance;
+    address public override governance;
     // AC token
-    address public reward;
+    address public override reward;
+    // Address => Whether this is claimer address.
+    // A claimer can help claim reward on behalf of the user.
+    mapping(address => bool) public override claimers;
 
     // List of supported SINGLE PLUS tokens
     address[] public tokens;
@@ -51,7 +59,7 @@ contract GaugeController is Initializable {
     // AC emission rate for invidual gauge. Base weight is WAD.
     mapping(address => uint256) public gaugeWeights;
     // Liquidity gauge address => AC emission rate(in WAD)
-    mapping(address => uint256) public gaugeRates;
+    mapping(address => uint256) public override gaugeRates;
 
     // Base AC emission rate
     uint256 public baseRate;
@@ -61,6 +69,8 @@ contract GaugeController is Initializable {
     uint256 public totalReward;
     // Last time the checkpoint is called
     uint256 public lastUpdateTimestamp;
+    // Mapping: Gauge address => Mapping: User address => Total claimed amount for this user in this gauge
+    mapping(address => mapping(address => uint256)) public override claimed;
 
     /**
      * @dev Initializes the gauge controller.
@@ -70,7 +80,7 @@ contract GaugeController is Initializable {
         
         governance = msg.sender;
         reward = _reward;
-        baseRate = _baseDayRate / 86400;    // Base rate is in seconds
+        baseRate = _baseDayRate / DAY;    // Base rate is in seconds
         lastUpdateTimestamp = block.timestamp;
     }
 
@@ -133,15 +143,17 @@ contract GaugeController is Initializable {
         }
 
         // Allocates AC emission rates for each liquidity gauge
+        uint256 oldRate = rate;
         uint256 totalRate;
         // Loads the gauge list for better performance
         address[] memory gaugeList = gauges;
+        uint256[] memory newGaugeRates = new uint256[](gaugeList.length);
         for (uint256 i = 0; i < gaugeList.length; i++) {
             // AC emission rate for each gauge is proportional to total amount of SINGLE plus staked times gauge weight.
             // Divided by WAD since ratePerToken is in WAD
-            uint256 newGaugeRate = IGauge(gaugeList[i]).totalAmount().mul(ratePerToken).mul(gaugeWeights[gaugeList[i]]).div(WAD);
-            gaugeRates[gaugeList[i]] = newGaugeRate;
-            totalRate = totalRate.add(newGaugeRate);
+            newGaugeRates[i] = IGauge(gaugeList[i]).totalAmount().mul(ratePerToken).mul(gaugeWeights[gaugeList[i]]).div(WAD);
+            gaugeRates[gaugeList[i]] = newGaugeRates[i];
+            totalRate = totalRate.add(newGaugeRates[i]);
         }
 
         // Checkpoints gauge controller
@@ -154,6 +166,21 @@ contract GaugeController is Initializable {
         for (uint256 i = 0; i < gaugeList.length; i++) {
             IGauge(gaugeList[i]).checkpoint();
         }
+
+        emit Checkpointed(oldRate, totalRate, totalSupply, ratePerToken, gaugeList, newGaugeRates);
+    }
+
+    /**
+     * @dev Claims rewards for a user. Only the supported gauge can call this function.
+     * @param _account Address of the user to claim reward.
+     * @param _amount Amount of AC to claim
+     */
+    function claim(address _account, uint256 _amount) public override {
+        require(gaugeSupported[msg.sender], "gauge not supported");
+        claimed[msg.sender][_account] = claimed[msg.sender][_account].add(_amount);
+        IERC20Upgradeable(reward).safeTransfer(_account, _amount);
+
+        emit RewardClaimed(msg.sender, _account, _amount);
     }
 
     /*********************************************
@@ -181,11 +208,19 @@ contract GaugeController is Initializable {
     }
 
     /**
+     * @dev Updates claimer. Only governance can update claimers.
+     */
+    function setClaimer(address _account, bool _allowed) external onlyGovernance {
+        claimers[_account] = _allowed;
+        emit ClaimerUpdated(_account, _allowed);
+    }
+
+    /**
      * @dev Updates the AC emission base rate. Only governance can update the base rate.
      */
     function setBaseRate(uint256 _baesDayRate) external onlyGovernance {
         uint256 oldBaseRate = baseRate;
-        baseRate = _baesDayRate / 86400;    // Base rate is in seconds.
+        baseRate = _baesDayRate / DAY;    // Base rate is in seconds.
         // Need to checkpoint with the base rate update!
         checkpoint();
 
