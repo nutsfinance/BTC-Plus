@@ -137,27 +137,23 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
     }
 
     /**
-     * @dev Claims rewards for user.
-     * @param _account User address to checkpoint.
-     */
-    function _checkpointUser(address _account) internal {
-        uint256 currentIntegral = integral;
-        uint256 amount = workingBalances[_account].mul(currentIntegral.sub(integralOf[_account])).div(WAD);
-        integralOf[_account] = currentIntegral;
-        checkpointOf[_account] = block.timestamp;
-
-        IGaugeController(controller).claim(_account, amount);
-    }
-
-    /**
      * @dev Performs checkpoint on AC rewards.
+     * @param _account User address to checkpoint. Zero to do global checkpoint only.
      */
-    function _checkpoint() internal {
+    function _checkpoint(address _account) internal {
         uint256 diffTime = block.timestamp.sub(lastCheckpoint);
         if (diffTime > 0) {
-            uint256 diff = rate.mul(diffTime).div(workingSupply);
-            integral = integral.add(diff);
+            uint256 newIntegral = integral.add(rate.mul(diffTime).div(workingSupply));
+            integral = newIntegral;
             lastCheckpoint = block.timestamp;
+
+            if (_account == address(0x0))   return;
+
+            uint256 amount = workingBalances[_account].mul(newIntegral.sub(integralOf[_account])).div(WAD);
+            integralOf[_account] = newIntegral;
+            checkpointOf[_account] = block.timestamp;
+
+            IGaugeController(controller).claim(_account, amount);
         }
     }
 
@@ -168,8 +164,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * between two checkpoints!
      */
     function checkpoint() public override {
-        _checkpoint();
-
+        _checkpoint(address(0x0));
         // Loads the new emission rate from gauge controller
         rate = IGaugeController(controller).gaugeRates(address(this));
     }
@@ -200,7 +195,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
      */
     function claim(address _account, bool _claimRewards) public {
         require(_account == msg.sender || IGaugeController(controller).claimers(msg.sender), "not authorized");
-        _checkpointUser(_account);
+        _checkpoint(_account);
         _updateLiquidityLimit(_account);
 
         if (_claimRewards) {
@@ -227,8 +222,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
 
         require(IERC20Upgradeable(address(escrow)).balanceOf(_account) == 0 || lastUserEvent > lastUserCheckpoint, "kick not allowed");
 
-        _checkpoint();
-        _checkpointUser(_account);
+        _checkpoint(_account);
         _updateLiquidityLimit(_account);
     }
 
@@ -239,8 +233,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
     function deposit(uint256 _amount) public {
         require(_amount > 0, "zero amount");
 
-        _checkpoint();
-        _checkpointUser(msg.sender);
+        _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
 
         _mint(msg.sender, _amount);
@@ -262,8 +255,7 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
     function withdraw(uint256 _amount) public {
         require(_amount > 0, "zero amount");
 
-        _checkpoint();
-        _checkpointUser(msg.sender);
+        _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
 
         _burn(msg.sender, _amount);
@@ -281,9 +273,8 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @dev Moves tokens `amount` from `sender` to `recipient`.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual override {
-        _checkpoint();
-        _checkpointUser(_sender);
-        _checkpointUser(_recipient);
+        _checkpoint(_sender);
+        _checkpoint(_recipient);
         _checkpointRewards(_sender);
         _checkpointRewards(_recipient);
 
