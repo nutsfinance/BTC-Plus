@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "../interfaces/IGaugeController.sol";
 import "../interfaces/IGauge.sol";
@@ -20,7 +21,7 @@ import "../interfaces/IVotingEscrow.sol";
  * Note: The liquidity gauge is tokenized so that it's 1:1 with the staked token.
  * Credit: https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/gauges/LiquidityGaugeV2.vy
  */
-contract LiquidityGauge is ERC20Upgradeable, IGauge {
+contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -67,6 +68,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
 
         __ERC20_init(string(abi.encodePacked(ERC20Upgradeable(_token).name(), " Gauge Deposit")),
             string(abi.encodePacked(ERC20Upgradeable(_token).symbol(), "-gauge")));
+        __ReentrancyGuard_init();
     }
 
     /**
@@ -172,7 +174,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * Gauge controller will checkpoint the gauge. Therefore, we could assume that the rate is not changed
      * between two checkpoints!
      */
-    function checkpoint() public override {
+    function checkpoint() external override nonReentrant {
         _checkpoint(address(0x0));
         // Loads the new emission rate from gauge controller
         rate = IGaugeController(controller).gaugeRates(address(this));
@@ -182,7 +184,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @dev Returns the amount of AC token that the user can claim.
      * @param _account Address of the account to check claimable reward.
      */
-    function claimable(address _account) public view returns (uint256) {
+    function claimable(address _account) external view returns (uint256) {
         return workingBalances[_account].mul(integral.sub(integralOf[_account])).div(WAD);
     }
 
@@ -191,7 +193,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @param _account Address of the account to check claimable reward.
      * @param _rewardToken Address of the reward token
      */
-    function claimableReward(address _account, address _rewardToken) public view returns (uint256) {
+    function claimableReward(address _account, address _rewardToken) external view returns (uint256) {
         return balanceOf(_account).mul(rewardIntegral[_rewardToken].sub(rewardIntegralOf[_rewardToken][_account])).div(WAD);
     }
 
@@ -202,7 +204,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @param _account Address of the user to claim.
      * @param _claimRewards Whether to claim other rewards as well.
      */
-    function claim(address _account, bool _claimRewards) public {
+    function claim(address _account, bool _claimRewards) external nonReentrant {
         require(_account == msg.sender || IGaugeController(controller).claimers(msg.sender), "not authorized");
         _checkpoint(_account);
         _updateLiquidityLimit(_account);
@@ -216,7 +218,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @dev Claims all rewards for the caller.
      * @param _account Address of the user to claim.
      */
-    function claimRewards(address _account) public {
+    function claimRewards(address _account) external nonReentrant {
         _checkpointRewards(_account);
     }
 
@@ -224,7 +226,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @dev Kicks an account for abusing their boost. Only kick if the user
      * has another voting event, or their lock expires.
      */
-    function kick(address _account) public {
+    function kick(address _account) external nonReentrant {
         IVotingEscrow escrow = IVotingEscrow(votingEscrow);
         uint256 lastUserCheckpoint = checkpointOf[_account];
         uint256 lastUserEvent = escrow.user_point_history__ts(_account, escrow.user_point_epoch(_account));
@@ -239,7 +241,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @dev Deposit the staked token into liquidity gauge.
      * @param _amount Amount of token to deposit.
      */
-    function deposit(uint256 _amount) public {
+    function deposit(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
 
         _checkpoint(msg.sender);
@@ -261,7 +263,7 @@ contract LiquidityGauge is ERC20Upgradeable, IGauge {
      * @dev Withdraw the staked token from liquidity gauge.
      * @param _amount Amounf of token to withdraw
      */
-    function withdraw(uint256 _amount) public {
+    function withdraw(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
 
         _checkpoint(msg.sender);
