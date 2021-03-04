@@ -25,8 +25,8 @@ module.exports = async function (callback) {
         await btcPlus.addToken(proxiedRenCrvPlus.address);
         await gaugeController.addToken(proxiedRenCrvPlus.address);
         console.log(`renCrv+ address: ${proxiedRenCrvPlus.address}`);
-        const renCrvGauge = await deployGauge(proxiedRenCrvPlus.address, gaugeController, votingEscrow);
-        console.log(`renCrv+ gauge: ${renCrvGauge.address}`);
+        // const renCrvGauge = await deployGauge(proxiedRenCrvPlus.address, gaugeController, votingEscrow);
+        // console.log(`renCrv+ gauge: ${renCrvGauge.address}`);
 
         console.log('Deploying sbtcCrv+...');
         const sbtcCrvPlus = await CurveSinglePlus.new();
@@ -36,8 +36,8 @@ module.exports = async function (callback) {
         await btcPlus.addToken(proxiedSbtcCrvPlus.address);
         await gaugeController.addToken(proxiedSbtcCrvPlus.address);
         console.log(`sbtcCrv+ address: ${proxiedSbtcCrvPlus.address}`);
-        const sbtcCrvGauge = await deployGauge(proxiedSbtcCrvPlus.address, gaugeController, votingEscrow);
-        console.log(`sbtcCrv+ gauge: ${sbtcCrvGauge.address}`);
+        // const sbtcCrvGauge = await deployGauge(proxiedSbtcCrvPlus.address, gaugeController, votingEscrow);
+        // console.log(`sbtcCrv+ gauge: ${sbtcCrvGauge.address}`);
 
         console.log('Deploying acBTC+...');
         const acBtcPlus = await SinglePlus.new();
@@ -47,8 +47,8 @@ module.exports = async function (callback) {
         await btcPlus.addToken(proxiedAcBtcPlus.address);
         await gaugeController.addToken(proxiedAcBtcPlus.address);
         console.log(`acBTC++ address: ${proxiedAcBtcPlus.address}`);
-        const acBtcGauge = await deployGauge(proxiedAcBtcPlus.address, gaugeController, votingEscrow);
-        console.log(`acBtc+ gauge: ${acBtcGauge.address}`);
+        // const acBtcGauge = await deployGauge(proxiedAcBtcPlus.address, gaugeController, votingEscrow);
+        // console.log(`acBtc+ gauge: ${acBtcGauge.address}`);
 
         console.log('Deploying cWBTC+...');
         const cWBTCPlus = await CompoundSinglePlus.new();
@@ -58,8 +58,8 @@ module.exports = async function (callback) {
         await btcPlus.addToken(proxiedCWBTCPlus.address);
         await gaugeController.addToken(proxiedCWBTCPlus.address);
         console.log(`cWBTC++ address: ${proxiedCWBTCPlus.address}`);
-        const cWBTCGauge = await deployGauge(proxiedCWBTCPlus.address, gaugeController, votingEscrow);
-        console.log(`cWBTC+ gauge: ${cWBTCGauge.address}`);
+        // const cWBTCGauge = await deployGauge(proxiedCWBTCPlus.address, gaugeController, votingEscrow);
+        // console.log(`cWBTC+ gauge: ${cWBTCGauge.address}`);
 
         callback();
     } catch (e) {
