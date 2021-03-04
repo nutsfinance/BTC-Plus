@@ -28,9 +28,9 @@ contract GaugeController is Initializable, IGaugeController {
     event BaseRateUpdated(uint256 oldBaseRate, uint256 newBaseRate);
     event TokenAdded(address indexed token);
     event TokenRemoved(address indexed token);
-    event GaugeAdded(address indexed gauge, uint256 gaugeWeight);
+    event GaugeAdded(address indexed gauge, uint256 gaugeWeight, bool dynamic, uint256 gaugeRate);
     event GaugeRemoved(address indexed gauge);
-    event GaugeWeightUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight);
+    event GaugeUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight, bool dynamic, uint256 oldGaugeRate, uint256 newGaugeRate);
     event Checkpointed(uint256 oldRate, uint256 newRate, uint256 totalSupply, uint256 ratePerToken, address[] gauges, uint256[] guageRates);
     event RewardClaimed(address indexed gauge, address indexed user, uint256 amount);
 
@@ -54,6 +54,10 @@ contract GaugeController is Initializable, IGaugeController {
     address[] public gauges;
     // Liquidity gauge address => Whether the gauge is supported
     mapping(address => bool) public gaugeSupported;
+    // Liquidity gauge address => Whether the gauge is dynamic
+    // The emission rate for a dynamic gauge changes based on the TVL, while emission rate for
+    // a static gauge is fixed and set by the governance.
+    mapping(address => bool) public dynamicGauges;
     // Liquidity gauge address => Liquidity gauge weight(in WAD)
     // Gauge weight is the multiplier applied to each gauge in computing
     // AC emission rate for invidual gauge. Base weight is WAD.
@@ -149,10 +153,15 @@ contract GaugeController is Initializable, IGaugeController {
         address[] memory gaugeList = gauges;
         uint256[] memory newGaugeRates = new uint256[](gaugeList.length);
         for (uint256 i = 0; i < gaugeList.length; i++) {
-            // AC emission rate for each gauge is proportional to total amount of SINGLE plus staked times gauge weight.
-            // Divided by WAD since ratePerToken is in WAD
-            newGaugeRates[i] = IGauge(gaugeList[i]).totalAmount().mul(ratePerToken).mul(gaugeWeights[gaugeList[i]]).div(WAD);
-            gaugeRates[gaugeList[i]] = newGaugeRates[i];
+            if (dynamicGauges[gaugeList[i]]) {
+                // AC emission rate for dynamic gauge is proportional to total amount of SINGLE plus staked times gauge weight.
+                // Divided by WAD since ratePerToken is in WAD
+                newGaugeRates[i] = IGauge(gaugeList[i]).totalAmount().mul(ratePerToken).mul(gaugeWeights[gaugeList[i]]).div(WAD);
+                gaugeRates[gaugeList[i]] = newGaugeRates[i];
+            } else {
+                // AC emission rate for static gauge is fixed and set by the governance
+                newGaugeRates[i] = gaugeRates[gaugeList[i]];
+            }
             totalRate = totalRate.add(newGaugeRates[i]);
         }
 
@@ -277,19 +286,23 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Adds a new liquidity gauge to the gauge controller. Only governance can add new gauge.
      * @param _gauge The new liquidity gauge to add.
      * @param _weight Weight of the liquidity gauge.
+     * @param _dynamic Whether it's a dynamic or statis gauge
+     * @param _rate Initial AC emission rate for the guage.
      */
-    function addGauge(address _gauge, uint256 _weight) external onlyGovernance {
+    function addGauge(address _gauge, uint256 _weight, bool _dynamic, uint256 _rate) external onlyGovernance {
         require(_gauge != address(0x0), "gauge not set");
         require(!gaugeSupported[_gauge], "gauge supported");
 
         gaugeSupported[_gauge] = true;
         gaugeWeights[_gauge] = _weight;
+        dynamicGauges[_gauge] = _dynamic;
+        gaugeRates[_gauge] = _rate;
         gauges.push(_gauge);
 
         // Need to checkpoint with the new token!
         checkpoint();
 
-        emit GaugeAdded(_gauge, _weight);
+        emit GaugeAdded(_gauge, _weight, _dynamic, _rate);
     }
 
     /**
@@ -326,15 +339,20 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Updates the weight of the liquidity gauge.
      * @param _gauge Address of the liquidity gauge to update.
      * @param _weight New weight of the liquidity gauge.
+     * @param _dynamic Whether it's a dynamic or statis gauge
+     * @param _rate Initial AC emission rate for the guage.
      */
-    function setGaugeWeight(address _gauge, uint256 _weight) external onlyGovernance {
+    function updateGauge(address _gauge, uint256 _weight, bool _dynamic, uint256 _rate) external onlyGovernance {
         require(gaugeSupported[_gauge], "gauge supported");
         uint256 oldWeight = gaugeWeights[_gauge];
+        uint256 oldRate = gaugeRates[_gauge];
         gaugeWeights[_gauge] = _weight;
+        dynamicGauges[_gauge] = _dynamic;
+        gaugeRates[_gauge] = _rate;
 
         // Need to checkpoint with the token removed!
         checkpoint();
 
-        emit GaugeWeightUpdated(_gauge, oldWeight, _weight);
+        emit GaugeWeightUpdated(_gauge, oldWeight, _weight, _dynamic, oldRate, _rate);
     }
 }
