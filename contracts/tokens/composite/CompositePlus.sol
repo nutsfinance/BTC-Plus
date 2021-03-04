@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "../../interfaces/IRebalancer.sol";
-import "../PlusToken.sol";
+import "../Plus.sol";
 
 /**
  * @title Composite plus token.
@@ -17,7 +17,7 @@ import "../PlusToken.sol";
  * A composite plus token is backed by a basket of plus token. The composite plus token,
  * along with its underlying tokens in the basket, should have the same peg.
  */
-contract CompositePlus is PlusToken, ReentrancyGuardUpgradeable {
+contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 

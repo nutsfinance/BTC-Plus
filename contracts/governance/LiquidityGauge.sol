@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 
 import "../interfaces/IGaugeController.sol";
 import "../interfaces/IGauge.sol";
+import "../interfaces/IPlus.sol";
 import "../interfaces/IUniPool.sol";
 import "../interfaces/IVotingEscrow.sol";
 
@@ -19,7 +20,7 @@ import "../interfaces/IVotingEscrow.sol";
  * Note: The liquidity gauge is tokenized so that it's 1:1 with the staked token.
  * Credit: https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/gauges/LiquidityGaugeV2.vy
  */
-abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
+contract LiquidityGauge is ERC20Upgradeable, IGauge {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -66,6 +67,14 @@ abstract contract LiquidityGauge is ERC20Upgradeable, IGauge {
 
         __ERC20_init(string(abi.encodePacked(ERC20Upgradeable(_token).name(), " Gauge Deposit")),
             string(abi.encodePacked(ERC20Upgradeable(_token).symbol(), "-gauge")));
+    }
+
+    /**
+     * @dev Returns the total amount of single plus tokens staked in the gauge.
+     */
+    function totalAmount() public view virtual override returns (uint256) {
+        address plus = token;
+        return IPlus(plus).totalUnderlying().mul(totalSupply()).div(IERC20Upgradeable(plus).totalSupply());
     }
 
     /**

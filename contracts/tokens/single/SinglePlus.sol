@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "../../interfaces/IStrategy.sol";
-import "../PlusToken.sol";
+import "../Plus.sol";
 
 /**
  * @title Single plus token.
@@ -18,7 +18,7 @@ import "../PlusToken.sol";
  * A single plus token wraps an underlying ERC20 token, typically a yield token,
  * into a value peg token.
  */
-contract SinglePlus is PlusToken, ReentrancyGuardUpgradeable {
+contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 

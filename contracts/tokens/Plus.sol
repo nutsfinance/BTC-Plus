@@ -18,7 +18,7 @@ import "../interfaces/IPlus.sol";
  * Single plus token is backed by one ERC20 token and targeted at yield generation.
  * Composite plus token is backed by a basket of ERC20 token and targeted at better basket management.
  */
-abstract contract PlusToken is ERC20Upgradeable, IPlus {
+abstract contract Plus is ERC20Upgradeable, IPlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -86,6 +86,14 @@ abstract contract PlusToken is ERC20Upgradeable, IPlus {
     }
 
     /**
+     * @dev Returns the total value of the plus token in terms of the peg value.
+     * All underlying token amounts have been scaled to 18 decimals.
+     * For single plus, it's equal to its total supply.
+     * For composite plus, it's equal to the total amount of single plus tokens in its basket.
+     */
+    function totalUnderlying() public view virtual override returns (uint256);
+
+    /**
      * @dev Returns the total supply of plus token. See {IERC20Updateable-totalSupply}.
      */
     function totalSupply() public view virtual override returns (uint256) {
@@ -105,12 +113,6 @@ abstract contract PlusToken is ERC20Upgradeable, IPlus {
     function getLiquidityRatio() public view returns (uint256) {
         return totalUnderlying().mul(MAX_PERCENT).div(totalSupply());
     }
-
-    /**
-     * @dev Returns the total value of the plus token in terms of the peg value.
-     * All underlying token amounts have been scaled to 18 decimals.
-     */
-    function totalUnderlying() public view virtual returns (uint256);
 
     /**
      * @dev Accrues interest to increase index.
