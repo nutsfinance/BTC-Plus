@@ -1,9 +1,9 @@
 const BTCPlus = artifacts.require("BTCPlus");
-const AdminUpgradeabilityProxy = artifacts.require("AdminUpgradeabilityProxy");
+const PlusProxy = artifacts.require("PlusProxy");
 
 const deployBTCPlus = async (deployer, accounts) => {
     const btcPlus = await deployer.deploy(BTCPlus);
-    const btcPlusProxy = await deployer.deploy(AdminUpgradeabilityProxy, btcPlus.address, accounts[1], Buffer.from(''));
+    const btcPlusProxy = await deployer.deploy(PlusProxy, btcPlus.address, accounts[1], Buffer.from(''));
     const proxiedBtcPlus = await BTCPlus.at(btcPlusProxy.address);
 
     await proxiedBtcPlus.initialize();

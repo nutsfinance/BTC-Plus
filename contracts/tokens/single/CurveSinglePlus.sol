@@ -20,7 +20,7 @@ contract CurveSinglePlus is SinglePlus {
      */
     function initialize(address _swap, address _token, string memory _nameOverride, string memory _symbolOverride) public initializer {
         // Make sure the swap works.
-        ICurveFi(_swap).get_virtual_price();
+        // ICurveFi(_swap).get_virtual_price();
         swap = _swap;
 
         SinglePlus.initialize(_token, _nameOverride, _symbolOverride);
