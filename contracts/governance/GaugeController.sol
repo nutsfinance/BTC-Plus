@@ -175,7 +175,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @param _account Address of the user to claim reward.
      * @param _amount Amount of AC to claim
      */
-    function claim(address _account, uint256 _amount) public override {
+    function claim(address _account, uint256 _amount) external override {
         require(gaugeSupported[msg.sender], "gauge not supported");
         claimed[msg.sender][_account] = claimed[msg.sender][_account].add(_amount);
         IERC20Upgradeable(reward).safeTransfer(_account, _amount);

@@ -218,7 +218,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * Note that only governance can approve new strategy, but strategists can revoke strategies.
      * @param _strategy Address of the strategy to revoke.
      */
-    function revokeStrategy(address _strategy) public virtual onlyStrategist {
+    function revokeStrategy(address _strategy) external virtual onlyStrategist {
         require(_strategy != address(0x0), "address not set");
         require(strategies[_strategy], "not approved");
 
@@ -235,7 +235,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Set a strategy as the active strategy. Only strategist can set active strategy.
      * @param _strategy Address of strategy to set as active. If empty it means clearing the active strategy.
      */
-    function setActiveStrategy(address _strategy) public virtual onlyStrategist {
+    function setActiveStrategy(address _strategy) external virtual onlyStrategist {
         require(strategies[_strategy], "not approved");
 
         _setActiveStrategy(_strategy);

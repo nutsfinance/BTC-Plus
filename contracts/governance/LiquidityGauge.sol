@@ -319,7 +319,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _rewardContract The new active reward contract.
      * @param _rewardTokens The reward tokens from the reward contract.
      */
-    function setRewards(address _rewardContract, address[] memory _rewardTokens) public onlyGovernance {
+    function setRewards(address _rewardContract, address[] memory _rewardTokens) external onlyGovernance {
         address currentRewardContract = rewardContract;
         if (currentRewardContract != address(0x0)) {
             _checkpointRewards(address(0x0));
