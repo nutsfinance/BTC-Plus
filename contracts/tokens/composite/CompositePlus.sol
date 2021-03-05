@@ -141,15 +141,16 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
         uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
         uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
         uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
-        uint256 _fee = _amount.mul(_withdrawAmount);
+        uint256 _fee = _amount.sub(_withdrawAmount);
 
         address[] memory _redeemTokens = tokens;
         uint256[] memory _redeemAmounts = new uint256[](tokens.length);
+        uint256 _totalSupply = totalSupply();
         for (uint256 i = 0; i < _redeemTokens.length; i++) {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
             if (_balance == 0)   continue;
 
-            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_amount);
+            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_totalSupply);
         }
 
         return (_redeemTokens, _redeemAmounts, _share, _fee);
@@ -179,15 +180,16 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
         uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
         uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
         uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
-        uint256 _fee = _amount.mul(_withdrawAmount);
+        uint256 _fee = _amount.sub(_withdrawAmount);
 
         address[] memory _redeemTokens = tokens;
         uint256[] memory _redeemAmounts = new uint256[](tokens.length);
+        uint256 _totalSupply = totalSupply();
         for (uint256 i = 0; i < _redeemTokens.length; i++) {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
             if (_balance == 0)   continue;
 
-            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_amount);
+            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_totalSupply);
             IERC20Upgradeable(_redeemTokens[i]).safeTransfer(msg.sender, _redeemAmounts[i]);
         }
 
@@ -236,8 +238,8 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Udpates the minimum liquidity ratio. Only governance can update minimum liquidity ratio.
      */
     function setMinLiquidityRatio(uint256 _minLiquidityRatio) external onlyGovernance {
-        require(_minLiquidityRatio <= WAD, "ratio too big");
-        require(_minLiquidityRatio >= liquidityRatio(), "ratio too small");
+        require(_minLiquidityRatio <= WAD, "overflow");
+        require(_minLiquidityRatio <= liquidityRatio(), "ratio too big");
         uint256 _oldRatio = minLiquidityRatio;
 
         minLiquidityRatio = _minLiquidityRatio;
