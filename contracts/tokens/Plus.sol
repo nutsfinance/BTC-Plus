@@ -108,10 +108,10 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     }
 
     /**
-     * @dev Returns the current liquidity ratio of the plus token.
+     * @dev Returns the current liquidity ratio of the plus token in WAD.
      */
     function liquidityRatio() public view returns (uint256) {
-        return totalUnderlying().mul(MAX_PERCENT).div(totalSupply());
+        return totalUnderlying().mul(WAD).div(totalSupply());
     }
 
     /**

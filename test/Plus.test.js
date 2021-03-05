@@ -50,12 +50,12 @@ contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.userShare(user1)).toString(), web3.utils.toWei("10"));
         assert.strictEqual((await plus.balanceOf(user1)).toString(), web3.utils.toWei("10"));
         assert.strictEqual((await plus.totalUnderlying()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.liquidityRatio()).toString(), "10000");
+        assert.strictEqual((await plus.liquidityRatio()).toString(), web3.utils.toWei("1"));
 
         await plus.increment(web3.utils.toWei("2"));
-        assert.strictEqual((await plus.liquidityRatio()).toString(), "12000");
+        assert.strictEqual((await plus.liquidityRatio()).toString(), web3.utils.toWei("1.2"));
         await plus.rebase();
-        assert.strictEqual((await plus.liquidityRatio()).toString(), "10000");
+        assert.strictEqual((await plus.liquidityRatio()).toString(), web3.utils.toWei("1"));
 
         assert.strictEqual((await plus.index()).toString(), web3.utils.toWei("1.2"));
         assert.strictEqual((await plus.totalSupply()).toString(), web3.utils.toWei("12"));

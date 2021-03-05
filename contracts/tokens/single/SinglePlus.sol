@@ -74,31 +74,38 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     function _withdraw(address _receiver, uint256  _amount) internal {
         IERC20Upgradeable underlying = IERC20Upgradeable(token);
         uint256 balance = underlying.balanceOf(address(this));
-        address strategy = activeStrategy;
 
         if (balance < _amount) {
+            address strategy = activeStrategy;
             require(strategy != address(0x0), "no active strategy");
             IStrategy(strategy).withdraw(_amount.sub(balance));
         }
+        balance = underlying.balanceOf(address(this));
 
-        underlying.safeTransfer(_receiver, _amount);
+        // Sends the minimum to avoid rounding errors
+        underlying.safeTransfer(_receiver, MathUpgradeable.min(balance, _amount));
     }
 
     /**
-     * @dev Returns the total value of the plus token in terms of the peg value.
-     * All underlying token amounts have been scaled to 18 decimals.
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
      */
     function totalUnderlying() public view virtual override returns (uint256) {
-        // Conversion rate is in WAD
-        return IERC20Upgradeable(token).balanceOf(address(this)).mul(WAD).div(_getConversionRate());
+        uint256 balance = IERC20Upgradeable(token).balanceOf(address(this));
+        address strategy = activeStrategy;
+        if (strategy != address(0x0)) {
+            balance = balance.add(IStrategy(strategy).balance());
+        }
+        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        return balance.mul(_getConversionRate()).div(WAD);
     }
 
     /**
      * @dev Returns the amount of single plus tokens minted with the underlying token provided.
-     * @dev _amounts Amount of token used to mint the single plus token.
+     * @dev _amounts Amount of underlying token used to mint the single plus token.
      */
     function getMintAmount(uint256 _amount) external view returns(uint256) {
-        return _amount.mul(WAD).div(_getConversionRate());
+        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        return _amount.mul(_getConversionRate()).div(WAD);
     }
 
     /**
@@ -107,14 +114,15 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      */
     function mint(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
+        require(!mintPaused, "mint paused");
 
         // Rebase first to make index up-to-date
         rebase();
 
         // Transfers the underlying token in.
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
-        // Conversion rate is in WAD
-        uint256 newAmount = _amount.mul(WAD).div(_getConversionRate());
+        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        uint256 newAmount = _amount.mul(_getConversionRate()).div(WAD);
         // Index is in WAD
         uint256 newShare = newAmount.mul(WAD).div(index);
         totalShares = totalShares.add(newShare);
@@ -133,22 +141,15 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
-        uint256 redeemShare;
-        uint256 redeemAmount = _amount;
-        if (_amount == uint256(-1)) {
-            redeemShare = userShare[msg.sender];
-            redeemAmount = redeemShare.mul(index).div(WAD);
-        } else {
-            redeemShare  = _amount.mul(WAD).div(index);
-        }
+        uint256 share = _amount.mul(WAD).div(index);
 
         uint256 fee = 0;
         if (redeemFee > 0) {
-            fee = redeemAmount.sub(redeemFee).div(MAX_PERCENT);
-            redeemAmount = redeemAmount.sub(fee);   
+            fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+            _amount = _amount.sub(fee);   
         }
-
-        return (redeemAmount, fee);
+        // Note: Fee is in plus token(18 decimals) but the received amount is in underlying token!
+        return (_amount.mul(WAD).div(_getConversionRate()), fee);
     }
 
     /**
@@ -164,15 +165,16 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
         uint256 redeemShare;
-        uint256 redeemAmount = _amount;
+        uint256 redeemAmount;
         if (_amount == uint256(-1)) {
             redeemShare = userShare[msg.sender];
             redeemAmount = redeemShare.mul(index).div(WAD);
         } else {
             redeemShare  = _amount.mul(WAD).div(index);
+            redeemAmount = _amount;
         }
 
-        uint256 fee = redeemAmount.sub(redeemFee).div(MAX_PERCENT);
+        uint256 fee = redeemAmount.mul(redeemFee).div(MAX_PERCENT);
         // Conversion rate is in WAD
         uint256 underlyingAmount = redeemAmount.sub(fee).mul(WAD).div(_getConversionRate());
 
