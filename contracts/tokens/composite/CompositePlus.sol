@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "../../interfaces/IRebalancer.sol";
+import "../../interfaces/ICompositePlus.sol";
 import "../Plus.sol";
 
 /**
@@ -17,7 +18,7 @@ import "../Plus.sol";
  * A composite plus token is backed by a basket of plus token. The composite plus token,
  * along with its underlying tokens in the basket, should have the same peg.
  */
-contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
+contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -31,9 +32,9 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
     event Rebalanced(uint256 underlyingBefore, uint256 underlyingAfter, uint256 supply);
 
     // The underlying plus tokens that constitutes the composite plus token.
-    address[] public tokens;
+    address[] public override tokens;
     // Mapping: Token address => Whether the token is an underlying token.
-    mapping(address => bool) public tokenSupported;
+    mapping(address => bool) public override tokenSupported;
     // Mapping: Token address => Whether minting with token is paused
     mapping(address => bool) public mintPaused;
 
@@ -57,7 +58,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Returns the total value of the plus token in terms of the peg value.
      * All underlying token amounts have been scaled to 18 decimals.
      */
-    function totalUnderlying() public view virtual override returns (uint256) {
+    function _totalUnderlying() internal view virtual override returns (uint256) {
         uint256 _amount = 0;
         for (uint256 i = 0; i < tokens.length; i++) {
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
@@ -99,7 +100,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Rebase first to make index up-to-date
         rebase();
-        uint256 _underlyingBefore = totalUnderlying();
+        uint256 _underlyingBefore = _totalUnderlying();
         for (uint256 i = 0; i < _tokens.length; i++) {
             if (_amounts[i] == 0) continue;
 
@@ -110,7 +111,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
             IERC20Upgradeable(_tokens[i]).safeTransferFrom(msg.sender, address(this), _amounts[i]);
         }
 
-        uint256 _underlyingAfter = totalUnderlying();
+        uint256 _underlyingAfter = _totalUnderlying();
         uint256 _newAmount = _underlyingAfter.sub(_underlyingBefore);
         uint256 _newShare = _newAmount.mul(WAD).div(index);
         totalShares = totalShares.add(_newShare);
@@ -310,7 +311,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Rebase first to make index up-to-date
         rebase();
-        uint256 _underlyingBefore = totalUnderlying();
+        uint256 _underlyingBefore = _totalUnderlying();
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             if (_amounts[i] == 0)   continue;
@@ -322,7 +323,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
         IRebalancer(_rebalancer).rebalance(_tokens, _amounts, _data);
 
         // Check post-rebalance conditions.
-        uint256 _underlyingAfter = totalUnderlying();
+        uint256 _underlyingAfter = _totalUnderlying();
         uint256 _supply = totalSupply();
         require(_underlyingAfter < _supply.mul(minLiquidityRatio).div(WAD), "too much loss");
 

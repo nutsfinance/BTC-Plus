@@ -20,7 +20,7 @@ contract MockPlus is Plus {
      * For single plus, it's equal to its total supply.
      * For composite plus, it's equal to the total amount of single plus tokens in its basket.
      */
-    function totalUnderlying() public view virtual override returns (uint256) {
+    function _totalUnderlying() internal view virtual override returns (uint256) {
         return underlying;
     }
 

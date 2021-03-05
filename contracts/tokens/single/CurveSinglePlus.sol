@@ -29,7 +29,7 @@ contract CurveSinglePlus is SinglePlus {
     /**
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
      */
-    function _getConversionRate() internal view override returns (uint256) {
+    function _conversionRate() internal view override returns (uint256) {
         // The Curve LP has 18 decimals, and the virtual price is already in WAD.
         return ICurveFi(swap).get_virtual_price();
     }

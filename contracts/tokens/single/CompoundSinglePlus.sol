@@ -15,7 +15,7 @@ contract CompoundSinglePlus is SinglePlus {
     /**
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
      */
-    function _getConversionRate() internal view override returns (uint256) {
+    function _conversionRate() internal view override returns (uint256) {
         address _token = token;
         uint256 _ratio = uint256(10) ** (18 - ERC20Upgradeable(ICToken(_token).underlying()).decimals());
         // The cToken's exchange rate is already in WAD

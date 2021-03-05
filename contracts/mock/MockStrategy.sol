@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import "../interfaces/ISinglePlus.sol";
 import "../strategies/StrategyBase.sol";
 import "./MockToken.sol";
 

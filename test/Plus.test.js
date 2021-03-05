@@ -4,6 +4,8 @@ const { expect } = require('chai');
 const MockPlus = artifacts.require("MockPlus");
 const MockToken = artifacts.require("MockToken");
 
+const toWei = web3.utils.toWei;
+
 contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
     let plus;
 
@@ -15,7 +17,7 @@ contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
     it("should initialize", async () => {
         assert.strictEqual(await plus.governance(), owner);
         assert.strictEqual(await plus.treasury(), owner);
-        assert.strictEqual((await plus.index()).toString(), web3.utils.toWei("1"));
+        assert.strictEqual((await plus.index()).toString(), toWei("1"));
     });
 
     it("should allow governance to update governance", async () => {
@@ -43,51 +45,51 @@ contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
     });
 
     it("should rebase", async () => {
-        await plus.mintShares(user1, web3.utils.toWei("10"));
-        assert.strictEqual((await plus.index()).toString(), web3.utils.toWei("1"));
-        assert.strictEqual((await plus.totalSupply()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.totalShares()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.userShare(user1)).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.balanceOf(user1)).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.totalUnderlying()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.liquidityRatio()).toString(), web3.utils.toWei("1"));
+        await plus.mintShares(user1, toWei("10"));
+        assert.strictEqual((await plus.index()).toString(), toWei("1"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("10"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("10"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("10"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("10"));
+        assert.strictEqual((await plus.underlying(toWei("10"))).toString(), toWei("10"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
-        await plus.increment(web3.utils.toWei("2"));
-        assert.strictEqual((await plus.liquidityRatio()).toString(), web3.utils.toWei("1.2"));
+        await plus.increment(toWei("2"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1.2"));
         await plus.rebase();
-        assert.strictEqual((await plus.liquidityRatio()).toString(), web3.utils.toWei("1"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
-        assert.strictEqual((await plus.index()).toString(), web3.utils.toWei("1.2"));
-        assert.strictEqual((await plus.totalSupply()).toString(), web3.utils.toWei("12"));
-        assert.strictEqual((await plus.totalShares()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.userShare(user1)).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.balanceOf(user1)).toString(), web3.utils.toWei("12"));
-        assert.strictEqual((await plus.totalUnderlying()).toString(), web3.utils.toWei("12"));
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("12"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("10"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("10"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("12"));
+        assert.strictEqual((await plus.underlying(toWei("10"))).toString(), toWei("12"));
     });
 
     it("should transfer after rebase", async () => {
-        await plus.mintShares(user1, web3.utils.toWei("10"));
-        await plus.increment(web3.utils.toWei("2"));
+        await plus.mintShares(user1, toWei("10"));
+        await plus.increment(toWei("2"));
         await plus.rebase();
         
-        assert.strictEqual((await plus.index()).toString(), web3.utils.toWei("1.2"));
-        assert.strictEqual((await plus.totalSupply()).toString(), web3.utils.toWei("12"));
-        assert.strictEqual((await plus.totalShares()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.userShare(user1)).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.balanceOf(user1)).toString(), web3.utils.toWei("12"));
-        assert.strictEqual((await plus.userShare(user2)).toString(), web3.utils.toWei("0"));
-        assert.strictEqual((await plus.balanceOf(user2)).toString(), web3.utils.toWei("0"));
-        assert.strictEqual((await plus.totalUnderlying()).toString(), web3.utils.toWei("12"));
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("12"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("10"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("10"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("12"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("0"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("0"));
+        assert.strictEqual((await plus.underlying(toWei("12"))).toString(), toWei("12"));
 
-        await plus.transfer(user2, web3.utils.toWei("3.6"), {from: user1});
-        assert.strictEqual((await plus.index()).toString(), web3.utils.toWei("1.2"));
-        assert.strictEqual((await plus.totalSupply()).toString(), web3.utils.toWei("12"));
-        assert.strictEqual((await plus.totalShares()).toString(), web3.utils.toWei("10"));
-        assert.strictEqual((await plus.userShare(user1)).toString(), web3.utils.toWei("7"));
-        assert.strictEqual((await plus.balanceOf(user1)).toString(), web3.utils.toWei("8.4"));
-        assert.strictEqual((await plus.userShare(user2)).toString(), web3.utils.toWei("3"));
-        assert.strictEqual((await plus.balanceOf(user2)).toString(), web3.utils.toWei("3.6"));
-        assert.strictEqual((await plus.totalUnderlying()).toString(), web3.utils.toWei("12"));
+        await plus.transfer(user2, toWei("3.6"), {from: user1});
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("12"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("10"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("7"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("8.4"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("3"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("3.6"));
+        assert.strictEqual((await plus.underlying(toWei("12"))).toString(), toWei("12"));
     });
 
     it("should allow governance to add transaction", async () => {
@@ -158,8 +160,8 @@ contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
         await plus.addTransaction(token.address, data);
         assert.strictEqual((await token.balanceOf(user3)).toString(), "0");
 
-        await plus.mintShares(user1, web3.utils.toWei("10"));
-        await plus.increment(web3.utils.toWei("2"));
+        await plus.mintShares(user1, toWei("10"));
+        await plus.increment(toWei("2"));
         await plus.rebase();
 
         assert.strictEqual((await token.balanceOf(user3)).toString(), "45000");

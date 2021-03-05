@@ -91,7 +91,27 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * For single plus, it's equal to its total supply.
      * For composite plus, it's equal to the total amount of single plus tokens in its basket.
      */
-    function totalUnderlying() public view virtual override returns (uint256);
+    function _totalUnderlying() internal view virtual returns (uint256);
+
+    /**
+     * @dev Returns the value of the plus token in terms of the peg value.
+     * All underlying token amounts have been scaled to 18 decimals.
+     * For single plus, it's equal to its total supply.
+     * For composite plus, it's equal to the total amount of single plus tokens in its basket.
+     * @param _amount The amount of plus token to get underlying value.
+     */
+    function underlying(uint256 _amount) external view override returns (uint256) {
+        uint256 _totalSupply = totalSupply();
+
+        return _totalSupply == 0 ? 0 : _totalUnderlying().mul(_amount).div(_totalSupply);
+    }
+
+    /**
+     * @dev Returns the total value of the plus token in terms of the peg value.
+     */
+    function totalUnderlying() external view override returns (uint256) {
+        return _totalUnderlying();
+    }
 
     /**
      * @dev Returns the total supply of plus token. See {IERC20Updateable-totalSupply}.
@@ -112,14 +132,14 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      */
     function liquidityRatio() public view returns (uint256) {
         uint256 _totalSupply = totalSupply();
-        return _totalSupply == 0 ? WAD : totalUnderlying().mul(WAD).div(_totalSupply);
+        return _totalSupply == 0 ? WAD : _totalUnderlying().mul(WAD).div(_totalSupply);
     }
 
     /**
      * @dev Accrues interest to increase index.
      */
     function rebase() public {
-        uint256 _underlying = totalUnderlying();
+        uint256 _underlying = _totalUnderlying();
         uint256 _supply = totalSupply();
         // Supply might be larger than underlyiing in a short period of time after rebalancing.
         if (_underlying > _supply) {

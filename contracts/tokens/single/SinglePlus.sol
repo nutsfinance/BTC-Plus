@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "../../interfaces/IStrategy.sol";
+import "../../interfaces/ISinglePlus.sol";
 import "../Plus.sol";
 
 /**
@@ -18,7 +19,7 @@ import "../Plus.sol";
  * A single plus token wraps an underlying ERC20 token, typically a yield token,
  * into a value peg token.
  */
-contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
+contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -30,7 +31,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     
     // Underlying token of the single plus toke. Typically a yield token and
     // not value peg.
-    address public token;
+    address public override token;
     // Whether minting is paused for the single plus token.
     bool public mintPaused;
 
@@ -61,7 +62,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
      * The default implmentation assumes that the single plus and underlying tokens are both peg.
      */
-    function _getConversionRate() internal view virtual returns (uint256) {
+    function _conversionRate() internal view virtual returns (uint256) {
         // 36 since the decimals for plus token is always 18, and conversion rate is in WAD.
         return uint256(10) ** (36 - ERC20Upgradeable(token).decimals());
     }
@@ -89,14 +90,14 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     /**
      * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
      */
-    function totalUnderlying() public view virtual override returns (uint256) {
+    function _totalUnderlying() internal view virtual override returns (uint256) {
         uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
         address _strategy = activeStrategy;
         if (_strategy != address(0x0)) {
             _balance = _balance.add(IStrategy(_strategy).balance());
         }
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _balance.mul(_getConversionRate()).div(WAD);
+        return _balance.mul(_conversionRate()).div(WAD);
     }
 
     /**
@@ -105,7 +106,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      */
     function getMintAmount(uint256 _amount) external view returns(uint256) {
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _amount.mul(_getConversionRate()).div(WAD);
+        return _amount.mul(_conversionRate()).div(WAD);
     }
 
     /**
@@ -122,7 +123,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
         // Transfers the underlying token in.
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        uint256 _newAmount = _amount.mul(_getConversionRate()).div(WAD);
+        uint256 _newAmount = _amount.mul(_conversionRate()).div(WAD);
         // Index is in WAD
         uint256 _newShare = _newAmount.mul(WAD).div(index);
         totalShares = totalShares.add(_newShare);
@@ -145,7 +146,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
             _amount = _amount.sub(_fee);   
         }
         // Note: Fee is in plus token(18 decimals) but the received amount is in underlying token!
-        return (_amount.mul(WAD).div(_getConversionRate()), _fee);
+        return (_amount.mul(WAD).div(_conversionRate()), _fee);
     }
 
     /**
@@ -170,7 +171,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
 
         uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
         // Conversion rate is in WAD
-        uint256 _underlyingAmount = _amount.sub(_fee).mul(WAD).div(_getConversionRate());
+        uint256 _underlyingAmount = _amount.sub(_fee).mul(WAD).div(_conversionRate());
 
         _withdraw(msg.sender, _underlyingAmount);
 
@@ -253,7 +254,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Invest the managed token into strategy to earn yield.
      * Only BTC+, governance and strategists can invoke this function.
      */
-    function invest() public virtual onlyStrategist {
+    function invest() public virtual override onlyStrategist {
         address _strategy = activeStrategy;
         if (_strategy == address(0x0)) return;
 
@@ -269,7 +270,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Harvest from strategy.
      * Only BTC+, governance and strategists can invoke this function.
      */
-    function harvest() public virtual onlyStrategist {
+    function harvest() public virtual override onlyStrategist {
         address _strategy = activeStrategy;
         if (_strategy != address(0x0)) {
             IStrategy(_strategy).harvest();

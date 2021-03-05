@@ -75,8 +75,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Returns the total amount of single plus tokens staked in the gauge.
      */
     function totalAmount() public view virtual override returns (uint256) {
-        address plus = token;
-        return IPlus(plus).totalUnderlying().mul(totalSupply()).div(IERC20Upgradeable(plus).totalSupply());
+        // The liquidity gauge token is 1:1 with the staked token and both have 18 decimals.
+        return IPlus(token).underlying(totalSupply());
     }
 
     /**
