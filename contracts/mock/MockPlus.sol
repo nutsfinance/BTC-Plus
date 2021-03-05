@@ -8,7 +8,7 @@ import "./MockToken.sol";
  * @dev Mock plus implementation.
  */
 contract MockPlus is Plus {
-    uint256 public underlying;
+    uint256 public underlyingAmount;
 
     function initialize(string memory _name, string memory _symbol) public {
         __PlusToken__init(_name, _symbol);
@@ -21,16 +21,16 @@ contract MockPlus is Plus {
      * For composite plus, it's equal to the total amount of single plus tokens in its basket.
      */
     function _totalUnderlying() internal view virtual override returns (uint256) {
-        return underlying;
+        return underlyingAmount;
     }
 
     function increment(uint256 amount) public {
-        underlying = underlying + amount;
+        underlyingAmount = underlyingAmount + amount;
     }
 
     function mintShares(address user, uint256 amount) public {
         totalShares += amount;
         userShare[user] += amount;
-        underlying += amount * index / WAD; 
+        underlyingAmount += amount * index / WAD; 
     }
 }

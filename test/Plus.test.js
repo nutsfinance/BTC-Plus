@@ -64,7 +64,8 @@ contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.totalShares()).toString(), toWei("10"));
         assert.strictEqual((await plus.userShare(user1)).toString(), toWei("10"));
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("12"));
-        assert.strictEqual((await plus.underlying(toWei("10"))).toString(), toWei("12"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("12"));
+        assert.strictEqual((await plus.underlying(toWei("5"))).toString(), toWei("5"));
     });
 
     it("should transfer after rebase", async () => {

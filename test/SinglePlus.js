@@ -170,7 +170,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("7.2"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.6"));
-        assert.strictEqual((await plus.underlying(toWei("10.8"))).toString(), toWei("10.8"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("10.8"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "0");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
@@ -189,7 +189,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("4.8"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.6"));
-        assert.strictEqual((await plus.underlying(toWei("8.424"))).toString(), toWei("8.424"));   // 0.024 fee remains!
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("8.424"));   // 0.024 fee remains!
         assert.strictEqual((await plus.liquidityRatio()).toString(), "1002857142857142857");
         assert.strictEqual((await token.balanceOf(user1)).toString(), "2376000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
@@ -204,7 +204,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), "4813714285714285712");
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), "3610285714285714284");
-        assert.strictEqual((await plus.underlying(toWei("8.424"))).toString(), toWei("8.424"));   // 0.024 fee remains!
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("8.424"));   // 0.024 fee remains!
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "2376000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
@@ -233,7 +233,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("7.2"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.6"));
-        assert.strictEqual((await plus.underlying(toWei("10.8"))).toString(), toWei("10.8"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("10.8"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "0");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
@@ -248,7 +248,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("0"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.6"));
-        assert.strictEqual((await plus.underlying(toWei("3.672"))).toString(), toWei("3.672"));   // 0.072 fee remains!
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("3.672"));   // 0.072 fee remains!
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1.02"));    // 3.672 / 3.6 = 1.02
         assert.strictEqual((await token.balanceOf(user1)).toString(), "7128000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
@@ -263,7 +263,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("0"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.672"));
-        assert.strictEqual((await plus.underlying(toWei("3.672"))).toString(), toWei("3.672"));   // 0.024 fee remains!
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("3.672"));   // 0.024 fee remains!
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "7128000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
