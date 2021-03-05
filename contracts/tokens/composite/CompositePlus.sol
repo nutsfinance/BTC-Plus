@@ -31,9 +31,9 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
     event Rebalanced(uint256 underlyingBefore, uint256 underlyingAfter, uint256 supply);
 
     // The underlying plus tokens that constitutes the composite plus token.
-    address[] public tokenList;
+    address[] public tokens;
     // Mapping: Token address => Whether the token is an underlying token.
-    mapping(address => bool) public tokens;
+    mapping(address => bool) public tokenSupported;
     // Mapping: Token address => Whether minting with token is paused
     mapping(address => bool) public mintPaused;
 
@@ -58,14 +58,14 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      * All underlying token amounts have been scaled to 18 decimals.
      */
     function totalUnderlying() public view virtual override returns (uint256) {
-        uint256 amount = 0;
-        for (uint256 i = 0; i < tokenList.length; i++) {
+        uint256 _amount = 0;
+        for (uint256 i = 0; i < tokens.length; i++) {
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
             // minted is the amount of all plus tokens in the basket added.
-            amount = amount.add(IERC20Upgradeable(tokenList[i]).balanceOf(address(this)));
+            _amount = _amount.add(IERC20Upgradeable(tokens[i]).balanceOf(address(this)));
         }
 
-        return amount;
+        return _amount;
     }
 
     /**
@@ -75,18 +75,18 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      */
     function getMintAmount(address[] calldata _tokens, uint256[] calldata _amounts) external view returns(uint256) {
         require(_tokens.length == _amounts.length, "invalid input");
-        uint256 amount = 0;
+        uint256 _amount = 0;
         for (uint256 i = 0; i < _tokens.length; i++) {
             require(!mintPaused[_tokens[i]], "token paused");
-            require(tokens[_tokens[i]], "token not exist");
+            require(tokenSupported[_tokens[i]], "token not exist");
             if (_amounts[i] == 0) continue;
 
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
             // minted is the amount of all tokens to mint added.
-            amount = amount.add(_amounts[i]);
+            _amount = _amount.add(_amounts[i]);
         }
 
-        return amount;
+        return _amount;
     }
 
     /**
@@ -99,23 +99,24 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Rebase first to make index up-to-date
         rebase();
-        uint256 underlyingBefore = totalUnderlying();
+        uint256 _underlyingBefore = totalUnderlying();
         for (uint256 i = 0; i < _tokens.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            require(tokens[_tokens[i]], "token not exist");
+            require(tokenSupported[_tokens[i]], "token not exist");
             require(!mintPaused[_tokens[i]], "token paused");
 
             // Transfers the token into pool.
             IERC20Upgradeable(_tokens[i]).safeTransferFrom(msg.sender, address(this), _amounts[i]);
         }
 
-        uint256 underlyingAfter = totalUnderlying();
-        uint256 newShare = underlyingAfter.sub(underlyingBefore).mul(WAD).div(index);
-        totalShares = totalShares.add(newShare);
-        userShare[msg.sender] = userShare[msg.sender].add(newShare);
+        uint256 _underlyingAfter = totalUnderlying();
+        uint256 _newAmount = _underlyingAfter.sub(_underlyingBefore);
+        uint256 _newShare = _newAmount.mul(WAD).div(index);
+        totalShares = totalShares.add(_newShare);
+        userShare[msg.sender] = userShare[msg.sender].add(_newShare);
 
-        emit Minted(msg.sender, _tokens, _amounts, newShare, underlyingAfter.sub(underlyingBefore));
+        emit Minted(msg.sender, _tokens, _amounts, _newShare, _newAmount);
     }
 
     /**
@@ -128,29 +129,30 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
-        uint256 redeemShare;
-        uint256 redeemAmount = _amount;
+        uint256 _share;
         if (_amount == uint256(-1)) {
-            redeemShare = userShare[msg.sender];
-            redeemAmount = redeemShare.mul(index).div(WAD);
+            _share = userShare[msg.sender];
+            _amount = _share.mul(index).div(WAD);
         } else {
-            redeemShare  = _amount.mul(WAD).div(index);
+            _share  = _amount.mul(WAD).div(index);
         }
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        uint256 withdrawRatio = MathUpgradeable.min(liquidityRatio(), MAX_PERCENT - redeemFee);
-        uint256 fee = redeemAmount.mul(MAX_PERCENT.sub(withdrawRatio)).div(MAX_PERCENT);
+        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
+        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
+        uint256 _fee = _amount.mul(_withdrawAmount);
 
-        address[] memory redeemTokens = tokenList;
-        uint256[] memory redeemAmounts = new uint256[](tokenList.length);
-        for (uint256 i = 0; i < redeemTokens.length; i++) {
-            uint256 balance = IERC20Upgradeable(redeemTokens[i]).balanceOf(address(this));
-            if (balance == 0)   continue;
+        address[] memory _redeemTokens = tokens;
+        uint256[] memory _redeemAmounts = new uint256[](tokens.length);
+        for (uint256 i = 0; i < _redeemTokens.length; i++) {
+            uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
+            if (_balance == 0)   continue;
 
-            redeemAmounts[i] = balance.mul(redeemShare).mul(withdrawRatio).div(totalShares).div(MAX_PERCENT);
+            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_amount);
         }
 
-        return (redeemTokens, redeemAmounts, redeemShare, fee);
+        return (_redeemTokens, _redeemAmounts, _share, _fee);
     }
 
     /**
@@ -165,34 +167,35 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
-        uint256 redeemShare;
-        uint256 redeemAmount = _amount;
+        uint256 _share;
         if (_amount == uint256(-1)) {
-            redeemShare = userShare[msg.sender];
-            redeemAmount = redeemShare.mul(index).div(WAD);
+            _share = userShare[msg.sender];
+            _amount = _share.mul(index).div(WAD);
         } else {
-            redeemShare  = _amount.mul(WAD).div(index);
+            _share  = _amount.mul(WAD).div(index);
         }
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        uint256 withdrawRatio = MathUpgradeable.min(liquidityRatio(), MAX_PERCENT - redeemFee);
-        uint256 fee = redeemAmount.mul(MAX_PERCENT.sub(withdrawRatio)).div(MAX_PERCENT);
+        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
+        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
+        uint256 _fee = _amount.mul(_withdrawAmount);
 
-        address[] memory redeemTokens = tokenList;
-        uint256[] memory redeemAmounts = new uint256[](tokenList.length);
-        for (uint256 i = 0; i < redeemTokens.length; i++) {
-            uint256 balance = IERC20Upgradeable(redeemTokens[i]).balanceOf(address(this));
-            if (balance == 0)   continue;
+        address[] memory _redeemTokens = tokens;
+        uint256[] memory _redeemAmounts = new uint256[](tokens.length);
+        for (uint256 i = 0; i < _redeemTokens.length; i++) {
+            uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
+            if (_balance == 0)   continue;
 
-            redeemAmounts[i] = balance.mul(redeemShare).mul(withdrawRatio).div(totalShares).div(MAX_PERCENT);
-            IERC20Upgradeable(redeemTokens[i]).safeTransfer(msg.sender, redeemAmounts[i]);
+            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_amount);
+            IERC20Upgradeable(_redeemTokens[i]).safeTransfer(msg.sender, _redeemAmounts[i]);
         }
 
         // Updates the balance
-        totalShares = totalShares.sub(redeemShare);
-        userShare[msg.sender] = userShare[msg.sender].sub(redeemShare);
+        totalShares = totalShares.sub(_share);
+        userShare[msg.sender] = userShare[msg.sender].sub(_share);
 
-        emit Redeemed(msg.sender, redeemTokens, redeemAmounts, redeemShare, redeemAmount, fee);
+        emit Redeemed(msg.sender, _redeemTokens, _redeemAmounts, _share, _amount, _fee);
     }
 
     /**
@@ -201,7 +204,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      * @param _paused Whether minting with that token is paused.
      */
     function setMintPaused(address _token, bool _paused) external onlyStrategist {
-        require(tokens[_token], "no token");
+        require(tokenSupported[_token], "no token");
         require(mintPaused[_token] != _paused, "no change");
 
         mintPaused[_token] = _paused;
@@ -233,11 +236,12 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Udpates the minimum liquidity ratio. Only governance can update minimum liquidity ratio.
      */
     function setMinLiquidityRatio(uint256 _minLiquidityRatio) external onlyGovernance {
-        require(_minLiquidityRatio <= MAX_PERCENT, "min liquidity ratio too big");
-        uint256 oldRatio = minLiquidityRatio;
+        require(_minLiquidityRatio <= WAD, "ratio too big");
+        require(_minLiquidityRatio >= liquidityRatio(), "ratio too small");
+        uint256 _oldRatio = minLiquidityRatio;
 
         minLiquidityRatio = _minLiquidityRatio;
-        emit MinLiquidityRatioUpdated(oldRatio, _minLiquidityRatio);
+        emit MinLiquidityRatioUpdated(_oldRatio, _minLiquidityRatio);
     }
 
     /**
@@ -246,10 +250,10 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      */
     function addToken(address _token) external onlyGovernance {
         require(_token != address(0x0), "token not set");
-        require(!tokens[_token], "token exists");
+        require(!tokenSupported[_token], "token exists");
 
-        tokens[_token] = true;
-        tokenList.push(_token);
+        tokenSupported[_token] = true;
+        tokens.push(_token);
 
         emit TokenAdded(_token);
     }
@@ -261,23 +265,23 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      */
     function removeToken(address _token) external onlyGovernance {
         require(_token != address(0x0), "token not set");
-        require(tokens[_token], "token not exists");
+        require(tokenSupported[_token], "token not exists");
         require(IERC20Upgradeable(_token).balanceOf(address(this)) == 0, "nonzero balance");
 
-        uint256 tokenSize = tokenList.length;
-        uint256 tokenIndex = tokenSize;
-        for (uint256 i = 0; i < tokenSize; i++) {
-            if (tokenList[i] == _token) {
-                tokenIndex = i;
+        uint256 _tokenSize = tokens.length;
+        uint256 _tokenIndex = _tokenSize;
+        for (uint256 i = 0; i < _tokenSize; i++) {
+            if (tokens[i] == _token) {
+                _tokenIndex = i;
                 break;
             }
         }
         // We must have found the token!
-        assert(tokenIndex < tokenSize);
+        assert(_tokenIndex < _tokenSize);
 
-        tokenList[tokenIndex] = tokenList[tokenSize - 1];
-        tokenList.pop();
-        delete tokens[_token];
+        tokens[_tokenIndex] = tokens[_tokenSize - 1];
+        tokens.pop();
+        delete tokenSupported[_token];
         // Delete the mint paused state as well
         delete mintPaused[_token];
 
@@ -288,7 +292,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Return the total number of tokens.
      */
     function tokenSize() external view returns (uint256) {
-        return tokenList.length;
+        return tokens.length;
     }
 
     /**
@@ -304,11 +308,11 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Rebase first to make index up-to-date
         rebase();
-        uint256 underlyingBefore = totalUnderlying();
+        uint256 _underlyingBefore = totalUnderlying();
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             if (_amounts[i] == 0)   continue;
-            require(tokens[_tokens[i]], "token not exist");
+            require(tokenSupported[_tokens[i]], "token not exist");
 
             IERC20Upgradeable(_tokens[i]).safeTransfer(_rebalancer, _amounts[i]);
         }
@@ -316,10 +320,10 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
         IRebalancer(_rebalancer).rebalance(_tokens, _amounts, _data);
 
         // Check post-rebalance conditions.
-        uint256 underlyingAfter = totalUnderlying();
-        uint256 supply = totalSupply();
-        require(underlyingAfter < supply.mul(minLiquidityRatio).div(MAX_PERCENT), "too much loss");
+        uint256 _underlyingAfter = totalUnderlying();
+        uint256 _supply = totalSupply();
+        require(_underlyingAfter < _supply.mul(minLiquidityRatio).div(WAD), "too much loss");
 
-        emit Rebalanced(underlyingBefore, underlyingAfter, supply);
+        emit Rebalanced(_underlyingBefore, _underlyingAfter, _supply);
     }
 }

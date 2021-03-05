@@ -25,8 +25,8 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     event Minted(address indexed user, uint256 amount, uint256 mintShare, uint256 mintAmount);
     event Redeemed(address indexed user, uint256 amount, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
 
-    event StrategyListUpdated(address indexed _strategy, bool _approved);
-    event ActiveStrategyUpdated(address indexed _oldActiveStrategy, address indexed _newActiveStrategy);
+    event StrategyListUpdated(address indexed strategy, bool approved);
+    event ActiveStrategyUpdated(address indexed oldActiveStrategy, address indexed newActiveStrategy);
     
     // Underlying token of the single plus toke. Typically a yield token and
     // not value peg.
@@ -45,15 +45,15 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     function initialize(address _token, string memory _nameOverride, string memory _symbolOverride) public initializer {
         token = _token;
 
-        string memory name = _nameOverride;
-        string memory symbol = _symbolOverride;
-        if (bytes(name).length == 0) {
-            name = string(abi.encodePacked(ERC20Upgradeable(_token).name(), " Plus"));
+        string memory _name = _nameOverride;
+        string memory _symbol = _symbolOverride;
+        if (bytes(_name).length == 0) {
+            _name = string(abi.encodePacked(ERC20Upgradeable(_token).name(), " Plus"));
         }
-        if (bytes(symbol).length == 0) {
-            symbol = string(abi.encodePacked(ERC20Upgradeable(_token).symbol(), "+"));
+        if (bytes(_symbol).length == 0) {
+            _symbol = string(abi.encodePacked(ERC20Upgradeable(_token).symbol(), "+"));
         }
-        __PlusToken__init(name, symbol);
+        __PlusToken__init(_name, _symbol);
         __ReentrancyGuard_init();
     }
 
@@ -72,31 +72,31 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @param _amount Amount of underlying token withdraw.
      */
     function _withdraw(address _receiver, uint256  _amount) internal {
-        IERC20Upgradeable underlying = IERC20Upgradeable(token);
-        uint256 balance = underlying.balanceOf(address(this));
+        IERC20Upgradeable _underlying = IERC20Upgradeable(token);
+        uint256 _balance = _underlying.balanceOf(address(this));
 
-        if (balance < _amount) {
-            address strategy = activeStrategy;
-            require(strategy != address(0x0), "no active strategy");
-            IStrategy(strategy).withdraw(_amount.sub(balance));
+        if (_balance < _amount) {
+            address _strategy = activeStrategy;
+            require(_strategy != address(0x0), "no active strategy");
+            IStrategy(_strategy).withdraw(_amount.sub(_balance));
         }
-        balance = underlying.balanceOf(address(this));
+        _balance = _underlying.balanceOf(address(this));
 
         // Sends the minimum to avoid rounding errors
-        underlying.safeTransfer(_receiver, MathUpgradeable.min(balance, _amount));
+        _underlying.safeTransfer(_receiver, MathUpgradeable.min(_balance, _amount));
     }
 
     /**
      * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
      */
     function totalUnderlying() public view virtual override returns (uint256) {
-        uint256 balance = IERC20Upgradeable(token).balanceOf(address(this));
-        address strategy = activeStrategy;
-        if (strategy != address(0x0)) {
-            balance = balance.add(IStrategy(strategy).balance());
+        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
+        address _strategy = activeStrategy;
+        if (_strategy != address(0x0)) {
+            _balance = _balance.add(IStrategy(_strategy).balance());
         }
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return balance.mul(_getConversionRate()).div(WAD);
+        return _balance.mul(_getConversionRate()).div(WAD);
     }
 
     /**
@@ -122,13 +122,13 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
         // Transfers the underlying token in.
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        uint256 newAmount = _amount.mul(_getConversionRate()).div(WAD);
+        uint256 _newAmount = _amount.mul(_getConversionRate()).div(WAD);
         // Index is in WAD
-        uint256 newShare = newAmount.mul(WAD).div(index);
-        totalShares = totalShares.add(newShare);
-        userShare[msg.sender] = userShare[msg.sender].add(newShare);
+        uint256 _newShare = _newAmount.mul(WAD).div(index);
+        totalShares = totalShares.add(_newShare);
+        userShare[msg.sender] = userShare[msg.sender].add(_newShare);
 
-        emit Minted(msg.sender, _amount, newShare, newAmount);
+        emit Minted(msg.sender, _amount, _newShare, _newAmount);
     }
 
     /**
@@ -139,17 +139,13 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256) {
         require(_amount > 0, "zero amount");
 
-        // Special handling of -1 is required here in order to fully redeem all shares, since interest
-        // will be accrued between the redeem transaction is signed and mined.
-        uint256 share = _amount.mul(WAD).div(index);
-
-        uint256 fee = 0;
+        uint256 _fee = 0;
         if (redeemFee > 0) {
-            fee = _amount.mul(redeemFee).div(MAX_PERCENT);
-            _amount = _amount.sub(fee);   
+            _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+            _amount = _amount.sub(_fee);   
         }
         // Note: Fee is in plus token(18 decimals) but the received amount is in underlying token!
-        return (_amount.mul(WAD).div(_getConversionRate()), fee);
+        return (_amount.mul(WAD).div(_getConversionRate()), _fee);
     }
 
     /**
@@ -164,27 +160,25 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
 
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
-        uint256 redeemShare;
-        uint256 redeemAmount;
+        uint256 _share;
         if (_amount == uint256(-1)) {
-            redeemShare = userShare[msg.sender];
-            redeemAmount = redeemShare.mul(index).div(WAD);
+            _share = userShare[msg.sender];
+            _amount = _share.mul(index).div(WAD);
         } else {
-            redeemShare  = _amount.mul(WAD).div(index);
-            redeemAmount = _amount;
+            _share  = _amount.mul(WAD).div(index);
         }
 
-        uint256 fee = redeemAmount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
         // Conversion rate is in WAD
-        uint256 underlyingAmount = redeemAmount.sub(fee).mul(WAD).div(_getConversionRate());
+        uint256 _underlyingAmount = _amount.sub(_fee).mul(WAD).div(_getConversionRate());
 
-        _withdraw(msg.sender, underlyingAmount);
+        _withdraw(msg.sender, _underlyingAmount);
 
         // Updates the balance
-        totalShares = totalShares.sub(redeemShare);
-        userShare[msg.sender] = userShare[msg.sender].sub(redeemShare);
+        totalShares = totalShares.sub(_share);
+        userShare[msg.sender] = userShare[msg.sender].sub(_share);
 
-        emit Redeemed(msg.sender, underlyingAmount, redeemShare, redeemAmount, fee);
+        emit Redeemed(msg.sender, _underlyingAmount, _share, _amount, _fee);
     }
 
     /**
@@ -244,13 +238,13 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     }
 
     function _setActiveStrategy(address _strategy) internal {
-        address oldActiveStrategy = activeStrategy;
-        if (oldActiveStrategy != address(0x0)) {
-            IStrategy(oldActiveStrategy).withdrawAll();
+        address _oldActiveStrategy = activeStrategy;
+        if (_oldActiveStrategy != address(0x0)) {
+            IStrategy(_oldActiveStrategy).withdrawAll();
         }
 
         activeStrategy = _strategy;
-        emit ActiveStrategyUpdated(oldActiveStrategy, _strategy);
+        emit ActiveStrategyUpdated(_oldActiveStrategy, _strategy);
 
         invest();
     }
@@ -260,13 +254,14 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * Only BTC+, governance and strategists can invoke this function.
      */
     function invest() public virtual onlyStrategist {
-        if (activeStrategy == address(0x0)) return;
+        address _strategy = activeStrategy;
+        if (_strategy == address(0x0)) return;
 
-        IERC20Upgradeable underlying = IERC20Upgradeable(token);
-        uint256 balance = underlying.balanceOf(address(this));
-        if (balance > 0) {
-            underlying.safeTransfer(activeStrategy, balance);
-            IStrategy(activeStrategy).deposit();
+        IERC20Upgradeable _underlying = IERC20Upgradeable(token);
+        uint256 _balance = _underlying.balanceOf(address(this));
+        if (_balance > 0) {
+            _underlying.safeTransfer(_strategy, _balance);
+            IStrategy(_strategy).deposit();
         }
     }
 
@@ -275,8 +270,9 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * Only BTC+, governance and strategists can invoke this function.
      */
     function harvest() public virtual onlyStrategist {
-        if (activeStrategy != address(0x0)) {
-            IStrategy(activeStrategy).harvest();
+        address _strategy = activeStrategy;
+        if (_strategy != address(0x0)) {
+            IStrategy(_strategy).harvest();
             // It's time to rebase after harvest!
             rebase();
         }

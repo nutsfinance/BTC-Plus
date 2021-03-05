@@ -118,14 +118,14 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * @dev Accrues interest to increase index.
      */
     function rebase() public {
-        uint256 underlying = totalUnderlying();
-        uint256 supply = totalSupply();
+        uint256 _underlying = totalUnderlying();
+        uint256 _supply = totalSupply();
         // Supply might be larger than underlyiing in a short period of time after rebalancing.
-        if (underlying > supply) {
-            uint256 oldIndex = index;
+        if (_underlying > _supply) {
+            uint256 _oldIndex = index;
             // Index can never decrease
-            uint256 newIndex = underlying.mul(WAD).div(totalShares);
-            index = newIndex;
+            uint256 _newIndex = _underlying.mul(WAD).div(totalShares);
+            index = _newIndex;
 
             for (uint256 i = 0; i < transactions.length; i++) {
                 Transaction storage transaction = transactions[i];
@@ -135,7 +135,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
                 }
             }
 
-            emit Rebased(oldIndex, newIndex);
+            emit Rebased(_oldIndex, _newIndex);
         }
     }
 
@@ -145,9 +145,9 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual override {
         // Rebase first to make index up-to-date
         rebase();
-        uint256 shareToTransfer = _amount.mul(WAD).div(index);
-        userShare[_sender] = userShare[_sender].sub(shareToTransfer, "insufficient share");
-        userShare[_recipient] = userShare[_recipient].add(shareToTransfer);
+        uint256 _shareToTransfer = _amount.mul(WAD).div(index);
+        userShare[_sender] = userShare[_sender].sub(_shareToTransfer, "insufficient share");
+        userShare[_recipient] = userShare[_recipient].add(_shareToTransfer);
     }
 
     /*********************************************
@@ -160,19 +160,19 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * @dev Updates governance. Only governance can update governance.
      */
     function setGovernance(address _governance) external onlyGovernance {
-        address oldGovernance = governance;
+        address _oldGovernance = governance;
         governance = _governance;
-        emit GovernanceUpdated(oldGovernance, _governance);
+        emit GovernanceUpdated(_oldGovernance, _governance);
     }
 
     /**
      * @dev Updates strategist. Only strategist can update strategist.
      */
-    function setStrategist(address _strategist, bool allowed) external onlyStrategist {
+    function setStrategist(address _strategist, bool _allowed) external onlyStrategist {
         require(_strategist != address(0x0), "strategist not set");
 
-        strategists[_strategist] = allowed;
-        emit StrategistUpdated(_strategist, allowed);
+        strategists[_strategist] = _allowed;
+        emit StrategistUpdated(_strategist, _allowed);
     }
 
     /**
@@ -181,9 +181,9 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function setTreasury(address _treasury) external onlyGovernance {
         require(_treasury != address(0x0), "treasury not set");
 
-        address oldTreasury = treasury;
+        address _oldTreasury = treasury;
         treasury = _treasury;
-        emit TreasuryUpdated(oldTreasury, _treasury);
+        emit TreasuryUpdated(_oldTreasury, _treasury);
     }
 
     /**
@@ -191,10 +191,10 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      */
     function setRedeemFee(uint256 _redeemFee) external onlyGovernance {
         require(_redeemFee <= MAX_PERCENT, "redeem fee too big");
-        uint256 oldFee = redeemFee;
+        uint256 _oldFee = redeemFee;
 
         redeemFee = _redeemFee;
-        emit RedeemFeeUpdated(oldFee, _redeemFee);
+        emit RedeemFeeUpdated(_oldFee, _redeemFee);
     }
 
     /**
@@ -202,9 +202,9 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * The salvaged ETH is transferred to treasury for futher operation.
      */
     function salvage() external onlyStrategist {
-        uint256 amount = address(this).balance;
-        address payable target = payable(treasury);
-        (bool success, ) = target.call{value: amount}(new bytes(0));
+        uint256 _amount = address(this).balance;
+        address payable _target = payable(treasury);
+        (bool success, ) = _target.call{value: _amount}(new bytes(0));
         require(success, 'ETH salvage failed');
     }
 
@@ -216,8 +216,8 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function salvageToken(address _token) external onlyStrategist {
         require(_token != address(0x0), "token not set");
 
-        IERC20Upgradeable token = IERC20Upgradeable(_token);
-        token.safeTransfer(treasury, token.balanceOf(address(this)));
+        IERC20Upgradeable _target = IERC20Upgradeable(_token);
+        _target.safeTransfer(treasury, _target.balanceOf(address(this)));
     }
 
     /**
