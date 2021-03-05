@@ -54,24 +54,6 @@ contract("BTC+", async ([owner, treasury, strategist, user1, user2, user3, btcPl
         await btcPlus.addPool(token2.address, pool2.address)
     });
 
-    it("should allow governance to update governance", async () => {
-        await expectRevert(btcPlus.setGovernance(user1, {from: strategist}), "not governance");
-        await btcPlus.setGovernance(user1);
-        assert.strictEqual(await btcPlus.governance(), user1);
-    });
-
-    it("should allow strategist to update strategist", async () => {
-        await expectRevert(btcPlus.setStrategist(user2, true, {from: user1}), "not strategist");
-        await btcPlus.setStrategist(user2, true, {from: strategist});
-        assert.strictEqual(await btcPlus.strategists(user2), true);
-    });
-
-    it("should allow governance to update treasury", async () => {
-        await expectRevert(btcPlus.setTreasury(user2, {from: strategist}), "not governance");
-        await btcPlus.setTreasury(user2);
-        assert.strictEqual(await btcPlus.treasury(), user2);
-    });
-
     it("should allow governance to update rebalancer", async () => {
         await expectRevert(btcPlus.setRebalancer(user2, {from: strategist}), "not governance");
         await btcPlus.setRebalancer(user2);

@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/nutsfinance/BTC-Plus#readme",
   "devDependencies": {
+    "@openzeppelin/test-helpers": "^0.5.10",
     "dotenv": "^8.2.0",
     "solidity-coverage": "^0.6.7",
     "truffle-hdwallet-provider": "^1.0.6",

@@ -353,6 +353,6 @@ contract GaugeController is Initializable, IGaugeController {
         // Need to checkpoint with the token removed!
         checkpoint();
 
-        emit GaugeWeightUpdated(_gauge, oldWeight, _weight, _dynamic, oldRate, _rate);
+        emit GaugeUpdated(_gauge, oldWeight, _weight, _dynamic, oldRate, _rate);
     }
 }

@@ -138,7 +138,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
         }
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        uint256 withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
+        uint256 withdrawRatio = MathUpgradeable.min(liquidityRatio(), MAX_PERCENT - redeemFee);
         uint256 fee = redeemAmount.mul(MAX_PERCENT.sub(withdrawRatio)).div(MAX_PERCENT);
 
         address[] memory redeemTokens = tokenList;
@@ -175,7 +175,7 @@ contract CompositePlus is Plus, ReentrancyGuardUpgradeable {
         }
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        uint256 withdrawRatio = MathUpgradeable.min(getLiquidityRatio(), MAX_PERCENT - redeemFee);
+        uint256 withdrawRatio = MathUpgradeable.min(liquidityRatio(), MAX_PERCENT - redeemFee);
         uint256 fee = redeemAmount.mul(MAX_PERCENT.sub(withdrawRatio)).div(MAX_PERCENT);
 
         address[] memory redeemTokens = tokenList;
