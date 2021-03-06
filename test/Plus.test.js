@@ -5,6 +5,7 @@ const MockPlus = artifacts.require("MockPlus");
 const MockToken = artifacts.require("MockToken");
 
 const toWei = web3.utils.toWei;
+const MAX = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1));
 
 contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
     let plus;
@@ -166,5 +167,94 @@ contract("Plus", async ([owner, treasury, strategist, user1, user2, user3]) => {
         await plus.rebase();
 
         assert.strictEqual((await token.balanceOf(user3)).toString(), "45000");
+    });
+
+    it("should allow anyone to donate", async () => {
+        await plus.mintShares(user1, toWei("10"));
+        await plus.increment(toWei("2"));
+        await plus.rebase();
+        await plus.mintShares(user2, toWei("4"));
+
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("16.8"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("14"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("10"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("12"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("4.8"));
+        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("16.8"));
+
+        await plus.donate(toWei("7.2"), {from: user1});
+
+        // After donation, it seems that 7.2 plus is redeemed
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("9.6"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("8"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("4.8"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("4.8"));
+        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("10.5"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1.75"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("16.8"));
+
+        await plus.rebase();
+
+        // After the next rebase, the 7.2 plus is distributed evenly to all users!
+        assert.strictEqual((await plus.index()).toString(), toWei("2.1"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("16.8"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("8"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("8.4"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("8.4"));
+        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("16.8"));
+    });
+
+    it("should allow anyone to donate", async () => {
+        await plus.mintShares(user1, toWei("10"));
+        await plus.increment(toWei("2"));
+        await plus.rebase();
+        await plus.mintShares(user2, toWei("4"));
+
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("16.8"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("14"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("10"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("12"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("4.8"));
+        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("16.8"));
+
+        await plus.donate(MAX, {from: user1});
+
+        // After donation, it seems that 12 plus is redeemed
+        assert.strictEqual((await plus.index()).toString(), toWei("1.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("4.8"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("4"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("0"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("0"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("4.8"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("16.8"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("3.5"));
+        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("21"));
+        await plus.rebase();
+
+        // After the next rebase, the 7.2 plus is distributed evenly to all users!
+        assert.strictEqual((await plus.index()).toString(), toWei("4.2"));
+        assert.strictEqual((await plus.totalSupply()).toString(), toWei("16.8"));
+        assert.strictEqual((await plus.totalShares()).toString(), toWei("4"));
+        assert.strictEqual((await plus.userShare(user1)).toString(), toWei("0"));
+        assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("0"));
+        assert.strictEqual((await plus.userShare(user2)).toString(), toWei("4"));
+        assert.strictEqual((await plus.balanceOf(user2)).toString(), toWei("16.8"));
+        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
+        assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
+        assert.strictEqual((await plus.totalUnderlying()).toString(), toWei("16.8"));
     });
 });

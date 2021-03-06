@@ -23,6 +23,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     using SafeMathUpgradeable for uint256;
 
     event Rebased(uint256 oldIndex, uint256 newIndex, uint256 totalUnderlying);
+    event Donated(address indexed account, uint256 amount, uint256 share);
 
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
     event StrategistUpdated(address indexed strategist, bool allowed);
@@ -160,6 +161,29 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
             // Interest generated can be computed as _underlying - _underlying * _oldIndex / _newIndex
             emit Rebased(_oldIndex, _newIndex, _underlying);
         }
+    }
+
+    /**
+     * @dev Allows anyone to donate their plus asset to all other holders.
+     * @param _amount Amount of plus token to donate.
+     */
+    function donate(uint256 _amount) public {
+        // Rebase first to make index up-to-date
+        rebase();
+        // Special handling of -1 is required here in order to fully donate all shares, since interest
+        // will be accrued between the donate transaction is signed and mined.
+        uint256 _share;
+        if (_amount == uint256(-1)) {
+            _share = userShare[msg.sender];
+            _amount = _share.mul(index).div(WAD);
+        } else {
+            _share  = _amount.mul(WAD).div(index);
+        }
+
+        userShare[msg.sender] = userShare[msg.sender].sub(_share, "insufficient share");
+        totalShares = totalShares.sub(_share);
+
+        emit Donated(msg.sender, _amount, _share);
     }
 
     /**
