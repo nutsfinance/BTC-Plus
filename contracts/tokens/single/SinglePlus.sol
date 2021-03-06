@@ -26,22 +26,26 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     event Minted(address indexed user, uint256 amount, uint256 mintShare, uint256 mintAmount);
     event Redeemed(address indexed user, uint256 amount, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
 
-    event StrategyListUpdated(address indexed strategy, bool approved);
-    event ActiveStrategyUpdated(address indexed oldActiveStrategy, address indexed newActiveStrategy);
+    event StrategyUpdated(address indexed strategy, bool approved);
+    event StrategyActivated(address indexed oldActiveStrategy, address indexed newActiveStrategy);
     
-    // Underlying token of the single plus toke. Typically a yield token and
-    // not value peg.
+    // Underlying token of the single plus toke. Typically a yield token and not value peg.
     address public override token;
     // Whether minting is paused for the single plus token.
     bool public mintPaused;
 
-    // Strategies used to earn yield for the underlying token.
+    // Strategies approved to earn yield for the underlying token. Only governance can approve new strategies,
+    // both governance and strategist can revoke strategies.
     mapping(address => bool) public strategies;
-    // Only strategy is active at a time.
+    // Only one strategy is active at a time. A strategy must be approved before activated. Both governance and
+    // strategists can activate strategy.
     address public activeStrategy;
 
     /**
      * @dev Initializes the single plus contract.
+     * @param _token Underlying token of the single plus.
+     * @param _nameOverride If empty, the single plus name will be `token_name Plus`
+     * @param _symbolOverride If empty. the single plus name will be `token_symbol+`
      */
     function initialize(address _token, string memory _nameOverride, string memory _symbolOverride) public initializer {
         token = _token;
@@ -199,11 +203,12 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _setActive Whether to set this strategy as the active strategy.
      */
     function approveStrategy(address _strategy, bool _setActive) public virtual onlyGovernance {
-        require(_strategy != address(0x0), "address not set");
         require(!strategies[_strategy], "already approved");
+        // Makre sure that strategy works
+        IStrategy(_strategy).balance();
 
         strategies[_strategy] = true;
-        emit StrategyListUpdated(_strategy, true);
+        emit StrategyUpdated(_strategy, true);
 
         if (_setActive) {
             _setActiveStrategy(_strategy);
@@ -216,11 +221,10 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _strategy Address of the strategy to revoke.
      */
     function revokeStrategy(address _strategy) external virtual onlyStrategist {
-        require(_strategy != address(0x0), "address not set");
         require(strategies[_strategy], "not approved");
 
         strategies[_strategy] = false;
-        emit StrategyListUpdated(_strategy, false);
+        emit StrategyUpdated(_strategy, false);
 
         // If the strategy to revoke is the current active strategy, clears the active strategy.
         if (_strategy == activeStrategy) {
@@ -245,7 +249,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         }
 
         activeStrategy = _strategy;
-        emit ActiveStrategyUpdated(_oldActiveStrategy, _strategy);
+        emit StrategyActivated(_oldActiveStrategy, _strategy);
 
         invest();
     }

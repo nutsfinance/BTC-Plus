@@ -12,7 +12,7 @@ import "../interfaces/IStrategy.sol";
  * @notice Base contract of Strategy.
  * 
  * This contact defines common properties and functions shared by all strategies.
- * One strategy is bound to one plusToken and cannot be changed.
+ * One strategy is bound to one single plus and cannot be changed.
  */
 abstract contract StrategyBase is IStrategy, Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -20,26 +20,26 @@ abstract contract StrategyBase is IStrategy, Initializable {
     event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
     event WithdrawalFeeUpdated(uint256 oldWithdrawFee, uint256 newWithdrawFee);
 
-    address public plusToken;
+    address public plus;
     uint256 public performanceFee;
     uint256 public constant PERCENT_MAX = 10000;    // 0.01%
 
-    function __StrategyBase_init(address _plusToken) internal initializer {
-        require(_plusToken != address(0x0), "plus token not set");
-        plusToken = _plusToken;
+    function __StrategyBase_init(address _plus) internal initializer {
+        require(_plus != address(0x0), "plus token not set");
+        plus = _plus;
     }
 
-    function _checkPlusToken() internal view {
-        require(msg.sender == plusToken, "not plus token");
+    function _checkPlus() internal view {
+        require(msg.sender == plus, "not plus token");
     }
 
-    modifier onlyPlusToken {
-        _checkPlusToken();
+    modifier onlyPlus {
+        _checkPlus();
         _;
     }
 
     function _checkGovernance() internal view {
-        require(msg.sender == plusToken || msg.sender == ISinglePlus(plusToken).governance(), "not governance");
+        require(msg.sender == plus || msg.sender == ISinglePlus(plus).governance(), "not governance");
     }
 
     modifier onlyGovernance() {
@@ -48,7 +48,7 @@ abstract contract StrategyBase is IStrategy, Initializable {
     }
 
     function _checkStrategist() internal view {
-        require(msg.sender == plusToken || msg.sender == ISinglePlus(plusToken).governance() || ISinglePlus(plusToken).strategists(msg.sender), "not strategist");
+        require(msg.sender == plus || msg.sender == ISinglePlus(plus).governance() || ISinglePlus(plus).strategists(msg.sender), "not strategist");
     }
 
     modifier onlyStrategist() {
@@ -68,21 +68,21 @@ abstract contract StrategyBase is IStrategy, Initializable {
     }
 
     /**
-     * @dev Used to salvage any ETH deposited into the plusToken by mistake.
-     * Only governance or strategist can salvage ETH from the plusToken.
+     * @dev Used to salvage any ETH deposited into the plus by mistake.
+     * Only governance or strategist can salvage ETH from the plus.
      * The salvaged ETH is transferred to treasury for futher operation.
      */
     function salvage() public onlyStrategist {
         uint256 amount = address(this).balance;
-        address payable target = payable(ISinglePlus(plusToken).treasury());
+        address payable target = payable(ISinglePlus(plus).treasury());
         (bool success, ) = target.call{value: amount}(new bytes(0));
         require(success, 'ETH salvage failed');
     }
 
     /**
-     * @dev Used to salvage any token deposited into the plusToken by mistake.
+     * @dev Used to salvage any token deposited into the plus by mistake.
      * The want token cannot be salvaged.
-     * Only governance or strategist can salvage token from the plusToken.
+     * Only governance or strategist can salvage token from the plus.
      * The salvaged token is transferred to treasury for futhuer operation.
      * @param _tokenAddress Token address to salvage.
      */
@@ -93,7 +93,7 @@ abstract contract StrategyBase is IStrategy, Initializable {
         }
 
         IERC20Upgradeable token = IERC20Upgradeable(_tokenAddress);
-        token.safeTransfer(ISinglePlus(plusToken).treasury(), token.balanceOf(address(this)));
+        token.safeTransfer(ISinglePlus(plus).treasury(), token.balanceOf(address(this)));
     }
 
     /**

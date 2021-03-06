@@ -63,6 +63,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         for (uint256 i = 0; i < tokens.length; i++) {
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
             // minted is the amount of all plus tokens in the basket added.
+            // Note: All plus tokens, single or composite, have 18 decimals.
             _amount = _amount.add(IERC20Upgradeable(tokens[i]).balanceOf(address(this)));
         }
 
@@ -79,11 +80,12 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _amount = 0;
         for (uint256 i = 0; i < _tokens.length; i++) {
             require(!mintPaused[_tokens[i]], "token paused");
-            require(tokenSupported[_tokens[i]], "token not exist");
+            require(tokenSupported[_tokens[i]], "token not supported");
             if (_amounts[i] == 0) continue;
 
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
             // minted is the amount of all tokens to mint added.
+            // Note: All plus tokens, single or composite, have 18 decimals.
             _amount = _amount.add(_amounts[i]);
         }
 
@@ -100,24 +102,22 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
         // Rebase first to make index up-to-date
         rebase();
-        uint256 _underlyingBefore = _totalUnderlying();
+        uint256 _amount = 0;
         for (uint256 i = 0; i < _tokens.length; i++) {
+            require(tokenSupported[_tokens[i]], "token not supported");
+            require(!mintPaused[_tokens[i]], "token paused");
             if (_amounts[i] == 0) continue;
 
-            require(tokenSupported[_tokens[i]], "token not exist");
-            require(!mintPaused[_tokens[i]], "token paused");
-
+            _amount = _amount.add(_amounts[i]);
             // Transfers the token into pool.
             IERC20Upgradeable(_tokens[i]).safeTransferFrom(msg.sender, address(this), _amounts[i]);
         }
 
-        uint256 _underlyingAfter = _totalUnderlying();
-        uint256 _newAmount = _underlyingAfter.sub(_underlyingBefore);
-        uint256 _newShare = _newAmount.mul(WAD).div(index);
+        uint256 _newShare = _amount.mul(WAD).div(index);
         totalShares = totalShares.add(_newShare);
         userShare[msg.sender] = userShare[msg.sender].add(_newShare);
 
-        emit Minted(msg.sender, _tokens, _amounts, _newShare, _newAmount);
+        emit Minted(msg.sender, _tokens, _amounts, _newShare, _amount);
     }
 
     /**
@@ -139,13 +139,14 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         }
 
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
+        // Liquidity ratio is in WAD and redeem fee is in 0.01%
         uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
         uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
         uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
         uint256 _fee = _amount.sub(_withdrawAmount);
 
         address[] memory _redeemTokens = tokens;
-        uint256[] memory _redeemAmounts = new uint256[](tokens.length);
+        uint256[] memory _redeemAmounts = new uint256[](_redeemTokens.length);
         uint256 _totalSupply = totalSupply();
         for (uint256 i = 0; i < _redeemTokens.length; i++) {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
@@ -184,7 +185,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _fee = _amount.sub(_withdrawAmount);
 
         address[] memory _redeemTokens = tokens;
-        uint256[] memory _redeemAmounts = new uint256[](tokens.length);
+        uint256[] memory _redeemAmounts = new uint256[](_redeemTokens.length);
         uint256 _totalSupply = totalSupply();
         for (uint256 i = 0; i < _redeemTokens.length; i++) {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
@@ -207,7 +208,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _paused Whether minting with that token is paused.
      */
     function setMintPaused(address _token, bool _paused) external onlyStrategist {
-        require(tokenSupported[_token], "no token");
+        require(tokenSupported[_token], "not supported");
         require(mintPaused[_token] != _paused, "no change");
 
         mintPaused[_token] = _paused;
@@ -267,7 +268,6 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _token The plus token to remove from the basket.
      */
     function removeToken(address _token) external onlyGovernance {
-        require(_token != address(0x0), "token not set");
         require(tokenSupported[_token], "token not exists");
         require(IERC20Upgradeable(_token).balanceOf(address(this)) == 0, "nonzero balance");
 
@@ -314,8 +314,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _underlyingBefore = _totalUnderlying();
 
         for (uint256 i = 0; i < _tokens.length; i++) {
+            require(tokenSupported[_tokens[i]], "token not supported");
             if (_amounts[i] == 0)   continue;
-            require(tokenSupported[_tokens[i]], "token not exist");
 
             IERC20Upgradeable(_tokens[i]).safeTransfer(_rebalancer, _amounts[i]);
         }
@@ -325,7 +325,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Check post-rebalance conditions.
         uint256 _underlyingAfter = _totalUnderlying();
         uint256 _supply = totalSupply();
-        require(_underlyingAfter < _supply.mul(minLiquidityRatio).div(WAD), "too much loss");
+        // _underlyingAfter / _supply > minLiquidityRatio
+        require(_underlyingAfter > _supply.mul(minLiquidityRatio).div(WAD), "too much loss");
 
         emit Rebalanced(_underlyingBefore, _underlyingAfter, _supply);
     }
