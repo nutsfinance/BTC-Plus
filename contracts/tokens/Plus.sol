@@ -59,6 +59,13 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     // Governance parameters
     uint256 public redeemFee;
 
+    // EIP 2612: Permit
+    // Credit: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2ERC20.sol
+    bytes32 public DOMAIN_SEPARATOR;
+    // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+    mapping(address => uint) public nonces;
+
     /**
      * @dev Initializes the plus token contract.
      */
@@ -67,6 +74,20 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         index = WAD;
         governance = msg.sender;
         treasury = msg.sender;
+
+        uint _chainId;
+        assembly {
+            _chainId := chainid()
+        }
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
+                keccak256(bytes(_name)),
+                keccak256(bytes('1')),
+                _chainId,
+                address(this)
+            )
+        );
     }
 
     function _checkGovernance() internal view {
@@ -195,6 +216,23 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         uint256 _shareToTransfer = _amount.mul(WAD).div(index);
         userShare[_sender] = userShare[_sender].sub(_shareToTransfer, "insufficient share");
         userShare[_recipient] = userShare[_recipient].add(_shareToTransfer);
+    }
+
+    /**
+     * @dev Gassless approve.
+     */
+    function permit(address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external {
+        require(_deadline >= block.timestamp, 'expired');
+        bytes32 _digest = keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, nonces[_owner]++, _deadline))
+            )
+        );
+        address _recoveredAddress = ecrecover(_digest, _v, _r, _s);
+        require(_recoveredAddress != address(0) && _recoveredAddress == _owner, 'invalid signature');
+        _approve(_owner, _spender, _value);
     }
 
     /*********************************************
