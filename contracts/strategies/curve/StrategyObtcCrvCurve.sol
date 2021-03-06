@@ -29,12 +29,12 @@ contract StrategyObtcCrvCurve is StrategyCurveBase {
     /**
      * @dev Initializes the strategy.
      */
-    function initialize(address _plusToken) public initializer {
-        __StrategyCurveBase__init(_plusToken, OBTCCRV_GAUGE, OBTC_DEPOSIT);
+    function initialize(address _plus) public initializer {
+        __StrategyCurveBase__init(_plus, OBTCCRV_GAUGE, OBTC_DEPOSIT);
     }
     
     /**
-     * @dev Claims CRV from Curve and convert it back to renCRV. Only plusToken, governance and strategist can harvest.
+     * @dev Claims CRV from Curve and convert it back to renCRV. Only plus, governance and strategist can harvest.
      */
     function harvest() public override onlyStrategist {
         // Step 1: Claims CRV from Curve
@@ -78,7 +78,7 @@ contract StrategyObtcCrvCurve is StrategyCurveBase {
             IERC20Upgradeable(wbtc).safeApprove(curve, wbtcBalance);
             ICurveFi(curve).add_liquidity([0, 0, wbtcBalance, 0], 0);
         }
-        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plusToken).token());
+        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plus).token());
         uint256 tokenBalance = token.balanceOf(address(this));
         if (tokenBalance == 0) {
             return;
@@ -86,7 +86,7 @@ contract StrategyObtcCrvCurve is StrategyCurveBase {
         uint256 feeAmount = 0;
         if (performanceFee > 0) {
             feeAmount = tokenBalance.mul(performanceFee).div(PERCENT_MAX);
-            token.safeTransfer(ISinglePlus(plusToken).treasury(), feeAmount);
+            token.safeTransfer(ISinglePlus(plus).treasury(), feeAmount);
         }
         deposit();
 

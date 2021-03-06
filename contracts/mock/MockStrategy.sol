@@ -10,9 +10,9 @@ import "./MockToken.sol";
 contract MockStrategy is StrategyBase {
     MockToken token;
 
-    function initialize(address _plusToken) public initializer {
-        __StrategyBase_init(_plusToken);
-        token = MockToken(ISinglePlus(_plusToken).token());
+    function initialize(address _plus) public initializer {
+        __StrategyBase_init(_plus);
+        token = MockToken(ISinglePlus(_plus).token());
     }
 
     /**
@@ -31,7 +31,7 @@ contract MockStrategy is StrategyBase {
      * @dev Withdraws a portional amount of assets from the Strategy.
      */
     function withdraw(uint256 _amount) public override {
-        token.transfer(plusToken, _amount);
+        token.transfer(plus, _amount);
     }
 
     /**
@@ -39,7 +39,7 @@ contract MockStrategy is StrategyBase {
      */
     function withdrawAll() public override returns (uint256) {
         uint256 amount = balance();
-        token.transfer(plusToken, amount);
+        token.transfer(plus, amount);
 
         return amount;
     }
