@@ -22,7 +22,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    event Rebased(uint256 oldIndex, uint256 newIndex);
+    event Rebased(uint256 oldIndex, uint256 newIndex, uint256 totalUnderlying);
 
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
     event StrategistUpdated(address indexed strategist, bool allowed);
@@ -156,7 +156,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
                 }
             }
 
-            emit Rebased(_oldIndex, _newIndex);
+            emit Rebased(_oldIndex, _newIndex, _underlying);
         }
     }
 
