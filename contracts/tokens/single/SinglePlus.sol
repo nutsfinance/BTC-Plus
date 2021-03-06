@@ -278,4 +278,13 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
             rebase();
         }
     }
+
+    /**
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
+     */
+    function _salvageable(address _token) internal view override returns (bool) {
+        // For single plus, the only token that cannot salvage is the underlying token!
+        return _token != token;
+    }
 }

@@ -47,6 +47,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     uint256 public totalShares;
     mapping(address => uint256) public userShare;
     // The exchange rate between total shares and BTC+ total supply. Express in WAD.
+    // It's equal to the amount of plus token per share.
     // Note: The index will never decrease!
     uint256 public index;
 
@@ -141,7 +142,8 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function rebase() public {
         uint256 _underlying = _totalUnderlying();
         uint256 _supply = totalSupply();
-        // Supply might be larger than underlyiing in a short period of time after rebalancing.
+        // _underlying - _supply is the interest generated and should be distributed via rebase.
+        // _supply might be larger than _underlying in a short period of time after rebalancing in composite plus.
         if (_underlying > _supply) {
             uint256 _oldIndex = index;
             // Index can never decrease
@@ -155,7 +157,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
                     require(success, "rebase hook failed");
                 }
             }
-
+            // Interest generated can be computed as _underlying - _underlying * _oldIndex / _newIndex
             emit Rebased(_oldIndex, _newIndex, _underlying);
         }
     }
@@ -187,7 +189,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     }
 
     /**
-     * @dev Updates strategist. Only strategist can update strategist.
+     * @dev Updates strategist. Both governance and strategists can update strategist.
      */
     function setStrategist(address _strategist, bool _allowed) external onlyStrategist {
         require(_strategist != address(0x0), "strategist not set");
@@ -230,12 +232,19 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     }
 
     /**
-     * @dev Used to salvage any token deposited to BTC+ contract by mistake. Only strategist can salvage token.
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
+     */
+    function _salvageable(address _token) internal view virtual returns (bool);
+
+    /**
+     * @dev Used to salvage any token deposited to plus contract by mistake. Only strategist can salvage token.
      * The salvaged token is transferred to treasury for futhuer operation.
      * @param _token Address of the token to salvage.
      */
     function salvageToken(address _token) external onlyStrategist {
         require(_token != address(0x0), "token not set");
+        require(_salvageable(_token), "cannot salvage");
 
         IERC20Upgradeable _target = IERC20Upgradeable(_token);
         _target.safeTransfer(treasury, _target.balanceOf(address(this)));

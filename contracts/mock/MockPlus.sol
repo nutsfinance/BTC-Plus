@@ -33,4 +33,12 @@ contract MockPlus is Plus {
         userShare[user] += amount;
         underlyingAmount += amount * index / WAD; 
     }
+
+    /**
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
+     */
+    function _salvageable(address _token) internal view override returns (bool) {
+        return true;
+    }
 }

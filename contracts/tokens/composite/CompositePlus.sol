@@ -329,4 +329,13 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
         emit Rebalanced(_underlyingBefore, _underlyingAfter, _supply);
     }
+
+    /**
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
+     */
+    function _salvageable(address _token) internal view override returns (bool) {
+        // For composite plus, all tokens in the basekt cannot be salvaged!
+        return !tokenSupported[_token];
+    }
 }
