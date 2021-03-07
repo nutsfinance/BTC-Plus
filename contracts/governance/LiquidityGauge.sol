@@ -11,56 +11,65 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 
 import "../interfaces/IGaugeController.sol";
 import "../interfaces/IGauge.sol";
-import "../interfaces/IPlus.sol";
 import "../interfaces/IUniPool.sol";
 import "../interfaces/IVotingEscrow.sol";
 
 /**
  * @dev Liquidity gauge that stakes token and earns reward.
  * 
- * Note: The liquidity gauge is tokenized so that it's 1:1 with the staked token.
+ * Note: The liquidity gauge is tokenized so that it's 1:1 with the staked token. Therefore,
+ * Total supply of gauge token = Total amount of token staked
+ * Balance of gauge token for a user = Amount of token staked by the user
  * Credit: https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/gauges/LiquidityGaugeV2.vy
  */
 contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    event LiquidityLimitUpdated(address indexed account, uint256 balance, uint256 supply, uint256 oldWorkingSupply,
-        uint256 oldWorkingBalance, uint256 newWorkingBalance, uint256 newWorkingSupply);
+    event LiquidityLimitUpdated(address indexed account, uint256 balance, uint256 supply, uint256 oldWorkingBalance,
+        uint256 oldWorkingSupply, uint256 newWorkingBalance, uint256 newWorkingSupply);
     event Deposited(address indexed account, uint256 amount);
-    event Withdrawn(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount, uint256 fee);
     event RewardContractUpdated(address indexed oldRewardContract, address indexed newRewardContract, address[] rewardTokens);
+    event WithdrawFeeUpdated(uint256 oldWithdrawFee, uint256 newWithdrawFee);
 
     uint256 constant TOKENLESS_PRODUCTION = 40;
     uint256 constant WAD = 10**18;
+    uint256 constant MAX_PERCENT = 10000;   // 0.01%
 
+    // Token staked in the liquidity gauge
     address public override token;
+    // AC token
     address public reward;
+    // Gauge controller
     address public controller;
     address public votingEscrow;
+    // AC emission rate per seconds in the gauge
     uint256 public rate;
+    uint256 public withdrawFee;
 
     uint256 public workingSupply;
     mapping(address => uint256) public workingBalances;
 
     uint256 public integral;
+    // Last global checkpoint timestamp
     uint256 public lastCheckpoint;
+    // Integral of the last user checkpoint
     mapping(address => uint256) public integralOf;
+    // Timestamp of the last user checkpoint
     mapping(address => uint256) public checkpointOf;
 
     address public rewardContract;
     address[] public rewardTokens;
+    // Reward token address => Reward token integral
     mapping(address => uint256) public rewardIntegral;
+    // Reward token address => (User address => Reward integral of the last user reward checkpoint)
     mapping(address => mapping(address => uint256)) public rewardIntegralOf;
 
     /**
      * @dev Initlaizes the liquidity gauge contract.
      */
     function initialize(address _token, address _controller, address _votingEscrow) public initializer {
-        require(_token != address(0x0), "token not set");
-        require(_controller != address(0x0), "controller not set");
-        require(_votingEscrow != address(0x0), "voting escrow not set");
-
         token = _token;
         controller = _controller;
         reward = IGaugeController(_controller).reward();
@@ -72,39 +81,31 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
-     * @dev Returns the total amount of single plus tokens staked in the gauge.
-     */
-    function totalAmount() public view virtual override returns (uint256) {
-        // The liquidity gauge token is 1:1 with the staked token and both have 18 decimals.
-        return IPlus(token).underlying(totalSupply());
-    }
-
-    /**
      * @dev Important: Updates the working balance of the user to effectively apply
      * boosting on liquidity mining.
      * @param _account Address to update liquidity limit
      */
     function _updateLiquidityLimit(address _account) internal {
-        IERC20Upgradeable escrow = IERC20Upgradeable(votingEscrow);
-        uint256 votingBalance = escrow.balanceOf(_account);
-        uint256 votingTotal = escrow.totalSupply();
+        IERC20Upgradeable _votingEscrow = IERC20Upgradeable(votingEscrow);
+        uint256 _votingBalance = _votingEscrow.balanceOf(_account);
+        uint256 _votingTotal = _votingEscrow.totalSupply();
 
-        uint256 balance = balanceOf(_account);
-        uint256 supply = totalSupply();
-        uint256 limit = balance.mul(TOKENLESS_PRODUCTION).div(100);
-        if (votingTotal > 0) {
-            uint256 boosting = supply.mul(votingBalance).mul(100 - TOKENLESS_PRODUCTION).div(votingTotal).div(100);
-            limit = limit.add(boosting);
+        uint256 _balance = balanceOf(_account);
+        uint256 _supply = totalSupply();
+        uint256 _limit = _balance.mul(TOKENLESS_PRODUCTION).div(100);
+        if (_votingTotal > 0) {
+            uint256 _boosting = _supply.mul(_votingBalance).mul(100 - TOKENLESS_PRODUCTION).div(_votingTotal).div(100);
+            _limit = _limit.add(_boosting);
         }
 
-        limit = MathUpgradeable.min(balance, limit);
-        uint256 oldWorkingBalance = workingBalances[_account];
-        uint256 oldWorkingSupply = workingSupply;
-        workingBalances[_account] = limit;
-        uint256 newWorkingSupply = oldWorkingSupply.add(limit).sub(oldWorkingBalance);
-        workingSupply = newWorkingSupply;
+        _limit = MathUpgradeable.min(_balance, _limit);
+        uint256 _oldWorkingBalance = workingBalances[_account];
+        uint256 _oldWorkingSupply = workingSupply;
+        workingBalances[_account] = _limit;
+        uint256 _newWorkingSupply = _oldWorkingSupply.add(_limit).sub(_oldWorkingBalance);
+        workingSupply = _newWorkingSupply;
 
-        emit LiquidityLimitUpdated(_account, balance, supply, oldWorkingSupply, oldWorkingBalance, limit, newWorkingSupply);
+        emit LiquidityLimitUpdated(_account, _balance, _supply, _oldWorkingBalance, _oldWorkingSupply, _limit, _newWorkingSupply);
     }
 
     /**
@@ -112,36 +113,37 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _account Address of the user to checkpoint reward. Zero means global checkpoint only.
      */
     function _checkpointRewards(address _account) internal {
-        uint256 supply = totalSupply();
-        address unipool = rewardContract;
-        address[] memory rewardList = rewardTokens;
-        uint256[] memory rewardBalances = new uint256[](rewardList.length);
+        uint256 _supply = totalSupply();
+        address _rewardContract = rewardContract;
+        address[] memory _rewardList = rewardTokens;
+        uint256[] memory _rewardBalances = new uint256[](_rewardList.length);
         // No op if nothing is staked yet!
-        if (supply == 0 || unipool == address(0x0) || rewardList.length == 0) return;
+        if (_supply == 0 || _rewardContract == address(0x0) || _rewardList.length == 0) return;
 
         // Reads balance for each reward token
-        for (uint256 i = 0; i < rewardList.length; i++) {
-            rewardBalances[i] = IERC20Upgradeable(rewardList[i]).balanceOf(address(this));
+        for (uint256 i = 0; i < _rewardList.length; i++) {
+            _rewardBalances[i] = IERC20Upgradeable(_rewardList[i]).balanceOf(address(this));
         }
-        IUniPool(unipool).getReward();
+        IUniPool(_rewardContract).getReward();
         
-        uint256 balance = balanceOf(_account);
+        uint256 _balance = balanceOf(_account);
         // Checks balance increment for each reward token
-        for (uint256 i = 0; i < rewardList.length; i++) {
-            uint256 diff = IERC20Upgradeable(rewardList[i]).balanceOf(address(this)).sub(rewardBalances[i]).mul(WAD).div(supply);
-            uint256 newIntegral = rewardIntegral[rewardList[i]].add(diff);
-            if (diff != 0) {
-                rewardIntegral[rewardList[i]] = newIntegral;
+        for (uint256 i = 0; i < _rewardList.length; i++) {
+            // Integral is in WAD
+            uint256 _diff = IERC20Upgradeable(_rewardList[i]).balanceOf(address(this)).sub(_rewardBalances[i]).mul(WAD).div(_supply);
+            uint256 _newIntegral = rewardIntegral[_rewardList[i]].add(_diff);
+            if (_diff != 0) {
+                rewardIntegral[_rewardList[i]] = _newIntegral;
             }
             if (_account == address(0x0))   continue;
 
-            uint256 userIntegral = rewardIntegralOf[rewardList[i]][_account];
-            if (userIntegral < newIntegral) {
-                uint256 claimable = balance.mul(newIntegral.sub(userIntegral)).div(WAD);
-                rewardIntegralOf[rewardList[i]][_account] = newIntegral;
+            uint256 _userIntegral = rewardIntegralOf[_rewardList[i]][_account];
+            if (_userIntegral < _newIntegral) {
+                uint256 _claimable = _balance.mul(_newIntegral.sub(_userIntegral)).div(WAD);
+                rewardIntegralOf[_rewardList[i]][_account] = _newIntegral;
 
-                if (claimable > 0) {
-                    IERC20Upgradeable(rewardList[i]).safeTransfer(_account, claimable);
+                if (_claimable > 0) {
+                    IERC20Upgradeable(_rewardList[i]).safeTransfer(_account, _claimable);
                 }
             }
         }
@@ -152,20 +154,22 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _account User address to checkpoint. Zero to do global checkpoint only.
      */
     function _checkpoint(address _account) internal {
-        uint256 diffTime = block.timestamp.sub(lastCheckpoint);
-        if (diffTime > 0) {
-            uint256 newIntegral = integral.add(rate.mul(diffTime).div(workingSupply));
-            integral = newIntegral;
-            lastCheckpoint = block.timestamp;
+        uint256 _diffTime = block.timestamp.sub(lastCheckpoint);
+        uint256 _workingSupply = workingSupply;
+        if (_diffTime == 0 || _workingSupply == 0)  return;
 
-            if (_account == address(0x0))   return;
+        // Both rate and integral are in WAD
+        uint256 _newIntegral = integral.add(rate.mul(_diffTime).div(_workingSupply));
+        integral = _newIntegral;
+        lastCheckpoint = block.timestamp;
 
-            uint256 amount = workingBalances[_account].mul(newIntegral.sub(integralOf[_account])).div(WAD);
-            integralOf[_account] = newIntegral;
-            checkpointOf[_account] = block.timestamp;
+        if (_account == address(0x0))   return;
 
-            IGaugeController(controller).claim(_account, amount);
-        }
+        uint256 _amount = workingBalances[_account].mul(_newIntegral.sub(integralOf[_account])).div(WAD);
+        integralOf[_account] = _newIntegral;
+        checkpointOf[_account] = block.timestamp;
+
+        IGaugeController(controller).claim(_account, _amount);
     }
 
     /**
@@ -227,11 +231,11 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * has another voting event, or their lock expires.
      */
     function kick(address _account) external nonReentrant {
-        IVotingEscrow escrow = IVotingEscrow(votingEscrow);
-        uint256 lastUserCheckpoint = checkpointOf[_account];
-        uint256 lastUserEvent = escrow.user_point_history__ts(_account, escrow.user_point_epoch(_account));
+        address _votingEscrow = votingEscrow;
+        uint256 _lastUserCheckpoint = checkpointOf[_account];
+        uint256 _lastUserEvent = IVotingEscrow(_votingEscrow).user_point_history__ts(_account, IVotingEscrow(_votingEscrow).user_point_epoch(_account));
 
-        require(IERC20Upgradeable(address(escrow)).balanceOf(_account) == 0 || lastUserEvent > lastUserCheckpoint, "kick not allowed");
+        require(IERC20Upgradeable(_votingEscrow).balanceOf(_account) == 0 || _lastUserEvent > _lastUserCheckpoint, "kick not allowed");
 
         _checkpoint(_account);
         _updateLiquidityLimit(_account);
@@ -247,13 +251,15 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
 
+        // Gauge token is 1:1 with the staked token
         _mint(msg.sender, _amount);
         _updateLiquidityLimit(msg.sender);
 
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
 
-        if (rewardContract != address(0x0)) {
-            IUniPool(rewardContract).stake(_amount);
+        address _rewardContract = rewardContract;
+        if (_rewardContract != address(0x0)) {
+            IUniPool(_rewardContract).stake(_amount);
         }
 
         emit Deposited(msg.sender, _amount);
@@ -272,12 +278,22 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         _burn(msg.sender, _amount);
         _updateLiquidityLimit(msg.sender);
 
-        if (rewardContract != address(0x0)) {
-            IUniPool(rewardContract).withdraw(_amount);
+        address _rewardContract = rewardContract;
+        if (_rewardContract != address(0x0)) {
+            IUniPool(_rewardContract).withdraw(_amount);
+        }
+        
+        uint256 _fee;
+        address _token = token;
+        address _controller = controller;
+        if (withdrawFee > 0) {
+            _fee = _amount.mul(withdrawFee).div(MAX_PERCENT);
+            IERC20Upgradeable(_token).safeTransfer(_controller, _fee);
+            IGaugeController(_controller).processFee(_token);
         }
 
-        IERC20Upgradeable(token).safeTransfer(msg.sender, _amount);
-        emit Withdrawn(msg.sender, _amount);
+        IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount.sub(_fee));
+        emit Withdrawn(msg.sender, _amount, _fee);
     }
 
     /**
@@ -320,16 +336,18 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _rewardTokens The reward tokens from the reward contract.
      */
     function setRewards(address _rewardContract, address[] memory _rewardTokens) external onlyGovernance {
-        address currentRewardContract = rewardContract;
-        if (currentRewardContract != address(0x0)) {
+        address _currentRewardContract = rewardContract;
+        address _token = token;
+        if (_currentRewardContract != address(0x0)) {
             _checkpointRewards(address(0x0));
-            IUniPool(rewardContract).exit();
+            IUniPool(_currentRewardContract).exit();
 
-            IERC20Upgradeable(token).safeApprove(currentRewardContract, 0);
+            IERC20Upgradeable(_token).safeApprove(_currentRewardContract, 0);
         }
 
         if (_rewardContract != address(0x0)) {
-            IERC20Upgradeable(token).safeApprove(_rewardContract, uint256(-1));
+            require(_rewardTokens.length > 0, "reward tokens not set");
+            IERC20Upgradeable(_token).safeApprove(_rewardContract, uint256(-1));
             IUniPool(_rewardContract).stake(totalSupply());
 
             rewardContract = _rewardContract;
@@ -339,6 +357,17 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
             _checkpointRewards(address(0x0));
         }
 
-        emit RewardContractUpdated(currentRewardContract, _rewardContract, _rewardTokens);
+        emit RewardContractUpdated(_currentRewardContract, _rewardContract, _rewardTokens);
+    }
+
+    /**
+     * @dev Updates the withdraw fee. Only governance can update withdraw fee.
+     */
+    function setWithdrawFee(uint256 _withdrawFee) external onlyGovernance {
+        require(_withdrawFee <= MAX_PERCENT, "too big");
+        uint256 _oldWithdrawFee = withdrawFee;
+        withdrawFee = _withdrawFee;
+
+        emit WithdrawFeeUpdated(_oldWithdrawFee, _withdrawFee);
     }
 }

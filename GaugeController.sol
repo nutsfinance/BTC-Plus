@@ -17,7 +17,12 @@ import "../interfaces/IGaugeController.sol";
  * The Gauge Controller is responsible for the following:
  * 1) AC emission rate computation;
  * 2) AC emission allocation among liquidity gauges;
- * 3) AC reward claiming.
+ * 3) AC reward claiming;
+ * 4) Liquidity gauge withdraw fee processing.
+ *
+ * Liquidity gauges can be divided into two categories:
+ * 1) Plus gauge: Liquidity gauges for plus tokens, the total rate is dependent on the total staked amount in these gauges;
+ * 2) Non-plus gage: Liquidity gauges for non-plus token, the rate is set by governance.
  */
 contract GaugeController is Initializable, IGaugeController {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -26,18 +31,18 @@ contract GaugeController is Initializable, IGaugeController {
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
     event ClaimerUpdated(address indexed claimer, bool allowed);
     event BaseRateUpdated(uint256 oldBaseRate, uint256 newBaseRate);
-    event TokenAdded(address indexed token);
-    event TokenRemoved(address indexed token);
-    event GaugeAdded(address indexed gauge, uint256 gaugeWeight, bool dynamic, uint256 gaugeRate);
+    event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+    event GaugeAdded(address indexed gauge, uint256 gaugeWeight, bool plus, uint256 gaugeRate);
     event GaugeRemoved(address indexed gauge);
-    event GaugeUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight, bool dynamic, uint256 oldGaugeRate, uint256 newGaugeRate);
+    event GaugeUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight, uint256 oldGaugeRate, uint256 newGaugeRate);
     event Checkpointed(uint256 oldRate, uint256 newRate, uint256 totalSupply, uint256 ratePerToken, address[] gauges, uint256[] guageRates);
     event RewardClaimed(address indexed gauge, address indexed user, uint256 amount);
+    event FeeProcessed(address indexed gauge, address indexed token, uint256 amount);
 
     uint256 constant WAD = 10 ** 18;
     uint256 constant LOG_10_2 = 301029995663981195;  // log10(2) = 0.301029995663981195
     uint256 constant DAY = 86400;
-    uint256 constant MIN_REWARD_THRESHOLD = 10 * WAD;   // The TVL should be at least 10 BTC in order to start liquidity reward
+    uint256 constant REWARD_BOOST_THRESHOLD = 10 * WAD;   // When the total staked amount exceeds 10 BTC, reward boost starts.
 
     address public override governance;
     // AC token
@@ -45,47 +50,51 @@ contract GaugeController is Initializable, IGaugeController {
     // Address => Whether this is claimer address.
     // A claimer can help claim reward on behalf of the user.
     mapping(address => bool) public override claimers;
+    address public treasury;
 
-    // List of supported SINGLE PLUS tokens
-    address[] public tokens;
-    // SINGLE PLUS token address => Whether this single plus is supported
-    mapping(address => bool) public tokenSupported;
+    struct Gauge {
+        // Helps to check whether the gauge is in the gauges list.
+        bool isSupported;
+        // Whether this is a plus gauge. The emission rate for the plus gauges depends on
+        // the total staked value in the plus gauges, while the emission rate for the non-plus
+        // gauges is set by the governance.
+        bool isPlus;
+        // Multiplier applied to the gauge in computing emission rate. Only applied to plus
+        // gauges as non-plus gauges should have fixed rate set by governance.
+        uint256 weight;
+        // AC emission rate of the gauge.
+        uint256 rate;
+    }
+
     // List of supported liquidity gauges
     address[] public gauges;
-    // Liquidity gauge address => Whether the gauge is supported
-    mapping(address => bool) public gaugeSupported;
-    // Liquidity gauge address => Whether the gauge is dynamic
-    // The emission rate for a dynamic gauge changes based on the TVL, while emission rate for
-    // a static gauge is fixed and set by the governance.
-    mapping(address => bool) public dynamicGauges;
-    // Liquidity gauge address => Liquidity gauge weight(in WAD)
-    // Gauge weight is the multiplier applied to each gauge in computing
-    // AC emission rate for invidual gauge. Base weight is WAD.
-    mapping(address => uint256) public gaugeWeights;
-    // Liquidity gauge address => AC emission rate(in WAD)
-    mapping(address => uint256) public override gaugeRates;
+    // Liquidity gauge address => Liquidity gauge data
+    mapping(address => Gauge) public gaugeData;
 
-    // Base AC emission rate
-    uint256 public baseRate;
-    // Global AC emission rate
+    // Base AC emission rate for plus gauges when TVL is below REWARD_BOOST_THRESHOLD
+    uint256 public basePlusGaugeRate;
+    // Boost for all plus gauges. 1 when TVL is below REWARD_BOOST_THRESHOLD
+    uint256 public plusGaugeBoost;
+    // Global AC emission rate, including both plus and non-plus gauge.
     uint256 public rate;
     // Total amount of AC rewarded until the latest checkpoint
     uint256 public totalReward;
     // Last time the checkpoint is called
-    uint256 public lastUpdateTimestamp;
+    uint256 public lastCheckpoint;
     // Mapping: Gauge address => Mapping: User address => Total claimed amount for this user in this gauge
     mapping(address => mapping(address => uint256)) public override claimed;
 
     /**
      * @dev Initializes the gauge controller.
+     * @param _reward AC token address.
+     * @param _basePlusGaugeDayRate Amount of AC rewarded per day for plus gauges if no boost is applied.
      */
-    function initialize(address _reward, uint256 _baseDayRate) public initializer {
-        require(_reward != address(0x0), "reward not set");
-        
+    function initialize(address _reward, uint256 _basePlusGaugeDayRate) public initializer {        
         governance = msg.sender;
+        treasury = msg.sender;
         reward = _reward;
-        baseRate = _baseDayRate / DAY;    // Base rate is in seconds
-        lastUpdateTimestamp = block.timestamp;
+        basePlusGaugeRate = _basePlusGaugeDayRate / DAY;    // Base rate is in seconds
+        lastCheckpoint = block.timestamp;
     }
 
     /**
@@ -131,52 +140,63 @@ contract GaugeController is Initializable, IGaugeController {
      * large amount of minting, others can restore to the correct mining paramters.
      */
     function checkpoint() public {
-        uint256 totalSupply = 0;
-        // Computes the total supply for all supported SINGLE plus tokens
-        for (uint256 i = 0; i < tokens.length; i++) {
-            totalSupply = totalSupply.add(IERC20Upgradeable(tokens[i]).totalSupply());
+        // Loads the gauge list for better performance
+        address[] memory _gauges = gauges;
+        // The total amount of plus tokens staked
+        uint256 _totalPlus = 0;
+        // Amount of plus token staked in each gauge
+        uint256[] memory _gaugePlus = new uint256[](_gauges.length);
+        uint256 _plusGaugeBoost = WAD;
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            // Don't count if it's non-plus gauge
+            if (!gaugeData[_gauges[i]].isPlus) continue;
+            // Liquidity gauge token total supply equal the underlying amount staked in the gauge for plus gauges
+            _gaugePlus[i] = IPlus(_gauges[i]).underlying(IERC20Upgradeable(_gauge[i]).totalSupply());
+            _totalPlus = _totalPlus.add(_gaugePlus[i]);
         }
-        // Computes the AC emission per token. The AC emission rate is determined by TVL, which
-        // is the sum of all single plus total supply.
-        uint256 ratePerToken = 0;
-        // The minimum TVL to start liquidity reward is 10
-        if (totalSupply > MIN_REWARD_THRESHOLD) {
-            // rate = baseRate * (log TVL - 1)
-            // Minus 18 since the TVL is in WAD
-            ratePerToken = baseRate.mul(_log10(totalSupply) - 1 - 18).mul(WAD).div(totalSupply);
+        if (_totalPlus == 0)    return;
+
+        // Computes the AC emission per plus. The AC emission rate is determined by total plus staked.
+        uint256 _ratePerPlus = 0;
+        // The boost breakpoint is 10 BTC
+        if (_totalPlus > REWARD_BOOST_THRESHOLD) {
+            // rate = baseRate * (log total - 1)
+            // Minus 19 since the TVL is in WAD
+            _plusGaugeBoost = _log10(_totalPlus) - 19 * WAD;
         }
+        _ratePerPlus = _basePlusGaugeRate.mul(_plusGaugeBoost).div(_totalPlus);
 
         // Allocates AC emission rates for each liquidity gauge
-        uint256 oldRate = rate;
-        uint256 totalRate;
-        // Loads the gauge list for better performance
-        address[] memory gaugeList = gauges;
-        uint256[] memory newGaugeRates = new uint256[](gaugeList.length);
-        for (uint256 i = 0; i < gaugeList.length; i++) {
-            if (dynamicGauges[gaugeList[i]]) {
-                // AC emission rate for dynamic gauge is proportional to total amount of SINGLE plus staked times gauge weight.
+        uint256 _oldRate = rate;
+        uint256 _totalRate;
+        uint256[] memory _gaugeRates = new uint256[](_gauges.length);
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            if (gaugeData[_gauges[i]].isPlus) {
+                // AC emission rate for dynamic gauge is proportional to total amount of plus staked times gauge weight.
                 // Divided by WAD since ratePerToken is in WAD
-                newGaugeRates[i] = IGauge(gaugeList[i]).totalAmount().mul(ratePerToken).mul(gaugeWeights[gaugeList[i]]).div(WAD);
-                gaugeRates[gaugeList[i]] = newGaugeRates[i];
+                _gaugeRates[i] = _gaugePlus[i].mul(_ratePerPlus).mul(gaugeData[_gauges[i]].weight).div(WAD);
+                // Update the rate for plus gauges
+                gaugeData[_gauges[i]].rate = _gaugeRates[i];
             } else {
-                // AC emission rate for static gauge is fixed and set by the governance
-                newGaugeRates[i] = gaugeRates[gaugeList[i]];
+                // AC emission rate for non-plus gauge is fixed and set by the governance
+                _gaugeRates[i] = gaugeData[_gauges[i]].rate;
             }
-            totalRate = totalRate.add(newGaugeRates[i]);
+            _totalRate = _totalRate.add(_gaugeRates[i]);
         }
 
         // Checkpoints gauge controller
-        totalReward = totalReward.add(rate.mul(block.timestamp.sub(lastUpdateTimestamp)));
+        totalReward = totalReward.add(rate.mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
         lastUpdateTimestamp = block.timestamp;
-        rate = totalRate;
+        rate = _totalRate;
+        plusGaugeBoost = _plusGaugeBoost;
 
         // Checkpoints each gauge to consume the latest rate
         // We trigger gauge checkpoint after all parameters are updated
-        for (uint256 i = 0; i < gaugeList.length; i++) {
-            IGauge(gaugeList[i]).checkpoint();
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            IGauge(_gauges[i]).checkpoint();
         }
 
-        emit Checkpointed(oldRate, totalRate, totalSupply, ratePerToken, gaugeList, newGaugeRates);
+        emit Checkpointed(_oldRate, _totalRate, _totalPlus, _ratePerPlus, _gauges, _gaugeRates);
     }
 
     /**
@@ -185,7 +205,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @param _amount Amount of AC to claim
      */
     function claim(address _account, uint256 _amount) external override {
-        require(gaugeSupported[msg.sender], "gauge not supported");
+        require(gaugeSupported[msg.sender], "not gauge");
         claimed[msg.sender][_account] = claimed[msg.sender][_account].add(_amount);
         IERC20Upgradeable(reward).safeTransfer(_account, _amount);
 
@@ -211,9 +231,9 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Updates governance. Only governance can update governance.
      */
     function setGovernance(address _governance) external onlyGovernance {
-        address oldGovernance = governance;
+        address _oldGovernance = governance;
         governance = _governance;
-        emit GovernanceUpdated(oldGovernance, _governance);
+        emit GovernanceUpdated(_oldGovernance, _governance);
     }
 
     /**
@@ -227,8 +247,8 @@ contract GaugeController is Initializable, IGaugeController {
     /**
      * @dev Updates the AC emission base rate. Only governance can update the base rate.
      */
-    function setBaseRate(uint256 _baesDayRate) external onlyGovernance {
-        uint256 oldBaseRate = baseRate;
+    function setBasePlusGaugeRate(uint256 _baesPlusGaugeDayRate) external onlyGovernance {
+        uint256 _oldRate = basePlusGateRate;
         baseRate = _baesDayRate / DAY;    // Base rate is in seconds.
         // Need to checkpoint with the base rate update!
         checkpoint();
@@ -237,59 +257,24 @@ contract GaugeController is Initializable, IGaugeController {
     }
 
     /**
-     * @dev Adds a new single plus token to the gauge controller. Only governance can add new single plus.
-     * @param _token The new single plus to add.
+     * @dev Updates the treasury.
      */
-    function addToken(address _token) external onlyGovernance {
-        require(_token != address(0x0), "token not set");
-        require(!tokenSupported[_token], "token supported");
+    function setTreasury(address _treasury) external onlyGovernance {
+        require(_treasury != address(0x0), "treasury not set");
+        address _oldTreasury = treasury;
+        treasury = _treasury;
 
-        tokenSupported[_token] = true;
-        tokens.push(_token);
-
-        // Need to checkpoint with the new token!
-        checkpoint();
-
-        emit TokenAdded(_token);
-    }
-
-    /**
-     * @dev Removes a single plus from gauge controller. Only governance can remove a plus token.
-     * @param _token The plus token to remove from gauge controller.
-     */
-    function removeToken(address _token) external onlyGovernance {
-        require(_token != address(0x0), "token not set");
-        require(tokenSupported[_token], "token not supported");
-
-        uint256 tokenSize = tokens.length;
-        uint256 tokenIndex = tokenSize;
-        for (uint256 i = 0; i < tokenSize; i++) {
-            if (tokens[i] == _token) {
-                tokenIndex = i;
-                break;
-            }
-        }
-        // We must have found the token!
-        assert(tokenIndex < tokenSize);
-
-        tokens[tokenIndex] = tokens[tokenSize - 1];
-        tokens.pop();
-        delete tokenSupported[_token];
-
-        // Need to checkpoint with the token removed!
-        checkpoint();
-
-        emit TokenRemoved(_token);
+        emit TreasuryUpdated(_oldTreasury, _treasury);
     }
 
     /**
      * @dev Adds a new liquidity gauge to the gauge controller. Only governance can add new gauge.
      * @param _gauge The new liquidity gauge to add.
      * @param _weight Weight of the liquidity gauge.
-     * @param _dynamic Whether it's a dynamic or statis gauge
+     * @param _plus Whether it's a plus token gauge.
      * @param _rate Initial AC emission rate for the guage.
      */
-    function addGauge(address _gauge, uint256 _weight, bool _dynamic, uint256 _rate) external onlyGovernance {
+    function addGauge(address _gauge, uint256 _weight, bool _plus, uint256 _rate) external onlyGovernance {
         require(_gauge != address(0x0), "gauge not set");
         require(!gaugeSupported[_gauge], "gauge supported");
 

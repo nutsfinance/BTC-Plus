@@ -42,4 +42,10 @@ interface IGaugeController {
      * @param _amount Amount of AC to claim
      */
     function claim(address _account, uint256 _amount) external;
+
+    /**
+     * @dev Process the fee from liquidity gauge.
+     * @param _token Address of the fee token.
+     */
+    function processFee(address _token) external;
 }
