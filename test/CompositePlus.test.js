@@ -1,17 +1,23 @@
-const { expectRevert, BN } = require('@openzeppelin/test-helpers');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const assert = require('assert');
 const SinglePlus = artifacts.require("SinglePlus");
 const CompositePlus = artifacts.require("CompositePlus");
 const MockToken = artifacts.require("MockToken");
 const MockStrategy = artifacts.require("MockStrategy");
 
-const MAX = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1));
+const BN = web3.utils.BN;
+const MAX = new BN(2).pow(new BN(256)).sub(new BN(1));
 const assertAlmostEqual = function(expectedOrig, actualOrig) {
-    const _1e18 = new BN('10').pow(new BN('18'));
-    const expected = new BN(expectedOrig).div(_1e18).toNumber();
-    const actual = new BN(actualOrig).div(_1e18).toNumber();
-
-    assert.ok(Math.abs(expected - actual) <= 2, `Expected ${expected}, actual ${actual}`);
+    const expected = new BN(expectedOrig);
+    const actual = new BN(actualOrig);
+    
+    if (expected.toString() === "0") {
+        const _1e18 = new BN('10').pow(new BN('18'));
+        assert.ok(actual.muln(100).div(_1e18) <= 1, `Expected ${expected}, actual ${actual}`);
+    } else {
+        const diff = expected.sub(actual).abs().muln(100).div(expected);
+        assert.ok(diff.toNumber() <= 1, `Expected ${expected}, actual ${actual}`);
+    }
 }
 const toWei = web3.utils.toWei;
 
@@ -470,7 +476,7 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         assertAlmostEqual((await composite.totalShares()).toString(), toWei("53"));
 
         // User2 should get 0.792 plus1 and 1.584 plus2
-        assertAlmostEqual((await plus1.balanceOf(user2)).toString(), "792000");
+        assertAlmostEqual((await plus1.balanceOf(user2)).toString(), toWei("0.792"));
         assertAlmostEqual((await plus2.balanceOf(user2)).toString(), toWei("1.584"));
 
         // Should collect the fees after another round of rebase!
