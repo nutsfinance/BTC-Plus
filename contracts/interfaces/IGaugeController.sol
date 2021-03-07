@@ -17,6 +17,11 @@ interface IGaugeController {
     function governance() external view returns (address);
 
     /**
+     * @dev Returns the treasury address.
+     */
+    function treasury() external view returns (address);
+
+    /**
      * @dev Returns the current AC emission rate for the gauge.
      * @param _gauge The liquidity gauge to check AC emission rate.
      */

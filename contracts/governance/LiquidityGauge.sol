@@ -47,6 +47,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     // AC emission rate per seconds in the gauge
     uint256 public rate;
     uint256 public withdrawFee;
+    // List of tokens that cannot be salvaged
+    mapping(address => bool) public unsalvageable;
 
     uint256 public workingSupply;
     mapping(address => uint256) public workingBalances;
@@ -74,6 +76,11 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         controller = _controller;
         reward = IGaugeController(_controller).reward();
         votingEscrow = _votingEscrow;
+
+        // Should not salvage token from the gauge
+        unsalvageable[token] = true;
+        // We allow salvage reward token since the liquidity gauge should not hold reward token. It's
+        // distributed from gauge controller to user directly.
 
         __ERC20_init(string(abi.encodePacked(ERC20Upgradeable(_token).name(), " Gauge Deposit")),
             string(abi.encodePacked(ERC20Upgradeable(_token).symbol(), "-gauge")));
@@ -358,6 +365,13 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
 
             // Complete an initial checkpoint to make sure that everything works.
             _checkpointRewards(address(0x0));
+
+            // Reward contract is tokenized as well
+            unsalvageable[_rewardContract] = true;
+            // Don't salvage any reward token
+            for (uint256 i = 0; i < _rewardTokens.length; i++) {
+                unsalvageable[_rewardTokens[i]] = true;
+            }
         }
 
         emit RewardContractUpdated(_currentRewardContract, _rewardContract, _rewardTokens);
@@ -372,5 +386,28 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         withdrawFee = _withdrawFee;
 
         emit WithdrawFeeUpdated(_oldWithdrawFee, _withdrawFee);
+    }
+
+    /**
+     * @dev Used to salvage any ETH deposited to gauge contract by mistake. Only governance can salvage ETH.
+     * The salvaged ETH is transferred to treasury for futher operation.
+     */
+    function salvage() external onlyGovernance {
+        uint256 _amount = address(this).balance;
+        address payable _target = payable(IGaugeController(controller).treasury());
+        (bool success, ) = _target.call{value: _amount}(new bytes(0));
+        require(success, 'ETH salvage failed');
+    }
+
+    /**
+     * @dev Used to salvage any token deposited to gauge contract by mistake. Only governance can salvage token.
+     * The salvaged token is transferred to treasury for futhuer operation.
+     * @param _token Address of the token to salvage.
+     */
+    function salvageToken(address _token) external onlyGovernance {
+        require(!unsalvageable[_token], "cannot salvage");
+
+        IERC20Upgradeable _target = IERC20Upgradeable(_token);
+        _target.safeTransfer(IGaugeController(controller).treasury(), _target.balanceOf(address(this)));
     }
 }

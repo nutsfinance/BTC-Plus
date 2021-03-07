@@ -11,6 +11,7 @@ contract MockGaugeController is IGaugeController {
 
     address public override reward;
     address public override governance;
+    address public override treasury;
     address public claimer;
     uint256 public rate;
     mapping(address => mapping(address => uint256)) public override claimed;
