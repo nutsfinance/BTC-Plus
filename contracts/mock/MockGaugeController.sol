@@ -12,6 +12,7 @@ contract MockGaugeController is IGaugeController {
     address public override reward;
     address public override governance;
     address public claimer;
+    uint256 public rate;
     mapping(address => mapping(address => uint256)) public override claimed;
 
     constructor(address _reward, address _governance, address _claimer) public {
@@ -20,13 +21,17 @@ contract MockGaugeController is IGaugeController {
         claimer = _claimer;
     }
 
+    function setRate(uint256 _rate) public {
+        rate = _rate;
+    }
+
     /**
      * @dev Returns the current AC emission rate for the gauge.
      * @param _gauge The liquidity gauge to check AC emission rate.
      */
     function gaugeRates(address _gauge) external view override returns (uint256) {
         _gauge;
-        return 10 ** 18;
+        return rate;
     }
 
     /**

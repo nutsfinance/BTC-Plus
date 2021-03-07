@@ -1,4 +1,4 @@
-const { expectRevert, BN } = require('@openzeppelin/test-helpers');
+const { expectRevert, BN, time } = require('@openzeppelin/test-helpers');
 const assert = require('assert');
 const LiquidityGauge = artifacts.require("LiquidityGauge");
 const MockGaugeController = artifacts.require("MockGaugeController");
@@ -6,6 +6,11 @@ const MockToken = artifacts.require("MockToken");
 const MockVotingEscrow = artifacts.require("MockVotingEscrow");
 const MockReward = artifacts.require("MockReward");
 
+async function timeIncreaseTo (seconds) {
+    const delay = 10 - new Date().getMilliseconds();
+    await new Promise(resolve => setTimeout(resolve, delay));
+    await time.increaseTo(seconds);
+}
 const MAX = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1));
 const assertAlmostEqual = function(expectedOrig, actualOrig) {
     const _1e18 = new BN('10').pow(new BN('18'));
@@ -180,5 +185,127 @@ contract("LiquidityGauge", async ([owner, governance, claimer, user1, user2, use
         assert.strictEqual((await rewards[1].balanceOf(user2)).toString(), toWei("15"));
         // 35 * 0.6 = 21
         assert.strictEqual((await rewards[2].balanceOf(user2)).toString(), toWei("21"));
+    });
+    it("should set working balances", async () => {
+        await gauge.setRewards(rewardContract.address, rewardTokens, {from: governance});
+        // user1 stakes 40
+        await token.mint(user1, toWei("40"));
+        await token.approve(gauge.address, toWei("40"), {from: user1});
+        await gauge.deposit(toWei("40"), {from: user1});
+
+        // user2 stakes 60
+        await token.mint(user2, toWei("60"));
+        await token.approve(gauge.address, toWei("60"), {from: user2});
+        await gauge.deposit(toWei("60"), {from: user2});
+
+        assert.strictEqual((await gauge.workingSupply()).toString(), toWei("40"));
+        assert.strictEqual((await gauge.workingBalances(user1)).toString(), toWei("16"));
+        assert.strictEqual((await gauge.workingBalances(user2)).toString(), toWei("24"));
+
+        // Increase voting escrow
+        await voting.setTotalSupply(toWei("60"));
+        await voting.setBalance(user1, toWei("15"));
+        await gauge.claim(user1, true, {from: user1});
+        assert.strictEqual((await gauge.workingSupply()).toString(), toWei("55"));
+        assert.strictEqual((await gauge.workingBalances(user1)).toString(), toWei("31"));
+        assert.strictEqual((await gauge.workingBalances(user2)).toString(), toWei("24"));
+
+        // Increase voting escrow
+        await voting.setBalance(user1, toWei("30"));
+        await gauge.claim(user1, false, {from: user1});
+        assert.strictEqual((await gauge.workingSupply()).toString(), toWei("64"));
+        assert.strictEqual((await gauge.workingBalances(user1)).toString(), toWei("40"));
+        assert.strictEqual((await gauge.workingBalances(user2)).toString(), toWei("24"));
+    });
+    it("should distribute rewards", async () => {
+        let startTime = await time.latest();
+        let now = await time.latest();
+        await timeIncreaseTo(startTime);
+        // NOTE: rate is in WAD!
+        await controller.setRate(toWei(toWei("0.001")));
+        // Must use checkpoint to read the new gauge rate!
+        await gauge.checkpoint();
+
+        // user1 stakes 40
+        await token.mint(user1, toWei("40"));
+        await token.approve(gauge.address, toWei("40"), {from: user1});
+        await gauge.deposit(toWei("40"), {from: user1});
+
+        // After 5000 s
+        // 0.001 * 5000 = 5
+        await timeIncreaseTo(startTime.addn(5000));
+        assert.strictEqual((await gauge.rate()).toString(), toWei(toWei("0.001")));
+        assert.strictEqual((await gauge.integral()).toString(), toWei("0"));
+        assert.strictEqual((await gauge.integralOf(user1)).toString(), "0");
+        assert.strictEqual((await gauge.checkpointOf(user1)).toString(), "0");
+        assert.strictEqual((await gauge.claimable(user1)).toString(), "0");
+        assert.strictEqual((await reward.balanceOf(user1)).toString(), "0");
+
+        // user2 stakes 60
+        await token.mint(user2, toWei("60"));
+        await token.approve(gauge.address, toWei("60"), {from: user2});
+        await gauge.deposit(toWei("60"), {from: user2});
+        now = await time.latest();
+        // The first checkpoint happens after user2 deposit!
+        assert.strictEqual((await gauge.rate()).toString(), toWei(toWei("0.001")));
+        // 5 / 16 = 0.3125
+        assertAlmostEqual((await gauge.integral()).toString(), toWei("0.3125"));
+
+        assert.strictEqual((await gauge.integralOf(user1)).toString(), "0");
+        assert.strictEqual((await gauge.checkpointOf(user1)).toString(), "0");
+        // user1 gets 5
+        assertAlmostEqual((await gauge.claimable(user1)).toString(), toWei("5"));
+        assert.strictEqual((await reward.balanceOf(user1)).toString(), "0");
+        assert.strictEqual((await controller.claimed(gauge.address, user1)).toString(), "0");
+
+        assertAlmostEqual((await gauge.integralOf(user2)).toString(), toWei("0.3125"));
+        assert.strictEqual((await gauge.checkpointOf(user2)).toString(), now.toString());
+        assert.strictEqual((await gauge.claimable(user2)).toString(), "0");
+        assert.strictEqual((await reward.balanceOf(user2)).toString(), "0");
+        assert.strictEqual((await controller.claimed(gauge.address, user2)).toString(), "0");
+
+        // 0.001 * 7000 = 7
+        await timeIncreaseTo(startTime.addn(7000));
+        // user1 claims rewards!
+        await gauge.claim(user1, false, {from: user1});
+        now = await time.latest();
+
+        // 0.3125 + 2 / 40 = 0.3625
+        assertAlmostEqual((await gauge.integral()).toString(), toWei("0.3625"));
+        
+        assertAlmostEqual((await gauge.integralOf(user1)).toString(), "0.3625");
+        assert.strictEqual((await gauge.checkpointOf(user1)).toString(), now.toString());
+        assert.strictEqual((await gauge.claimable(user1)).toString(), toWei("0"));
+        // 5 + 2 * 16 / 40 = 5.8
+        assertAlmostEqual((await reward.balanceOf(user1)).toString(), toWei("5.8"));
+        assertAlmostEqual((await controller.claimed(gauge.address, user1)).toString(), toWei("5.8"));
+
+        assertAlmostEqual((await gauge.integralOf(user2)).toString(), toWei("0.3125"));
+        // 2 * 24 / 40 = 1.2
+        assertAlmostEqual((await gauge.claimable(user2)).toString(), toWei("1.2"));
+        assert.strictEqual((await reward.balanceOf(user2)).toString(), "0");
+        assert.strictEqual((await controller.claimed(gauge.address, user2)).toString(), "0");
+
+        // 0.001 * 10000 = 10
+        await timeIncreaseTo(startTime.addn(10000));
+        // user2 withdraws 20
+        await gauge.withdraw(toWei('20'), {from: user2});
+        now = await time.latest();
+
+        // 0.3625 + 3 / 40 = 0.4375
+        assertAlmostEqual((await gauge.integral()).toString(), toWei("0.4375"));
+        
+        assertAlmostEqual((await gauge.integralOf(user1)).toString(), "0.3625");
+        // 3 * 16 / 40 = 1.2
+        assertAlmostEqual((await gauge.claimable(user1)).toString(), toWei("1.2"));
+        // 5 + 2 * 16 / 40 = 5.8
+        assertAlmostEqual((await reward.balanceOf(user1)).toString(), toWei("5.8"));
+        assertAlmostEqual((await controller.claimed(gauge.address, user1)).toString(), toWei("5.8"));
+
+        assertAlmostEqual((await gauge.integralOf(user2)).toString(), toWei("0.4375"));
+        assert.strictEqual((await gauge.claimable(user2)).toString(), toWei("0"));
+        // 1.2 + 3 * 24 / 40 = 3
+        assertAlmostEqual((await reward.balanceOf(user2)).toString(), toWei("3"));
+        assertAlmostEqual((await controller.claimed(gauge.address, user2)).toString(), toWei("3"));
     });
 });

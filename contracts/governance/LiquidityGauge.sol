@@ -156,7 +156,10 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     function _checkpoint(address _account) internal {
         uint256 _diffTime = block.timestamp.sub(lastCheckpoint);
         uint256 _workingSupply = workingSupply;
-        if (_diffTime == 0 || _workingSupply == 0)  return;
+        if (_diffTime == 0 || _workingSupply == 0) {
+            lastCheckpoint = block.timestamp;
+            return;
+        }
 
         // Both rate and integral are in WAD
         uint256 _newIntegral = integral.add(rate.mul(_diffTime).div(_workingSupply));
