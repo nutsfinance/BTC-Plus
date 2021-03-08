@@ -84,7 +84,7 @@ contract GaugeController is Initializable, IGaugeController {
     // Last time the checkpoint is called
     uint256 public lastCheckpoint;
     // Total amount of AC rewarded until the latest checkpoint
-    uint256 public totalReward;
+    uint256 public lastTotalReward;
     // Total amount of AC claimed so far. totalReward - totalClaimed is the minimum AC balance that should be kept.
     uint256 public totalClaimed;
     // Mapping: Gauge address => Mapping: User address => Total claimed amount for this user in this gauge
@@ -211,7 +211,7 @@ contract GaugeController is Initializable, IGaugeController {
         }
 
         // Checkpoints gauge controller
-        totalReward = totalReward.add(_oldTotalRate.mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
+        lastTotalReward = lastTotalReward.add(_oldTotalRate.mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
         lastCheckpoint = block.timestamp;
         totalRate = _totalRate;
         plusBoost = _plusBoost;
@@ -237,6 +237,21 @@ contract GaugeController is Initializable, IGaugeController {
         IERC20Upgradeable(reward).safeTransfer(_account, _amount);
 
         emit RewardClaimed(msg.sender, _account, _amount);
+    }
+
+    /**
+     * @dev Return the total amount of rewards generated so far.
+     */
+    function totalReward() public view returns (uint256) {
+        return lastTotalReward.add(totalRate.mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
+    }
+
+    /**
+     * @dev Returns the total amount of rewards that can be claimed by user until now.
+     * It can be seen as minimum amount of reward tokens should be buffered in the gauge controller.
+     */
+    function claimable() external view returns (uint256) {
+        return totalReward().sub(totalClaimed);
     }
 
     /**
@@ -400,5 +415,27 @@ contract GaugeController is Initializable, IGaugeController {
         checkpoint();
 
         emit GaugeUpdated(_gauge, _oldWeight, _weight, _oldRate, _rate);
+    }
+
+    /**
+     * @dev Used to salvage any ETH deposited to gauge controller by mistake. Only governance can salvage ETH.
+     * The salvaged ETH is transferred to treasury for futher operation.
+     */
+    function salvage() external onlyGovernance {
+        uint256 _amount = address(this).balance;
+        address payable _target = payable(treasury);
+        (bool success, ) = _target.call{value: _amount}(new bytes(0));
+        require(success, 'ETH salvage failed');
+    }
+
+    /**
+     * @dev Used to salvage any token deposited to gauge controller by mistake. Only governance can salvage token.
+     * The salvaged token is transferred to treasury for futhuer operation.
+     * Note: The gauge controller is not expected to hold any token, so any token is salvageable!
+     * @param _token Address of the token to salvage.
+     */
+    function salvageToken(address _token) external onlyGovernance {
+        IERC20Upgradeable _target = IERC20Upgradeable(_token);
+        _target.safeTransfer(treasury, _target.balanceOf(address(this)));
     }
 }
