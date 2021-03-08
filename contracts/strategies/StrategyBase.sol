@@ -18,7 +18,6 @@ abstract contract StrategyBase is IStrategy, Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
-    event WithdrawalFeeUpdated(uint256 oldWithdrawFee, uint256 newWithdrawFee);
 
     address public plus;
     uint256 public performanceFee;
@@ -73,31 +72,30 @@ abstract contract StrategyBase is IStrategy, Initializable {
      * The salvaged ETH is transferred to treasury for futher operation.
      */
     function salvage() public onlyStrategist {
-        uint256 amount = address(this).balance;
-        address payable target = payable(ISinglePlus(plus).treasury());
-        (bool success, ) = target.call{value: amount}(new bytes(0));
-        require(success, 'ETH salvage failed');
+        uint256 _amount = address(this).balance;
+        address payable _treasury = payable(ISinglePlus(plus).treasury());
+        (bool _success, ) = _treasury.call{value: _amount}(new bytes(0));
+        require(_success, 'ETH salvage failed');
     }
 
     /**
-     * @dev Used to salvage any token deposited into the plus by mistake.
-     * The want token cannot be salvaged.
-     * Only governance or strategist can salvage token from the plus.
+     * @dev Used to salvage any token deposited to strategist contract by mistake. Only strategist can salvage token.
      * The salvaged token is transferred to treasury for futhuer operation.
-     * @param _tokenAddress Token address to salvage.
+     * @param _token Address of the token to salvage.
      */
-    function salvageToken(address _tokenAddress) public onlyStrategist {
-        address[] memory protected = _getProtectedTokens();
-        for (uint256 i = 0; i < protected.length; i++) {
-            require(_tokenAddress != protected[i], "cannot salvage");
-        }
+    function salvageToken(address _token) external onlyStrategist {
+        require(_token != address(0x0), "token not set");
+        require(_salvageable(_token), "cannot salvage");
 
-        IERC20Upgradeable token = IERC20Upgradeable(_tokenAddress);
-        token.safeTransfer(ISinglePlus(plus).treasury(), token.balanceOf(address(this)));
+        IERC20Upgradeable _target = IERC20Upgradeable(_token);
+        address _treasury = ISinglePlus(plus).treasury();
+        _target.safeTransfer(_treasury, _target.balanceOf(address(this)));
     }
 
     /**
-     * @dev Return the list of tokens that should not be salvaged.
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
      */
-    function _getProtectedTokens() internal virtual view returns (address[] memory);
+    function _salvageable(address _token) internal view virtual returns (bool);
+
 }

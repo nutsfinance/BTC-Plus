@@ -39,57 +39,59 @@ contract StrategyObtcCrvCurve is StrategyCurveBase {
     function harvest() public override onlyStrategist {
         // Step 1: Claims CRV from Curve
         ICurveMinter(mintr).mint(gauge);
-        uint256 crvBalance = IERC20Upgradeable(crv).balanceOf(address(this));
+        uint256 _crv = IERC20Upgradeable(crv).balanceOf(address(this));
 
         // Step 2: Sushiswap CRV --> WETH --> WBTC
-        if (crvBalance > 0) {
-            IERC20Upgradeable(crv).safeApprove(sushiswap, 0);
-            IERC20Upgradeable(crv).safeApprove(sushiswap, crvBalance);
+        address _sushiswap = sushiswap;
+        if (_crv > 0) {
+            IERC20Upgradeable(crv).safeApprove(_sushiswap, 0);
+            IERC20Upgradeable(crv).safeApprove(_sushiswap, _crv);
 
             address[] memory path = new address[](3);
             path[0] = crv;
             path[1] = weth;
             path[2] = wbtc;
 
-            IUniswapRouter(sushiswap).swapExactTokensForTokens(crvBalance, uint256(0), path, address(this), now.add(1800));
+            IUniswapRouter(_sushiswap).swapExactTokensForTokens(_crv, uint256(0), path, address(this), now.add(1800));
         }
 
         // Step 3: Claims BOR rewards
         ICurveGauge(gauge).claim_rewards();
-        uint256 borBalance = IERC20Upgradeable(bor).balanceOf(address(this));
+        uint256 _bor = IERC20Upgradeable(bor).balanceOf(address(this));
 
         // Step 4: Sushiswap BOR --> WETH --> WBTC
-        if (borBalance > 0) {
-            IERC20Upgradeable(bor).safeApprove(sushiswap, 0);
-            IERC20Upgradeable(bor).safeApprove(sushiswap, borBalance);
+        if (_bor > 0) {
+            IERC20Upgradeable(bor).safeApprove(_sushiswap, 0);
+            IERC20Upgradeable(bor).safeApprove(_sushiswap, _bor);
 
             address[] memory path = new address[](3);
             path[0] = bor;
             path[1] = weth;
             path[2] = wbtc;
 
-            IUniswapRouter(sushiswap).swapExactTokensForTokens(borBalance, uint256(0), path, address(this), now.add(1800));
+            IUniswapRouter(_sushiswap).swapExactTokensForTokens(_bor, uint256(0), path, address(this), now.add(1800));
         }
 
         // Step 5: Curve WBTC --> obtcCrv
-        uint256 wbtcBalance = IERC20Upgradeable(wbtc).balanceOf(address(this));
-        if (wbtcBalance > 0) {
-            IERC20Upgradeable(wbtc).safeApprove(curve, 0);
-            IERC20Upgradeable(wbtc).safeApprove(curve, wbtcBalance);
-            ICurveFi(curve).add_liquidity([0, 0, wbtcBalance, 0], 0);
+        uint256 _wbtc = IERC20Upgradeable(wbtc).balanceOf(address(this));
+        address _curve = curve;
+        if (_wbtc > 0) {
+            IERC20Upgradeable(wbtc).safeApprove(_curve, 0);
+            IERC20Upgradeable(wbtc).safeApprove(_curve, _wbtc);
+            ICurveFi(_curve).add_liquidity([0, 0, _wbtc, 0], 0);
         }
-        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plus).token());
-        uint256 tokenBalance = token.balanceOf(address(this));
-        if (tokenBalance == 0) {
+        IERC20Upgradeable _token = IERC20Upgradeable(ISinglePlus(plus).token());
+        uint256 _balance = _token.balanceOf(address(this));
+        if (_balance == 0) {
             return;
         }
-        uint256 feeAmount = 0;
+        uint256 _fee = 0;
         if (performanceFee > 0) {
-            feeAmount = tokenBalance.mul(performanceFee).div(PERCENT_MAX);
-            token.safeTransfer(ISinglePlus(plus).treasury(), feeAmount);
+            _fee = _balance.mul(performanceFee).div(PERCENT_MAX);
+            _token.safeTransfer(ISinglePlus(plus).treasury(), _fee);
         }
         deposit();
 
-        emit Harvested(address(token), tokenBalance, feeAmount);
+        emit Harvested(address(_token), _balance, _fee);
     }
 }

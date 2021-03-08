@@ -289,8 +289,8 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function salvage() external onlyStrategist {
         uint256 _amount = address(this).balance;
         address payable _target = payable(treasury);
-        (bool success, ) = _target.call{value: _amount}(new bytes(0));
-        require(success, 'ETH salvage failed');
+        (bool _success, ) = _target.call{value: _amount}(new bytes(0));
+        require(_success, 'ETH salvage failed');
     }
 
     /**

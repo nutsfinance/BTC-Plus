@@ -53,11 +53,10 @@ contract MockStrategy is StrategyBase {
     }
 
     /**
-     * @dev Return the list of tokens that should not be salvaged.
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
      */
-    function _getProtectedTokens() internal override view returns (address[] memory) {
-        address[] memory protectedTokens = new address[](1);
-        protectedTokens[0] = address(token);
-        return protectedTokens;
+    function _salvageable(address _token) internal view virtual override returns (bool) {
+        return _token != address(token);
     }
 }

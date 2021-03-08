@@ -44,12 +44,13 @@ abstract contract StrategyCurveBase is StrategyBase {
      * @dev Deposits all renCRV into Curve liquidity gauge to earn CRV.
      */
     function deposit() public override onlyStrategist {
-        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plus).token());
-        uint256 tokenBalance = token.balanceOf(address(this));
-        if (tokenBalance > 0) {
-            token.safeApprove(gauge, 0);
-            token.safeApprove(gauge, tokenBalance);
-            ICurveGauge(gauge).deposit(tokenBalance);
+        IERC20Upgradeable _token = IERC20Upgradeable(ISinglePlus(plus).token());
+        uint256 _balance = _token.balanceOf(address(this));
+        address _gauge = gauge;
+        if (_balance > 0) {
+            _token.safeApprove(_gauge, 0);
+            _token.safeApprove(_gauge, _balance);
+            ICurveGauge(_gauge).deposit(_balance);
         }
     }
 
@@ -57,26 +58,27 @@ abstract contract StrategyCurveBase is StrategyBase {
      * @dev Withdraw partial funds, normally used with a plus withdrawal
      */
     function withdraw(uint256 _amount) public override onlyPlus {
-        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plus).token());
-        uint256 tokenBalance = token.balanceOf(address(this));
-        if (tokenBalance < _amount) {
-            _amount = _withdrawSome(_amount.sub(tokenBalance));
-            _amount = _amount.add(tokenBalance);
+        IERC20Upgradeable _token = IERC20Upgradeable(ISinglePlus(plus).token());
+        uint256 _balance = _token.balanceOf(address(this));
+        if (_balance < _amount) {
+            _amount = _withdrawSome(_amount.sub(_balance));
+            _amount = _amount.add(_balance);
         }
 
-        token.safeTransfer(plus, _amount);
+        _token.safeTransfer(plus, _amount);
     }
 
     /**
      * @dev Withdraw all funds, normally used when migrating strategies
      * No withdrawal fee is charged when withdrawing all assets.
      */
-    function withdrawAll() public override onlyPlus returns (uint256 balance) {
-        ICurveGauge(gauge).withdraw(ICurveGauge(gauge).balanceOf(address(this)));
+    function withdrawAll() public override onlyPlus returns (uint256 _balance) {
+        ICurveGauge _gauge = ICurveGauge(gauge);
+        _gauge.withdraw(_gauge.balanceOf(address(this)));
 
-        IERC20Upgradeable token = IERC20Upgradeable(ISinglePlus(plus).token());
-        balance = token.balanceOf(address(this));
-        token.safeTransfer(plus, balance);
+        IERC20Upgradeable _token = IERC20Upgradeable(ISinglePlus(plus).token());
+        _balance = _token.balanceOf(address(this));
+        _token.safeTransfer(plus, _balance);
     }
 
     /**
@@ -111,13 +113,10 @@ abstract contract StrategyCurveBase is StrategyBase {
     }
 
     /**
-     * @dev Return the list of tokens that should not be salvaged.
+     * @dev Checks whether a token can be salvaged via salvageToken().
+     * @param _token Token to check salvageability.
      */
-    function _getProtectedTokens() internal virtual override view returns (address[] memory) {
-        address[] memory protectedTokens = new address[](3);
-        protectedTokens[0] = ISinglePlus(plus).token();
-        protectedTokens[1] = wbtc;
-        protectedTokens[2] = crv;
-        return protectedTokens;
+    function _salvageable(address _token) internal view virtual override returns (bool) {
+        return _token != ISinglePlus(plus).token() && _token != wbtc && _token != crv;
     }
 }
