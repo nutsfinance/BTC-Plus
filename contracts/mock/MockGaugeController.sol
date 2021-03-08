@@ -56,10 +56,10 @@ contract MockGaugeController is IGaugeController {
     }
 
     /**
-     * @dev Process the fee from liquidity gauge.
-     * @param _token Address of the fee token.
+     * @dev Donate the gauge fee. Only liqudity gauge can call this function.
+     * @param _token Address of the donated token.
      */
-    function processFee(address _token) external override {
+    function donate(address _token) external override {
         _token;
     }
 }

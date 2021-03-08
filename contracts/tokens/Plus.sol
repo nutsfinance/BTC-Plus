@@ -188,7 +188,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * @dev Allows anyone to donate their plus asset to all other holders.
      * @param _amount Amount of plus token to donate.
      */
-    function donate(uint256 _amount) public {
+    function donate(uint256 _amount) public override {
         // Rebase first to make index up-to-date
         rebase();
         // Special handling of -1 is required here in order to fully donate all shares, since interest

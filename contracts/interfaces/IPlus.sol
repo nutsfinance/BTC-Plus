@@ -34,4 +34,10 @@ interface IPlus {
      * @dev Returns the total value of the plus token in terms of the peg value.
      */
     function totalUnderlying() external view returns (uint256);
+
+    /**
+     * @dev Allows anyone to donate their plus asset to all other holders.
+     * @param _amount Amount of plus token to donate.
+     */
+    function donate(uint256 _amount) external;
 }

@@ -299,7 +299,9 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         if (withdrawFee > 0) {
             _fee = _amount.mul(withdrawFee).div(MAX_PERCENT);
             IERC20Upgradeable(_token).safeTransfer(_controller, _fee);
-            IGaugeController(_controller).processFee(_token);
+            // Donate the withdraw fee for future processing
+            // Withdraw fee for plus token is donated to all token holders right away
+            IGaugeController(_controller).donate(_token);
         }
 
         IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount.sub(_fee));
