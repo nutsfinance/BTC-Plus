@@ -22,8 +22,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    event Minted(address indexed user, address[] indexed tokens, uint256[] amounts, uint256 mintShare, uint256 mintAmount);
-    event Redeemed(address indexed user, address[] indexed tokens, uint256[] amounts, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
+    event Minted(address indexed user, address[] tokens, uint256[] amounts, uint256 mintShare, uint256 mintAmount);
+    event Redeemed(address indexed user, address[] tokens, uint256[] amounts, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
 
     event RebalancerUpdated(address indexed rebalancer, bool enabled);
     event MinLiquidityRatioUpdated(uint256 oldRatio, uint256 newRatio);
