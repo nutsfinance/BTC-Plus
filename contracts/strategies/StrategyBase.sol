@@ -17,6 +17,7 @@ import "../interfaces/IStrategy.sol";
 abstract contract StrategyBase is IStrategy, Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    event Harvested(address indexed token, uint256 amount, uint256 feeAmount);
     event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
 
     address public plus;
