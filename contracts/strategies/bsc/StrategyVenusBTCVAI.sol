@@ -44,7 +44,7 @@ contract StrategyVenusBTCVAI is StrategyBase {
         IComptroller(VENUS_COMPTROLLER).enterMarkets(_markets);
     }
 
-     /**
+    /**
      * @dev Returns the amount of tokens managed by the strategy.
      */
     function balance() public view override returns (uint256) {
