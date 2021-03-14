@@ -38,6 +38,10 @@ contract StrategyVenusBTCVAI is StrategyBase {
     function initialize(address _plus) public initializer {
         require(ISinglePlus(_plus).token() == VENUS_BTC, "not vBTC");
         __StrategyBase_init(_plus);
+
+        address[] memory _markets = new address[](1);
+        _markets[0] = VENUS_BTC;
+        IComptroller(VENUS_COMPTROLLER).enterMarkets(_markets);
     }
 
      /**

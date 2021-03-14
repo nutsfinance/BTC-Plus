@@ -7,6 +7,13 @@ pragma solidity 0.6.12;
 interface IComptroller {
 
     /**
+     * @notice Add assets to be included in account liquidity calculation
+     * @param vTokens The list of addresses of the vToken markets to be enabled
+     * @return Success indicator for whether each corresponding market was entered
+     */
+    function enterMarkets(address[] calldata vTokens) external returns (uint[] memory);
+
+    /**
      * @notice Determine what the account liquidity would be if the given amounts were redeemed/borrowed
      * @param vTokenModify The market to hypothetically redeem/borrow in
      * @param account The account to determine liquidity for
