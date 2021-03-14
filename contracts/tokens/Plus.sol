@@ -162,6 +162,9 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * @dev Accrues interest to increase index.
      */
     function rebase() public {
+        uint256 _totalShares = totalShares;
+        if (_totalShares == 0)  return;
+
         uint256 _underlying = _totalUnderlying();
         uint256 _supply = totalSupply();
         // _underlying - _supply is the interest generated and should be distributed via rebase.
@@ -169,7 +172,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         if (_underlying > _supply) {
             uint256 _oldIndex = index;
             // Index can never decrease
-            uint256 _newIndex = _underlying.mul(WAD).div(totalShares);
+            uint256 _newIndex = _underlying.mul(WAD).div(_totalShares);
             index = _newIndex;
 
             for (uint256 i = 0; i < transactions.length; i++) {
