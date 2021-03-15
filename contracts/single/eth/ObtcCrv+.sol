@@ -16,7 +16,7 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
 /**
  * @dev Single plus for renCrv.
  */
-contract RenCrvPlus is SinglePlus {
+contract ObtcCrvPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
