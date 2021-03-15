@@ -108,26 +108,26 @@ contract VenusBTCPlus is SinglePlus {
         }
         // Venus: BTCB --> vBTC
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        if (_btcb > 0) {
-            IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, 0);
-            IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, _btcb);
-            IVToken(VENUS_BTC).mint(_btcb);
-        }
-        uint256 _vbtc = IERC20Upgradeable(VENUS_BTC).balanceOf(address(this));
-        if (_vbtc == 0) {
-            return;
-        }
+        if (_btcb == 0) return;
+
+        // If there is performance fee, charged in BTCB
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _vbtc.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(VENUS_BTC).safeTransfer(treasury, _fee);
+            _fee = _btcb.mul(performanceFee).div(PERCENT_MAX);
+            IERC20Upgradeable(BTCB).safeTransfer(treasury, _fee);
+            _btcb = _btcb.sub(_fee);
         }
+
+        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, 0);
+        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, _btcb);
+        IVToken(VENUS_BTC).mint(_btcb);
+
         // Reinvest to get compound yield.
         invest();
         // Also it's a good time to rebase!
         rebase();
 
-        emit Harvested(VENUS_BTC, _vbtc, _fee);
+        emit Harvested(VENUS_BTC, _btcb, _fee);
     }
 
     /**
@@ -147,9 +147,8 @@ contract VenusBTCPlus is SinglePlus {
      * Venus forks Compound so we use cToken interface from Compound.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
-        uint256 _ratio = uint256(10) ** (18 - ERC20Upgradeable(ICToken(VENUS_BTC).underlying()).decimals());
-        // The cToken's exchange rate is already in WAD
-        return ICToken(VENUS_BTC).exchangeRateStored().mul(_ratio);
+        // vBTC has 8 decimals, and exchange rate is in WAD
+        return ICToken(VENUS_BTC).exchangeRateStored().mul(10 ** 10);
     }
 
     /**

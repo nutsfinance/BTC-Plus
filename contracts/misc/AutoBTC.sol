@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
+import "../interfaces/autofarm/IAutoBTC.sol";
 import "../interfaces/autofarm/IAutoFarm.sol";
 import "../interfaces/autofarm/IStrat.sol";
 
@@ -24,7 +25,7 @@ import "../interfaces/autofarm/IStrat.sol";
  * amount of BTCB into AutoFarm directly;
  * 3. Users won't lose any AUTO rewards by minting autoBTC.
  */
-contract AutoBTC is ERC20Upgradeable {
+contract AutoBTC is ERC20Upgradeable, IAutoBTC {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -57,6 +58,29 @@ contract AutoBTC is ERC20Upgradeable {
     }
 
     /**
+     * @dev Returns the underlying token of the AutoFarm position.
+     */
+    function underlying() public view override returns (address) {
+        return BTCB;
+    }
+
+    /**
+     * @dev Returns the update-to-date exchange rate between AutoBTC and BTCB.
+     */
+    function exchangeRateCurrent() public override returns (uint256) {
+        // Note: This function will throw if onlyGov = true in BTCB strategy!
+        IStrat(BTBC_STRAT).earn();
+        return IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
+    }
+
+    /**
+     * @dev Returns the current exchange rate between AutoBTC and BTCB.
+     */
+    function exchangeRateStored() public view override returns (uint256) {
+        return IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
+    }
+
+    /**
      * @dev Updates rewards for the user.
      */
     function _updateReward(address _account) internal {
@@ -78,7 +102,7 @@ contract AutoBTC is ERC20Upgradeable {
      * @dev Mints autoBTC with BTCB.
      * @param _amount Amount of BTCB used to mint autoBTC.
      */
-    function mint(uint256 _amount) public {
+    function mint(uint256 _amount) public override {
         uint256 _before = IStrat(BTBC_STRAT).sharesTotal();
         IERC20Upgradeable(BTCB).safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -118,7 +142,7 @@ contract AutoBTC is ERC20Upgradeable {
     /**
      * @dev Claims all AUTO available for the caller.
      */
-    function claimRewards() public {
+    function claimRewards() public override {
         // Triggers AUTO distribution with a zero deposit
         IAutoFarm(AUTOFARM).withdraw(PID, 0);
 

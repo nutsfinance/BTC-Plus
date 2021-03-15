@@ -9,31 +9,32 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
 import "../../SinglePlus.sol";
-import "../../interfaces/compound/ICToken.sol";
+import "../../interfaces/autofarm/IAutoBTC.sol";
 import "../../interfaces/fortube/IForTubeReward.sol";
 import "../../interfaces/fortube/IForTubeBank.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
- * @dev Single Plus for ForTube BCTB.
+ * @dev Single Plus for AutoFarm BTC+.
  */
-contract ForTubeBTCBPlus is SinglePlus {
+contract AutoBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant WBNB = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
-    address public constant FOR = address(0x658A109C5900BC6d2357c87549B651670E5b0539);
-    address public constant FORTUBE_BTCB = address(0xb5C15fD55C73d9BeeC046CB4DAce1e7975DcBBBc);
-    address public constant FORTUBE_BANK = address(0x0cEA0832e9cdBb5D476040D58Ea07ecfbeBB7672);
-    address public constant FORTUBE_REWARD = address(0x55838F18e79cFd3EA22Eea08Bd3Ec18d67f314ed);
+    address public constant AUTOv2 = address(0xa184088a740c695E156F91f5cC086a06bb78b827);
+    // Added when AUTO_BTC is deployed
+    address public constant AUTO_BTC = address(0x0);
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
     /**
      * @dev Initializes fBTCB+.
      */
     function initialize() public initializer {
-        SinglePlus.initialize(FORTUBE_BTCB, "", "");
+        SinglePlus.initialize(AUTO_BTC, "", "");
+        // Trust AutoBTC
+        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(-1));
     }
 
     /**
@@ -41,63 +42,62 @@ contract ForTubeBTCBPlus is SinglePlus {
      * Only governance or strategist can call this function.
      */
     function harvest() public virtual override onlyStrategist {
-        // Harvest from FurTube rewards
-        IForTubeReward(FORTUBE_REWARD).claimReward();
+        // Harvest from AutoBTC
+        IAutoBTC(AUTO_BTC).claimRewards();
 
-        uint256 _for = IERC20Upgradeable(FOR).balanceOf(address(this));
-        // PancakeSawp: FOR --> WBNB --> BTCB
-        if (_for > 0) {
-            IERC20Upgradeable(FOR).safeApprove(PANCAKE_SWAP_ROUTER, 0);
-            IERC20Upgradeable(FOR).safeApprove(PANCAKE_SWAP_ROUTER, _for);
+        uint256 _auto = IERC20Upgradeable(AUTOv2).balanceOf(address(this));
+        // PancakeSawp: AUTO --> WBNB --> BTCB
+        if (_auto > 0) {
+            IERC20Upgradeable(AUTOv2).safeApprove(PANCAKE_SWAP_ROUTER, 0);
+            IERC20Upgradeable(AUTOv2).safeApprove(PANCAKE_SWAP_ROUTER, _auto);
 
             address[] memory _path = new address[](3);
-            _path[0] = FOR;
+            _path[0] = AUTOv2;
             _path[1] = WBNB;
             _path[2] = BTCB;
 
-            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_for, uint256(0), _path, address(this), now.add(1800));
+            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_auto, uint256(0), _path, address(this), now.add(1800));
         }
-        // ForTube: BTCB --> fBTCB
+        
+        // BTCB --> AutoBTC
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        if (_btcb > 0) {
-            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, 0);
-            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, _for);
-            IForTubeBank(FORTUBE_BANK).deposit(BTCB, _btcb);
-        }
-        uint256 _fbtc = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));
-        if (_fbtc == 0) {
-            return;
-        }
+        if (_btcb == 0) return;
+
+        // If there is performance fee, charged in BTCB
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _fbtc.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(FORTUBE_BTCB).safeTransfer(treasury, _fee);
+            _fee = _btcb.mul(performanceFee).div(PERCENT_MAX);
+            IERC20Upgradeable(BTCB).safeTransfer(treasury, _fee);
+            _btcb = _btcb.sub(_fee);
         }
+
+        IAutoBTC(AUTO_BTC).mint(_btcb);
+
         // Reinvest to get compound yield.
         invest();
         // Also it's a good time to rebase!
         rebase();
 
-        emit Harvested(FORTUBE_BTCB, _fbtc, _fee);
+        emit Harvested(AUTO_BTC, _btcb, _fee);
     }
 
     /**
      * @dev Checks whether a token can be salvaged via salvageToken(). The following two
      * tokens are not salvageable:
-     * 1) fBTCB
-     * 2) FOR
+     * 1) autoBTC
+     * 2) AUTO
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
-        return _token != FORTUBE_BTCB && _token != FOR;
+        return _token != AUTO_BTC && _token != AUTOv2;
     }
 
     /**
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
-     * ForTube's fToken interface is compactible with Compound's cToken.
+     * AutoBTC is compactible with Compound's cToken.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
-        // fBTC has 18 decimals and exchangeRate is in WAD
-        return ICToken(FORTUBE_BTCB).exchangeRateStored();
+        // AutoBTC has 18 decimals and exchangeRate is in WAD
+        return IAutoBTC(AUTO_BTC).exchangeRateStored();
     }
 }

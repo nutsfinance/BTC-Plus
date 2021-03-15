@@ -78,26 +78,26 @@ contract ACryptoSBTCBPlus is SinglePlus {
         }
         // ACrytoS: BTCB --> acsBTCB
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        if (_btcb > 0) {
-            IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, 0);
-            IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, _btcb);
-            IVault(ACS_BTCB).deposit(_btcb);
-        }
-        uint256 _acsBTCB = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
-        if (_acsBTCB == 0) {
-            return;
-        }
+        if (_btcb == 0) return;
+
+        // If there is performance fee, charged in BTCB
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _acsBTCB.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(ACS_BTCB).safeTransfer(treasury, _fee);
+            _fee = _btcb.mul(performanceFee).div(PERCENT_MAX);
+            IERC20Upgradeable(BTCB).safeTransfer(treasury, _fee);
+            _btcb = _btcb.sub(_fee);
         }
+
+        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, 0);
+        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, _btcb);
+        IVault(ACS_BTCB).deposit(_btcb);
+
         // Reinvest to get compound yield
         invest();
         // Also it's a good time to rebase!
         rebase();
 
-        emit Harvested(ACS_BTCB, _acsBTCB, _fee);
+        emit Harvested(ACS_BTCB, _btcb, _fee);
     }
 
     /**
