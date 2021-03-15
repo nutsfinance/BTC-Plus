@@ -29,7 +29,7 @@ contract ACryptoSBTCBPlus is SinglePlus {
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
     /**
-     * @dev Initializes vBTC+.
+     * @dev Initializes acsBTC+.
      */
     function initialize() public initializer {
         SinglePlus.initialize(ACS_BTCB, "", "");
