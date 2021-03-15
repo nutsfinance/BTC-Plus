@@ -1,9 +1,8 @@
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const assert = require('assert');
-const SinglePlus = artifacts.require("SinglePlus");
+const MockSinglePlus = artifacts.require("MockSinglePlus");
 const CompositePlus = artifacts.require("CompositePlus");
 const MockToken = artifacts.require("MockToken");
-const MockStrategy = artifacts.require("MockStrategy");
 
 const BN = web3.utils.BN;
 const MAX = new BN(2).pow(new BN(256)).sub(new BN(1));
@@ -25,7 +24,6 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
     let composite;
     let token1, token2, token3;
     let plus1, plus2, plus3;
-    let strategy1, strategy2, strategy3;
 
     beforeEach(async () => {
         composite = await CompositePlus.new();
@@ -34,25 +32,13 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         await composite.setStrategist(strategist, true);
 
         token1 = await MockToken.new("Mock 1", "Mock 1", 6);
-        plus1 = await SinglePlus.new();
-        await plus1.initialize(token1.address, '', '');
-        strategy1 = await MockStrategy.new();
-        await strategy1.initialize(plus1.address);
-        await plus1.approveStrategy(strategy1.address, true);
+        plus1 = await MockSinglePlus.new(token1.address);
 
         token2 = await MockToken.new("Mock 2", "Mock 2", 18);
-        plus2 = await SinglePlus.new();
-        await plus2.initialize(token2.address, '', '');
-        strategy2 = await MockStrategy.new();
-        await strategy2.initialize(plus2.address);
-        await plus2.approveStrategy(strategy2.address, true);
+        plus2 = await MockSinglePlus.new(token2.address);
 
         token3 = await MockToken.new("Mock 3", "Mock 3", 8);
-        plus3 = await SinglePlus.new();
-        await plus3.initialize(token3.address, '', '');
-        strategy3 = await MockStrategy.new();
-        await strategy3.initialize(plus3.address);
-        await plus3.approveStrategy(strategy3.address, true);
+        plus3 = await MockSinglePlus.new(token3.address);
 
         await composite.addToken(plus1.address);
         await composite.addToken(plus2.address)
@@ -293,10 +279,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
@@ -351,10 +337,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
@@ -397,10 +383,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
@@ -447,10 +433,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
@@ -508,10 +494,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
@@ -559,10 +545,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
@@ -620,10 +606,10 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Deposit token1 and token2 into strategies
         await plus1.invest();
         await plus2.invest();
-        // Harvest 2 token1 in strategy1
-        await token1.mint(strategy1.address, "2000000");
-        // Harvest 8 token2 in strategy2
-        await token2.mint(strategy2.address, toWei("8"));
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
         await plus1.rebase();
         await plus2.rebase();
         await composite.rebase();
