@@ -19,6 +19,16 @@ interface ICurveFi {
 
     function remove_liquidity(uint256 _amount, uint256[2] calldata amounts) external;
 
+    // sbtc pool
+    function add_liquidity(
+        uint256[3] calldata amounts,
+        uint256 min_mint_amount
+    ) external;
+
+    function remove_liquidity_imbalance(uint256[3] calldata amounts, uint256 max_burn_amount) external;
+
+    function remove_liquidity(uint256 _amount, uint256[3] calldata amounts) external;
+
     // obtc pool
     function add_liquidity(
         uint256[4] calldata amounts,
