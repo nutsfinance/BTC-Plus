@@ -25,13 +25,15 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     event Minted(address indexed user, uint256 amount, uint256 mintShare, uint256 mintAmount);
     event Redeemed(address indexed user, uint256 amount, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
 
-    event StrategyUpdated(address indexed strategy, bool approved);
-    event StrategyActivated(address indexed oldActiveStrategy, address indexed newActiveStrategy);
+    event Harvested(address indexed token, uint256 amount, uint256 feeAmount);
+    event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
     
     // Underlying token of the single plus toke. Typically a yield token and not value peg.
     address public token;
     // Whether minting is paused for the single plus token.
     bool public mintPaused;
+    uint256 public performanceFee;
+    uint256 public constant PERCENT_MAX = 10000;    // 0.01%
 
     /**
      * @dev Initializes the single plus contract.
@@ -148,6 +150,17 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
+     * @dev Updates the performance fee. Only governance can update the performance fee.
+     */
+    function setPerformanceFee(uint256 _performanceFee) public onlyGovernance {
+        require(_performanceFee <= PERCENT_MAX, "overflow");
+        uint256 oldPerformanceFee = performanceFee;
+        performanceFee = _performanceFee;
+
+        emit PerformanceFeeUpdated(oldPerformanceFee, _performanceFee);
+    }
+
+    /**
      * @dev Retrive the underlying assets from the investment.
      */
     function divest() public virtual {}
@@ -166,7 +179,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Checks whether a token can be salvaged via salvageToken().
      * @param _token Token to check salvageability.
      */
-    function _salvageable(address _token) internal view override returns (bool) {
+    function _salvageable(address _token) internal view virtual override returns (bool) {
         // For single plus, the only token that cannot salvage is the underlying token!
         return _token != token;
     }
@@ -194,7 +207,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @param _receiver Address to receive the token withdraw.
      * @param _amount Amount of underlying token withdraw.
      */
-    function _withdraw(address _receiver, uint256  _amount) internal {
+    function _withdraw(address _receiver, uint256  _amount) internal virtual {
         IERC20Upgradeable(token).safeTransfer(_receiver, _amount);
     }
 }

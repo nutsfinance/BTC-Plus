@@ -2,9 +2,11 @@
 pragma solidity 0.6.12;
 
 /**
- * @dev Interface for ACryptoS Vault.
+ * @dev Interface for YFI Vault.
  */
 interface IVault {
+
+    function getPricePerFullShare() external view returns (uint256);
 
     function deposit(uint256 _amount) external;
 }

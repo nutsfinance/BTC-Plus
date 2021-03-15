@@ -8,16 +8,15 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../StrategyBase.sol";
-import "../../interfaces/ISinglePlus.sol";
+import "../../SinglePlus.sol";
 import "../../interfaces/acryptos/IFarm.sol";
-import "../../interfaces/acryptos/IVault.sol";
+import "../../interfaces/yfi/IVault.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
- * @dev Earning strategy for ACryptoS BTCB
+ * @dev Single plus for ACryptoS BTC.
  */
-contract StrategyACryptoSBTCB is StrategyBase {
+contract ACryptoSBTCBPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -30,64 +29,26 @@ contract StrategyACryptoSBTCB is StrategyBase {
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
     /**
-     * @dev Initializes the strategy.
+     * @dev Initializes vBTC+.
      */
-    function initialize(address _plus) public initializer {
-        require(ISinglePlus(_plus).token() == ACS_BTCB, "not acsBTCB");
-        __StrategyBase_init(_plus);
+    function initialize() public initializer {
+        SinglePlus.initialize(ACS_BTCB, "", "");
     }
 
     /**
-     * @dev Returns the amount of tokens deposited in the strategy.
+     * @dev Retrive the underlying assets from the investment.
+     * Only governance or strategist can call this function.
      */
-    function balanceOfStrategy() public view returns (uint256) {
-        return IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
+    function divest() public virtual override onlyStrategist {
+        uint256 _pool = IFarm(ACS_FARM).userInfo(ACS_BTCB, address(this)).amount;
+        IFarm(ACS_FARM).withdraw(ACS_BTCB, _pool);
     }
 
     /**
-     * @dev Returns the amount of tokens deposited in the gauge.
+     * @dev Invest the underlying assets for additional yield.
+     * Only governance or strategist can call this function.
      */
-    function balanceOfPool() public view returns (uint256) {
-        return IFarm(ACS_FARM).userInfo(ACS_BTCB, address(this)).amount;
-    }
-
-    /**
-     * @dev Returns the amount of tokens managed by the strategy.
-     */
-    function balance() public view override returns (uint256) {
-        return balanceOfStrategy().add(balanceOfPool());
-    }
-
-    /**
-     * @dev Withdraws a portional amount of assets from the Strategy.
-     */
-    function withdraw(uint256 _amount) public override onlyPlus {
-        IERC20Upgradeable _token = IERC20Upgradeable(ACS_BTCB);
-        uint256 _balance = _token.balanceOf(address(this));
-        if (_balance < _amount) {
-            IFarm(ACS_FARM).withdraw(ACS_BTCB, _amount.sub(_balance));
-            _amount = MathUpgradeable.min(_amount, _token.balanceOf(address(this)));
-        }
-        _token.safeTransfer(plus, _amount);
-    }
-
-    /**
-     * @dev Withdraws all assets out of the Strategy.  Usually used in strategy migration.
-     */
-    function withdrawAll() public override onlyPlus returns (uint256) {
-        IFarm(ACS_FARM).withdraw(ACS_BTCB, balanceOfPool());
-        uint256 _balance = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
-        if (_balance > 0) {
-            IERC20Upgradeable(ACS_BTCB).safeTransfer(plus, _balance);
-        }
-
-        return _balance;
-    }
-
-    /**
-     * @dev Invest the managed token in strategy to earn yield.
-     */
-    function deposit() public override onlyStrategist {
+    function invest() public virtual override onlyStrategist {
         uint256 _balance = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
         if (_balance > 0) {
             IFarm(ACS_FARM).deposit(ACS_BTCB, _balance);
@@ -95,10 +56,10 @@ contract StrategyACryptoSBTCB is StrategyBase {
     }
 
     /**
-     * @dev Harvest in strategy.
-     * Only pool can invoke this function.
+     * @dev Harvest additional yield from the investment.
+     * Only governance or strategist can call this function.
      */
-    function harvest() public override onlyStrategist {
+    function harvest() public virtual override onlyStrategist {
         // Harvest from ACryptoS Farm
         IFarm(ACS_FARM).harvest(ACS_BTCB);
 
@@ -129,9 +90,12 @@ contract StrategyACryptoSBTCB is StrategyBase {
         uint256 _fee = 0;
         if (performanceFee > 0) {
             _fee = _acsBTCB.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(ACS_BTCB).safeTransfer(ISinglePlus(plus).treasury(), _fee);
+            IERC20Upgradeable(ACS_BTCB).safeTransfer(treasury, _fee);
         }
-        deposit();
+        // Reinvest to get compound yield
+        invest();
+        // Also it's a good time to rebase!
+        rebase();
 
         emit Harvested(ACS_BTCB, _acsBTCB, _fee);
     }
@@ -145,5 +109,41 @@ contract StrategyACryptoSBTCB is StrategyBase {
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
         return _token != ACS_BTCB && _token != ACS;
+    }
+
+    /**
+     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
+     * ACryptoS vault uses YFI's interface.
+     */
+    function _conversionRate() internal view virtual override returns (uint256) {
+        // The share price is in WAD.
+        return IVault(ACS_BTCB).getPricePerFullShare();
+    }
+
+    /**
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
+     */
+    function _totalUnderlying() internal view virtual override returns (uint256) {
+        uint256 _balance = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
+        _balance = _balance.add(IFarm(ACS_FARM).userInfo(ACS_BTCB, address(this)).amount);
+
+        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        return _balance.mul(_conversionRate()).div(WAD);
+    }
+
+    /**
+     * @dev Withdraws underlying tokens.
+     * @param _receiver Address to receive the token withdraw.
+     * @param _amount Amount of underlying token withdraw.
+     */
+    function _withdraw(address _receiver, uint256  _amount) internal virtual override {
+        IERC20Upgradeable _token = IERC20Upgradeable(ACS_BTCB);
+        uint256 _balance = _token.balanceOf(address(this));
+        if (_balance < _amount) {
+            IFarm(ACS_FARM).withdraw(ACS_BTCB, _amount.sub(_balance));
+            // In case of rounding errors
+            _amount = MathUpgradeable.min(_amount, _token.balanceOf(address(this)));
+        }
+        _token.safeTransfer(_receiver, _amount);
     }
 }

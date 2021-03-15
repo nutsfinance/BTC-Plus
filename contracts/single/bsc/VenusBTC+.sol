@@ -7,18 +7,18 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../StrategyBase.sol";
-import "../../interfaces/ISinglePlus.sol";
+import "../../SinglePlus.sol";
 import "../../interfaces/venus/IVAIVault.sol";
 import "../../interfaces/venus/IVToken.sol";
 import "../../interfaces/venus/IVAIController.sol";
 import "../../interfaces/venus/IComptroller.sol";
+import "../../interfaces/compound/ICToken.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
- * @dev Earning strategy for Venus BTC which mints and stakes VAI.
+ * @dev Single plus of Venus BTC.
  */
-contract StrategyVenusBTCVAI is StrategyBase {
+contract VenusBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -33,11 +33,10 @@ contract StrategyVenusBTCVAI is StrategyBase {
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
     /**
-     * @dev Initializes the strategy.
+     * @dev Initializes vBTC+.
      */
-    function initialize(address _plus) public initializer {
-        require(ISinglePlus(_plus).token() == VENUS_BTC, "not vBTC");
-        __StrategyBase_init(_plus);
+    function initialize() public initializer {
+        SinglePlus.initialize(VENUS_BTC, "", "");
 
         address[] memory _markets = new address[](1);
         _markets[0] = VENUS_BTC;
@@ -45,29 +44,10 @@ contract StrategyVenusBTCVAI is StrategyBase {
     }
 
     /**
-     * @dev Returns the amount of tokens managed by the strategy.
+     * @dev Retrive the underlying assets from the investment.
+     * Only governance or strategist can call this function.
      */
-    function balance() public view override returns (uint256) {
-        return IERC20Upgradeable(VENUS_BTC).balanceOf(address(this));
-    }
-
-    /**
-     * @dev Withdraws a portional amount of assets from the Strategy.
-     */
-    function withdraw(uint256 _amount) public override onlyPlus {
-        (,,uint256 _shortfall) = IComptroller(VENUS_COMPTROLLER).getHypotheticalAccountLiquidity(address(this), VENUS_BTC, _amount, 0);
-        if (_shortfall > 0) {
-            IVAIVault(VAI_VAULT).withdraw(_shortfall);
-            IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
-        }
-
-        IERC20Upgradeable(VENUS_BTC).safeTransfer(plus, _amount);
-    }
-
-    /**
-     * @dev Withdraws all assets out of the Strategy.  Usually used in strategy migration.
-     */
-    function withdrawAll() public override onlyPlus returns (uint256) {
+    function divest() public virtual override onlyStrategist {
         // Withdraws all VAI from VAI vault
         uint256 _vai = IVAIVault(VAI_VAULT).userInfo(address(this)).amount;
         if (_vai > 0) {
@@ -79,19 +59,13 @@ contract StrategyVenusBTCVAI is StrategyBase {
         if ((_vai > 0)) {
             IVAIController(VAI_CONTROLLER).repayVAI(_vai);
         }
-
-        uint256 _vbtc = IERC20Upgradeable(VENUS_BTC).balanceOf(address(this));
-        if (_vbtc > 0) {
-            IERC20Upgradeable(VENUS_BTC).safeTransfer(plus, _vbtc);
-        }
-
-        return _vbtc;
     }
 
     /**
-     * @dev Invest the managed token in strategy to earn yield.
+     * @dev Invest the underlying assets for additional yield.
+     * Only governance or strategist can call this function.
      */
-    function deposit() public override onlyStrategist {
+    function invest() public virtual override onlyStrategist {
         (, uint256 _mintableVAI) = IVAIController(VAI_CONTROLLER).getMintableVAI(address(this));
         if (_mintableVAI > 0) {
             // Mints maximum VAI using vBTC as collateral
@@ -109,10 +83,10 @@ contract StrategyVenusBTCVAI is StrategyBase {
     }
 
     /**
-     * @dev Harvest in strategy.
-     * Only pool can invoke this function.
+     * @dev Harvest additional yield from the investment.
+     * Only governance or strategist can call this function.
      */
-    function harvest() public override onlyStrategist {
+    function harvest() public virtual override onlyStrategist {
         // Harvest from Venus comptroller
         IComptroller(VENUS_COMPTROLLER).claimVenus(address(this));
 
@@ -146,12 +120,14 @@ contract StrategyVenusBTCVAI is StrategyBase {
         uint256 _fee = 0;
         if (performanceFee > 0) {
             _fee = _vbtc.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(VENUS_BTC).safeTransfer(ISinglePlus(plus).treasury(), _fee);
+            IERC20Upgradeable(VENUS_BTC).safeTransfer(treasury, _fee);
         }
-        deposit();
+        // Reinvest to get compound yield.
+        invest();
+        // Also it's a good time to rebase!
+        rebase();
 
         emit Harvested(VENUS_BTC, _vbtc, _fee);
-
     }
 
     /**
@@ -164,5 +140,30 @@ contract StrategyVenusBTCVAI is StrategyBase {
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
         return _token != VENUS_BTC && _token != VENUS && _token != VAI;
+    }
+
+    /**
+     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
+     * Venus forks Compound so we use cToken interface from Compound.
+     */
+    function _conversionRate() internal view virtual override returns (uint256) {
+        uint256 _ratio = uint256(10) ** (18 - ERC20Upgradeable(ICToken(VENUS_BTC).underlying()).decimals());
+        // The cToken's exchange rate is already in WAD
+        return ICToken(VENUS_BTC).exchangeRateStored().mul(_ratio);
+    }
+
+    /**
+     * @dev Withdraws underlying tokens.
+     * @param _receiver Address to receive the token withdraw.
+     * @param _amount Amount of underlying token withdraw.
+     */
+    function _withdraw(address _receiver, uint256  _amount) internal virtual override {
+        (,,uint256 _shortfall) = IComptroller(VENUS_COMPTROLLER).getHypotheticalAccountLiquidity(address(this), VENUS_BTC, _amount, 0);
+        if (_shortfall > 0) {
+            IVAIVault(VAI_VAULT).withdraw(_shortfall);
+            IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
+        }
+
+        IERC20Upgradeable(VENUS_BTC).safeTransfer(_receiver, _amount);
     }
 }
