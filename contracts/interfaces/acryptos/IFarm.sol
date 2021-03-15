@@ -26,7 +26,7 @@ interface IFarm {
         //   4. User's `rewardDebt` gets updated.
     }
 
-    function userInfo(address _account) external view returns (UserInfo memory);
+    function userInfo(address _lpToken, address _account) external view returns (UserInfo memory);
 
     function deposit(address _lpToken, uint256 _amount) external;
 

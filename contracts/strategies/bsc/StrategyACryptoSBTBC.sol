@@ -48,7 +48,7 @@ contract StrategyACryptoSBTCB is StrategyBase {
      * @dev Returns the amount of tokens deposited in the gauge.
      */
     function balanceOfPool() public view returns (uint256) {
-        return IFarm(ACS_FARM).userInfo(address(this)).amount;
+        return IFarm(ACS_FARM).userInfo(ACS_BTCB, address(this)).amount;
     }
 
     /**
