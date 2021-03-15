@@ -9,9 +9,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import "../../interfaces/IStrategy.sol";
-import "../../interfaces/ISinglePlus.sol";
-import "../Plus.sol";
+import "./interfaces/IStrategy.sol";
+import "./Plus.sol";
 
 /**
  * @title Single plus token.
@@ -19,7 +18,7 @@ import "../Plus.sol";
  * A single plus token wraps an underlying ERC20 token, typically a yield token,
  * into a value peg token.
  */
-contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
+contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -30,16 +29,9 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     event StrategyActivated(address indexed oldActiveStrategy, address indexed newActiveStrategy);
     
     // Underlying token of the single plus toke. Typically a yield token and not value peg.
-    address public override token;
+    address public token;
     // Whether minting is paused for the single plus token.
     bool public mintPaused;
-
-    // Strategies approved to earn yield for the underlying token. Only governance can approve new strategies,
-    // both governance and strategist can revoke strategies.
-    mapping(address => bool) public strategies;
-    // Only one strategy is active at a time. A strategy must be approved before activated. Both governance and
-    // strategists can activate strategy.
-    address public activeStrategy;
 
     /**
      * @dev Initializes the single plus contract.
@@ -60,48 +52,6 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         }
         __PlusToken__init(_name, _symbol);
         __ReentrancyGuard_init();
-    }
-
-    /**
-     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
-     * The default implmentation assumes that the single plus and underlying tokens are both peg.
-     */
-    function _conversionRate() internal view virtual returns (uint256) {
-        // 36 since the decimals for plus token is always 18, and conversion rate is in WAD.
-        return uint256(10) ** (36 - ERC20Upgradeable(token).decimals());
-    }
-
-    /**
-     * @dev Withdraws underlying tokens.
-     * @param _receiver Address to receive the token withdraw.
-     * @param _amount Amount of underlying token withdraw.
-     */
-    function _withdraw(address _receiver, uint256  _amount) internal {
-        IERC20Upgradeable _underlying = IERC20Upgradeable(token);
-        uint256 _balance = _underlying.balanceOf(address(this));
-
-        if (_balance < _amount) {
-            address _strategy = activeStrategy;
-            require(_strategy != address(0x0), "no active strategy");
-            IStrategy(_strategy).withdraw(_amount.sub(_balance));
-        }
-        _balance = _underlying.balanceOf(address(this));
-
-        // Sends the minimum to avoid rounding errors
-        _underlying.safeTransfer(_receiver, MathUpgradeable.min(_balance, _amount));
-    }
-
-    /**
-     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
-     */
-    function _totalUnderlying() internal view virtual override returns (uint256) {
-        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
-        address _strategy = activeStrategy;
-        if (_strategy != address(0x0)) {
-            _balance = _balance.add(IStrategy(_strategy).balance());
-        }
-        // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _balance.mul(_conversionRate()).div(WAD);
     }
 
     /**
@@ -198,90 +148,19 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Approves a strategy for the pool. Only governance can approve new strategy.
-     * @param _strategy Address of the strategy to approve.
-     * @param _setActive Whether to set this strategy as the active strategy.
+     * @dev Retrive the underlying assets from the investment.
      */
-    function approveStrategy(address _strategy, bool _setActive) public virtual onlyGovernance {
-        require(!strategies[_strategy], "already approved");
-        // Makre sure that strategy works
-        IStrategy(_strategy).balance();
-
-        strategies[_strategy] = true;
-        emit StrategyUpdated(_strategy, true);
-
-        if (_setActive) {
-            _setActiveStrategy(_strategy);
-        }
-    }
+    function divest() public virtual {}
 
     /**
-     * @dev Revoke a strategy for the pool. Only strategist can revoke strategy.
-     * Note that only governance can approve new strategy, but strategists can revoke strategies.
-     * @param _strategy Address of the strategy to revoke.
+     * @dev Invest the underlying assets for additional yield.
      */
-    function revokeStrategy(address _strategy) external virtual onlyStrategist {
-        require(strategies[_strategy], "not approved");
-
-        strategies[_strategy] = false;
-        emit StrategyUpdated(_strategy, false);
-
-        // If the strategy to revoke is the current active strategy, clears the active strategy.
-        if (_strategy == activeStrategy) {
-            _setActiveStrategy(address(0x0));
-        }
-    }
+    function invest() public virtual {}
 
     /**
-     * @dev Set a strategy as the active strategy. Only strategist can set active strategy.
-     * @param _strategy Address of strategy to set as active. If empty it means clearing the active strategy.
+     * @dev Harvest additional yield from the investment.
      */
-    function setActiveStrategy(address _strategy) external virtual onlyStrategist {
-        require(strategies[_strategy], "not approved");
-
-        _setActiveStrategy(_strategy);
-    }
-
-    function _setActiveStrategy(address _strategy) internal {
-        address _oldActiveStrategy = activeStrategy;
-        if (_oldActiveStrategy != address(0x0)) {
-            IStrategy(_oldActiveStrategy).withdrawAll();
-        }
-
-        activeStrategy = _strategy;
-        emit StrategyActivated(_oldActiveStrategy, _strategy);
-
-        invest();
-    }
-
-    /**
-     * @dev Invest the managed token into strategy to earn yield.
-     * Only BTC+, governance and strategists can invoke this function.
-     */
-    function invest() public virtual override onlyStrategist {
-        address _strategy = activeStrategy;
-        if (_strategy == address(0x0)) return;
-
-        IERC20Upgradeable _underlying = IERC20Upgradeable(token);
-        uint256 _balance = _underlying.balanceOf(address(this));
-        if (_balance > 0) {
-            _underlying.safeTransfer(_strategy, _balance);
-            IStrategy(_strategy).deposit();
-        }
-    }
-
-    /**
-     * @dev Harvest from strategy.
-     * Only BTC+, governance and strategists can invoke this function.
-     */
-    function harvest() public virtual override onlyStrategist {
-        address _strategy = activeStrategy;
-        if (_strategy != address(0x0)) {
-            IStrategy(_strategy).harvest();
-            // It's time to rebase after harvest!
-            rebase();
-        }
-    }
+    function harvest() public virtual {}
 
     /**
      * @dev Checks whether a token can be salvaged via salvageToken().
@@ -290,5 +169,32 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     function _salvageable(address _token) internal view override returns (bool) {
         // For single plus, the only token that cannot salvage is the underlying token!
         return _token != token;
+    }
+
+    /**
+     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
+     * The default implmentation assumes that the single plus and underlying tokens are both peg.
+     */
+    function _conversionRate() internal view virtual returns (uint256) {
+        // 36 since the decimals for plus token is always 18, and conversion rate is in WAD.
+        return uint256(10) ** (36 - ERC20Upgradeable(token).decimals());
+    }
+
+    /**
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
+     */
+    function _totalUnderlying() internal view virtual override returns (uint256) {
+        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
+        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        return _balance.mul(_conversionRate()).div(WAD);
+    }
+
+    /**
+     * @dev Withdraws underlying tokens.
+     * @param _receiver Address to receive the token withdraw.
+     * @param _amount Amount of underlying token withdraw.
+     */
+    function _withdraw(address _receiver, uint256  _amount) internal {
+        IERC20Upgradeable(token).safeTransfer(_receiver, _amount);
     }
 }

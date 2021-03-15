@@ -8,9 +8,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import "../../interfaces/IRebalancer.sol";
-import "../../interfaces/ICompositePlus.sol";
-import "../Plus.sol";
+import "./interfaces/IRebalancer.sol";
+import "./interfaces/ICompositePlus.sol";
+import "./Plus.sol";
 
 /**
  * @title Composite plus token.
