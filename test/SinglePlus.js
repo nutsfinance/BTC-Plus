@@ -39,7 +39,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.totalShares()).toString(), toWei("6"));
         assert.strictEqual((await plus.userShare(user1)).toString(), toWei("6"));
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("6"));
-        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
         await plus.invest();
@@ -49,7 +48,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.totalShares()).toString(), toWei("6"));
         assert.strictEqual((await plus.userShare(user1)).toString(), toWei("6"));
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("6"));
-        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
         await plus.harvest();
@@ -61,7 +59,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("7.2"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("0"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("0"));
-        assert.strictEqual((await plus.underlying(toWei("7.2"))).toString(), toWei("7.2"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
         await token.mint(user3, "3600000");
@@ -76,7 +73,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("7.2"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.6"));
-        assert.strictEqual((await plus.underlying(toWei("10.8"))).toString(), toWei("10.8"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
     });

@@ -17,9 +17,8 @@ import "../interfaces/IVotingEscrow.sol";
 /**
  * @dev Liquidity gauge that stakes token and earns reward.
  * 
- * Note: The liquidity gauge is tokenized so that it's 1:1 with the staked token. Therefore,
- * Total supply of gauge token = Total amount of token staked
- * Balance of gauge token for a user = Amount of token staked by the user
+ * Note: The liquidity gauge token might not be 1:1 with the staked token.
+ * For plus tokens, the total staked amount increases as interest from plus token accrues.
  * Credit: https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/gauges/LiquidityGaugeV2.vy
  */
 contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge {
@@ -28,8 +27,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
 
     event LiquidityLimitUpdated(address indexed account, uint256 balance, uint256 supply, uint256 oldWorkingBalance,
         uint256 oldWorkingSupply, uint256 newWorkingBalance, uint256 newWorkingSupply);
-    event Deposited(address indexed account, uint256 amount);
-    event Withdrawn(address indexed account, uint256 amount, uint256 fee);
+    event Deposited(address indexed account, uint256 stakedAmount, uint256 mintAmount);
+    event Withdrawn(address indexed account, uint256 withdrawAmount, uint256 fee, uint256 burnAmount);
     event RewardContractUpdated(address indexed oldRewardContract, address indexed newRewardContract, address[] rewardTokens);
     event WithdrawFeeUpdated(uint256 oldWithdrawFee, uint256 newWithdrawFee);
 
@@ -252,8 +251,25 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
+     * @dev Returns the total amount of token staked.
+     */
+    function totalStaked() external view override returns (uint256) {
+        return IERC20Upgradeable(token).balanceOf(address(this));
+    }
+
+    /**
+     * @dev Returns the amount staked by the user.
+     */
+    function userStaked(address _account) external view override returns (uint256) {
+        uint256 _totalSupply = totalSupply();
+        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
+
+        return _totalSupply == 0 ? 0 : balanceOf(_account).mul(_balance).div(_totalSupply);
+    }
+
+    /**
      * @dev Deposit the staked token into liquidity gauge.
-     * @param _amount Amount of token to deposit.
+     * @param _amount Amount of staked token to deposit.
      */
     function deposit(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
@@ -261,8 +277,16 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
 
-        // Gauge token is 1:1 with the staked token
-        _mint(msg.sender, _amount);
+        uint256 _totalSupply = totalSupply();
+        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
+        // Note: Ideally, when _totalSupply = 0, _balance = 0.
+        // However, it's possible that _balance != 0 when _totalSupply = 0, e.g.
+        // 1) There are some leftover due to rounding error after all people withdraws;
+        // 2) Someone sends token to the liquidity gauge before there is any deposit.
+        // Therefore, when either _totalSupply or _balance is 0, we treat the gauge is empty.
+        uint256 _mintAmount = _totalSupply == 0 || _balance == 0 ? _amount : _amount.mul(_totalSupply).div(_balance);
+        
+        _mint(msg.sender, _mintAmount);
         _updateLiquidityLimit(msg.sender);
 
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -272,12 +296,12 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
             IUniPool(_rewardContract).stake(_amount);
         }
 
-        emit Deposited(msg.sender, _amount);
+        emit Deposited(msg.sender, _amount, _mintAmount);
     }
 
     /**
      * @dev Withdraw the staked token from liquidity gauge.
-     * @param _amount Amounf of token to withdraw
+     * @param _amount Amounf of staked token to withdraw
      */
     function withdraw(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
@@ -285,7 +309,12 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
 
-        _burn(msg.sender, _amount);
+        uint256 _totalSupply = totalSupply();
+        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
+        require(_totalSupply > 0 && _balance > 0, "no balance");
+        uint256 _burnAmount = _amount.mul(_totalSupply).div(_balance);
+
+        _burn(msg.sender, _burnAmount);
         _updateLiquidityLimit(msg.sender);
 
         address _rewardContract = rewardContract;
@@ -305,7 +334,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         }
 
         IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount.sub(_fee));
-        emit Withdrawn(msg.sender, _amount, _fee);
+        emit Withdrawn(msg.sender, _amount, _fee, _burnAmount);
     }
 
     /**

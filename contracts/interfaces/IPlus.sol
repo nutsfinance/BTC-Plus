@@ -22,13 +22,9 @@ interface IPlus {
     function treasury() external view returns (address);
 
     /**
-     * @dev Returns the value of the plus token in terms of the peg value.
-     * All underlying token amounts have been scaled to 18 decimals.
-     * For single plus, it's equal to its total supply.
-     * For composite plus, it's equal to the total amount of single plus tokens in its basket.
-     * @param _amount The amount of plus token to get underlying value.
+     * @dev Accrues interest to increase index.
      */
-    function underlying(uint256 _amount) external view returns (uint256);
+    function rebase() external;
 
     /**
      * @dev Returns the total value of the plus token in terms of the peg value.
