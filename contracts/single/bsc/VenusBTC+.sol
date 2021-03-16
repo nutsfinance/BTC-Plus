@@ -57,6 +57,8 @@ contract VenusBTCPlus is SinglePlus {
         // Repays all VAI
         _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
         if ((_vai > 0)) {
+            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
+            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _vai);
             IVAIController(VAI_CONTROLLER).repayVAI(_vai);
         }
     }
@@ -160,6 +162,8 @@ contract VenusBTCPlus is SinglePlus {
         (,,uint256 _shortfall) = IComptroller(VENUS_COMPTROLLER).getHypotheticalAccountLiquidity(address(this), VENUS_BTC, _amount, 0);
         if (_shortfall > 0) {
             IVAIVault(VAI_VAULT).withdraw(_shortfall);
+            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
+            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _shortfall);
             IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
         }
 
