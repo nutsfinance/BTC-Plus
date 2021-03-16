@@ -10,31 +10,31 @@ module.exports = async function (callback) {
     try {
         const accounts = await web3.eth.getAccounts();
 
-        console.log('Deploying vBTC+...');
-        const vBTCPlusImpl = await VenusBTCPlus.new();
-        const vBTCPlusProxy = await PlusProxy.new(vBTCPlusImpl.address, accounts[1], Buffer.from(''));
-        const vBTCPlus = await VenusBTCPlus.at(vBTCPlusProxy.address);
-        await vBTCPlus.initialize();
+        // console.log('Deploying vBTC+...');
+        // const vBTCPlusImpl = await VenusBTCPlus.new();
+        // const vBTCPlusProxy = await PlusProxy.new(vBTCPlusImpl.address, accounts[1], Buffer.from(''));
+        // const vBTCPlus = await VenusBTCPlus.at(vBTCPlusProxy.address);
+        // await vBTCPlus.initialize();
 
-        console.log(`Proxy admin: ${accounts[1]}`);
-        console.log(`vBTC+: ${vBTCPlus.address}`);
-        console.log(`vBTC+ implementation: ${vBTCPlusImpl.address}`);
+        // console.log(`Proxy admin: ${accounts[1]}`);
+        // console.log(`vBTC+: ${vBTCPlus.address}`);
+        // console.log(`vBTC+ implementation: ${vBTCPlusImpl.address}`);
 
-        // const vBTC = await ERC20Upgradeable.at(VBTC);
-        // const vBTCPlus = await VenusBTCPlus.at("0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d");
-        // await vBTCPlus.mint("155539");
-        // await proxiedVBTCPlus.divest();
-        // console.log('Total supply prev: ', (await vBTCPlus.totalSupply()).toString());
-        // console.log('vBTC+ balance prev: ', (await vBTCPlus.balanceOf(accounts[0])).toString());
-        // console.log('vBTC balance prev: ', (await vBTC.balanceOf(accounts[0])).toString());
+        const vBTC = await ERC20Upgradeable.at(VBTC);
+        const vBTCPlus = await VenusBTCPlus.at("0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d");
+
+        console.log('Total supply prev: ', (await vBTCPlus.totalSupply()).toString());
+        console.log('vBTC+ balance prev: ', (await vBTCPlus.balanceOf(accounts[0])).toString());
+        console.log('vBTC balance prev: ', (await vBTC.balanceOf(accounts[0])).toString());
 
         // await vBTCPlus.mint("1000000");
         // await vBTCPlus.invest();
         // await vBTCPlus.redeem(MAX);
+        await vBTCPlus.harvest();
 
-        // console.log('Total supply after:', (await vBTCPlus.totalSupply()).toString());
-        // console.log('vBTC+ balance after: ', (await vBTCPlus.balanceOf(accounts[0])).toString());
-        // console.log('vBTC balance after: ', (await vBTC.balanceOf(accounts[0])).toString());
+        console.log('Total supply after:', (await vBTCPlus.totalSupply()).toString());
+        console.log('vBTC+ balance after: ', (await vBTCPlus.balanceOf(accounts[0])).toString());
+        console.log('vBTC balance after: ', (await vBTC.balanceOf(accounts[0])).toString());
 
         callback();
     } catch (e) {

@@ -51,6 +51,8 @@ contract ACryptoSBTCBPlus is SinglePlus {
     function invest() public virtual override onlyStrategist {
         uint256 _balance = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
         if (_balance > 0) {
+            IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_FARM, 0);
+            IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_FARM, _balance);
             IFarm(ACS_FARM).deposit(ACS_BTCB, _balance);
         }
     }
@@ -60,6 +62,10 @@ contract ACryptoSBTCBPlus is SinglePlus {
      * Only governance or strategist can call this function.
      */
     function harvest() public virtual override onlyStrategist {
+        uint256 _pending = IFarm(ACS_FARM).pendingSushi(ACS_BTCB, address(this));
+        uint256 _minimum = IFarm(ACS_FARM).harvestFee();
+        if (_pending <= _minimum)   return;
+
         // Harvest from ACryptoS Farm
         IFarm(ACS_FARM).harvest(ACS_BTCB);
 

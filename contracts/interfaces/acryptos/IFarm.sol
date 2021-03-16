@@ -33,4 +33,10 @@ interface IFarm {
     function withdraw(address _lpToken, uint256 _amount) external;
 
     function harvest(address _lpToken) external;
+
+    // View function to see pending SUSHIs on frontend.
+    function pendingSushi(address _lpToken, address _account) external view returns (uint256);
+
+    // Minimum amount to harvest.
+    function harvestFee() external view returns (uint256);
 }
