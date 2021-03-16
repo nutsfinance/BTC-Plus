@@ -11,16 +11,14 @@ module.exports = async function (callback) {
         const accounts = await web3.eth.getAccounts();
 
         console.log('Deploying vBTC+...');
-        const vBTCPlus = await VenusBTCPlus.new();
-        const vBTCPlusProxy = await PlusProxy.new(vBTCPlus.address, accounts[1], Buffer.from(''));
-        const vBTCPlusProxy = await PlusProxy.at(VBTC_PLUS);
-        await vBTCPlusProxy.upgradeTo(vBTCPlus.address, {from: accounts[1]});
-        const proxiedVBTCPlus = await VenusBTCPlus.at(vBTCPlusProxy.address);
-        await proxiedVBTCPlus.initialize();
+        const vBTCPlusImpl = await VenusBTCPlus.new();
+        const vBTCPlusProxy = await PlusProxy.new(vBTCPlusImpl.address, accounts[1], Buffer.from(''));
+        const vBTCPlus = await VenusBTCPlus.at(vBTCPlusProxy.address);
+        await vBTCPlus.initialize();
 
         console.log(`Proxy admin: ${accounts[1]}`);
-        console.log(`vBTC+: ${proxiedVBTCPlus.address}`);
-        console.log(`vBTC+ implementation: ${vBTCPlus.address}`);
+        console.log(`vBTC+: ${vBTCPlus.address}`);
+        console.log(`vBTC+ implementation: ${vBTCPlusImpl.address}`);
 
         // const vBTC = await ERC20Upgradeable.at(VBTC);
         // const vBTCPlus = await VenusBTCPlus.at("0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d");
