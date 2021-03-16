@@ -95,13 +95,18 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256) {
         require(_amount > 0, "zero amount");
 
-        uint256 _fee = 0;
-        if (redeemFee > 0) {
-            _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
-            _amount = _amount.sub(_fee);   
-        }
+        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
+        // Liquidity ratio is in WAD and redeem fee is in 0.01%
+        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
+        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
+        uint256 _fee = _amount.sub(_withdrawAmount);
+
+        // Conversion rate is in WAD
+        uint256 _underlyingAmount = _withdrawAmount.mul(WAD).div(_conversionRate());
+
         // Note: Fee is in plus token(18 decimals) but the received amount is in underlying token!
-        return (_amount.mul(WAD).div(_conversionRate()), _fee);
+        return (_underlyingAmount, _fee);
     }
 
     /**
@@ -124,9 +129,15 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
             _share  = _amount.mul(WAD).div(index);
         }
 
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
+        // Liquidity ratio is in WAD and redeem fee is in 0.01%
+        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
+        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
+        uint256 _fee = _amount.sub(_withdrawAmount);
+
         // Conversion rate is in WAD
-        uint256 _underlyingAmount = _amount.sub(_fee).mul(WAD).div(_conversionRate());
+        uint256 _underlyingAmount = _withdrawAmount.mul(WAD).div(_conversionRate());
 
         _withdraw(msg.sender, _underlyingAmount);
 
