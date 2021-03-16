@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../interfaces/IPlus.sol";
+import "./interfaces/IPlus.sol";
 
 /**
  * @title Plus token base contract.
@@ -117,19 +117,6 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function _totalUnderlying() internal view virtual returns (uint256);
 
     /**
-     * @dev Returns the value of the plus token in terms of the peg value.
-     * All underlying token amounts have been scaled to 18 decimals.
-     * For single plus, it's equal to its total supply.
-     * For composite plus, it's equal to the total amount of single plus tokens in its basket.
-     * @param _amount The amount of plus token to get underlying value.
-     */
-    function underlying(uint256 _amount) external view override returns (uint256) {
-        uint256 _totalSupply = totalSupply();
-
-        return _totalSupply == 0 ? 0 : _totalUnderlying().mul(_amount).div(_totalSupply);
-    }
-
-    /**
      * @dev Returns the total value of the plus token in terms of the peg value.
      */
     function totalUnderlying() external view override returns (uint256) {
@@ -161,7 +148,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     /**
      * @dev Accrues interest to increase index.
      */
-    function rebase() public {
+    function rebase() public override {
         uint256 _totalShares = totalShares;
         if (_totalShares == 0)  return;
 

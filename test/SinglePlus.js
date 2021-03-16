@@ -1,8 +1,8 @@
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const assert = require('assert');
-const SinglePlus = artifacts.require("SinglePlus");
+const MockSinglePlus = artifacts.require("MockSinglePlus");
+const MockReward = artifacts.require("MockReward");
 const MockToken = artifacts.require("MockToken");
-const MockStrategy = artifacts.require("MockStrategy");
 
 const MAX = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1));
 const toWei = web3.utils.toWei;
@@ -10,16 +10,13 @@ const toWei = web3.utils.toWei;
 contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
     let token;
     let plus;
-    let strategy;
+    let reward;
 
     beforeEach(async () => {
         token = await MockToken.new("Mock Token", "mToken", 6);
-        plus = await SinglePlus.new();
-        await plus.initialize(token.address, '', '');
+        plus = await MockSinglePlus.new(token.address);
         await plus.setStrategist(strategist, true);
-        strategy = await MockStrategy.new();
-        await strategy.initialize(plus.address);
-        await plus.approveStrategy(strategy.address, true);
+        reward = await MockReward.at(await plus.reward());
     });
 
     it("should initialize", async () => {
@@ -29,70 +26,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual(await plus.strategists(user1), false);
         assert.strictEqual(await plus.name(), "Mock Token Plus");
         assert.strictEqual(await plus.symbol(), "mToken+");
-    });
-
-    it("should have set active strategy", async () => {
-        assert.strictEqual(await plus.strategies(strategy.address), true);
-        assert.strictEqual(await plus.activeStrategy(), strategy.address);
-    });
-
-    it("should not allow to approve strategy other than governance", async () => {
-        const strategy2 = await MockStrategy.new();
-        await strategy2.initialize(plus.address);
-        await expectRevert(plus.approveStrategy(strategy2.address, true, {from: strategist}), "not governance");
-        await expectRevert(plus.approveStrategy(strategy2.address, false, {from: strategist}), "not governance");
-    });
-
-    it("should allow governance to approve strategy", async () => {
-        const strategy2 = await MockStrategy.new();
-        await strategy2.initialize(plus.address);
-        await plus.approveStrategy(strategy2.address, false);
-        assert.strictEqual(await plus.strategies(strategy2.address), true);
-        assert.strictEqual(await plus.activeStrategy(), strategy.address);
-
-        const strategy3 = await MockStrategy.new();
-        await strategy3.initialize(plus.address);
-        await plus.approveStrategy(strategy3.address, true);
-        assert.strictEqual(await plus.strategies(strategy3.address), true);
-        assert.strictEqual(await plus.activeStrategy(), strategy3.address);
-    });
-
-    it("should not allow to revoke strategy other than strategist", async () => {
-        await expectRevert(plus.revokeStrategy(strategy.address, {from: user2}), "not strategist");
-    });
-
-    it("should only allow strategist to revoke approved strategy", async () => {
-        await expectRevert(plus.revokeStrategy(user3), "not approved");
-    });
-
-    it("should allow strategist to revoke strategy", async () => {
-        await plus.revokeStrategy(strategy.address, {from: strategist});
-        assert.strictEqual(await plus.strategies(strategy.address), false);
-        assert.strictEqual(await plus.activeStrategy(), '0x0000000000000000000000000000000000000000');
-    });
-
-    it("should not allow to set active strategy other than strategist", async () => {
-        const strategy2 = await MockStrategy.new();
-        await strategy2.initialize(plus.address);
-        await expectRevert(plus.setActiveStrategy(strategy2.address, {from: user2}), "not strategist");
-    });
-
-    it("should allow to set approved strategies as active", async () => {
-        const strategy2 = await MockStrategy.new();
-        await strategy2.initialize(plus.address);
-        await expectRevert(plus.setActiveStrategy(strategy2.address), "not approved");
-
-        await plus.approveStrategy(strategy2.address, false);
-        assert.strictEqual(await plus.strategies(strategy2.address), true);
-        assert.strictEqual(await plus.activeStrategy(), strategy.address);
-        
-        await plus.setActiveStrategy(strategy2.address);
-        assert.strictEqual(await plus.activeStrategy(), strategy2.address);
-    });
-
-    it("should not allow to invest or harvest other than strategist", async () => {
-        await expectRevert(plus.invest({from: user3}), "not strategist");
-        await expectRevert(plus.harvest({from: user3}), "not strategist");
     });
 
     it("should be able to mint", async () => {
@@ -106,7 +39,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.totalShares()).toString(), toWei("6"));
         assert.strictEqual((await plus.userShare(user1)).toString(), toWei("6"));
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("6"));
-        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
         await plus.invest();
@@ -116,7 +48,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.totalShares()).toString(), toWei("6"));
         assert.strictEqual((await plus.userShare(user1)).toString(), toWei("6"));
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("6"));
-        assert.strictEqual((await plus.underlying(toWei("6"))).toString(), toWei("6"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
         await plus.harvest();
@@ -128,7 +59,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("7.2"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("0"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("0"));
-        assert.strictEqual((await plus.underlying(toWei("7.2"))).toString(), toWei("7.2"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
         await token.mint(user3, "3600000");
@@ -143,7 +73,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.balanceOf(user1)).toString(), toWei("7.2"));
         assert.strictEqual((await plus.userShare(user3)).toString(), toWei("3"));
         assert.strictEqual((await plus.balanceOf(user3)).toString(), toWei("3.6"));
-        assert.strictEqual((await plus.underlying(toWei("10.8"))).toString(), toWei("10.8"));
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
 
     });
@@ -174,7 +103,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "0");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
-        assert.strictEqual((await token.balanceOf(strategy.address)).toString(), "10800000");
+        assert.strictEqual((await token.balanceOf(reward.address)).toString(), "10800000");
 
         const redeemAmount = await plus.getRedeemAmount(toWei("2.4"));   // plus token has 18 decimals
         assert.strictEqual(redeemAmount[0].toString(), "2376000"); // redeem amount has 6 decimals
@@ -193,7 +122,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.liquidityRatio()).toString(), "1002857142857142857");
         assert.strictEqual((await token.balanceOf(user1)).toString(), "2376000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
-        assert.strictEqual((await token.balanceOf(strategy.address)).toString(), "8424000");
+        assert.strictEqual((await token.balanceOf(reward.address)).toString(), "8424000");
 
         await plus.rebase();
 
@@ -208,7 +137,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "2376000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
-        assert.strictEqual((await token.balanceOf(strategy.address)).toString(), "8424000");
+        assert.strictEqual((await token.balanceOf(reward.address)).toString(), "8424000");
     });
 
     it("should be able to redeem all", async () => {
@@ -237,7 +166,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "0");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
-        assert.strictEqual((await token.balanceOf(strategy.address)).toString(), "10800000");
+        assert.strictEqual((await token.balanceOf(reward.address)).toString(), "10800000");
 
         await plus.redeem(MAX, {from: user1});
 
@@ -252,7 +181,7 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1.02"));    // 3.672 / 3.6 = 1.02
         assert.strictEqual((await token.balanceOf(user1)).toString(), "7128000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
-        assert.strictEqual((await token.balanceOf(strategy.address)).toString(), "3672000");
+        assert.strictEqual((await token.balanceOf(reward.address)).toString(), "3672000");
 
         await plus.rebase();
 
@@ -267,6 +196,6 @@ contract("SinglePlus", async ([owner, strategist, user1, user2, user3]) => {
         assert.strictEqual((await plus.liquidityRatio()).toString(), toWei("1"));
         assert.strictEqual((await token.balanceOf(user1)).toString(), "7128000");
         assert.strictEqual((await token.balanceOf(plus.address)).toString(), "0");
-        assert.strictEqual((await token.balanceOf(strategy.address)).toString(), "3672000");
+        assert.strictEqual((await token.balanceOf(reward.address)).toString(), "3672000");
     });
 });

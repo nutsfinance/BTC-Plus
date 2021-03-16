@@ -167,7 +167,9 @@ contract GaugeController is Initializable, IGaugeController {
             // Liquidity gauge token and staked token is 1:1
             // Total plus is used to compute boost
             address _staked = IGauge(_gauges[i]).token();
-            _gaugePlus[i] = IPlus(_staked).underlying(IERC20Upgradeable(_gauges[i]).totalSupply());
+            // Rebase once to get an accurate result
+            IPlus(_staked).rebase();
+            _gaugePlus[i] = IGauge(_gauges[i]).totalStaked();
             _totalPlus = _totalPlus.add(_gaugePlus[i]);
 
             // Weighted plus is used to compute rate allocation

@@ -8,16 +8,16 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../StrategyBase.sol";
-import "../../interfaces/ISinglePlus.sol";
+import "../../SinglePlus.sol";
+import "../../interfaces/compound/ICToken.sol";
 import "../../interfaces/fortube/IForTubeReward.sol";
 import "../../interfaces/fortube/IForTubeBank.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
- * @dev Earning strategy for ForTube BTCB
+ * @dev Single Plus for ForTube BCTB.
  */
-contract StrategyFBTCB is StrategyBase {
+contract ForTubeBTCBPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -30,51 +30,17 @@ contract StrategyFBTCB is StrategyBase {
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
     /**
-     * @dev Initializes the strategy.
+     * @dev Initializes fBTCB+.
      */
-    function initialize(address _plus) public initializer {
-        require(ISinglePlus(_plus).token() == FORTUBE_BTCB, "not fBTCB");
-        __StrategyBase_init(_plus);
+    function initialize() public initializer {
+        SinglePlus.initialize(FORTUBE_BTCB, "", "");
     }
 
     /**
-     * @dev Returns the amount of tokens managed by the strategy.
+     * @dev Harvest additional yield from the investment.
+     * Only governance or strategist can call this function.
      */
-    function balance() public view override returns (uint256) {
-        return IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));
-    }
-
-    /**
-     * @dev Withdraws a portional amount of assets from the Strategy.
-     */
-    function withdraw(uint256 _amount) public override onlyPlus {
-        IERC20Upgradeable(FORTUBE_BTCB).safeTransfer(plus, _amount);
-    }
-
-    /**
-     * @dev Withdraws all assets out of the Strategy.  Usually used in strategy migration.
-     */
-    function withdrawAll() public override onlyPlus returns (uint256) {
-        uint256 _balance = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));
-        if (_balance > 0) {
-            IERC20Upgradeable(FORTUBE_BTCB).safeTransfer(plus, _balance);
-        }
-
-        return _balance;
-    }
-
-    /**
-     * @dev Invest the managed token in strategy to earn yield.
-     */
-    function deposit() public override onlyStrategist {
-        // No op
-    }
-
-    /**
-     * @dev Harvest in strategy.
-     * Only pool can invoke this function.
-     */
-    function harvest() public override onlyStrategist {
+    function harvest() public virtual override onlyStrategist {
         // Harvest from FurTube rewards
         IForTubeReward(FORTUBE_REWARD).claimReward();
 
@@ -91,25 +57,28 @@ contract StrategyFBTCB is StrategyBase {
 
             IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_for, uint256(0), _path, address(this), now.add(1800));
         }
-        // ACrytoS: BTCB --> fBTCB
+        // ForTube: BTCB --> fBTCB
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         if (_btcb > 0) {
             IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, 0);
             IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, _for);
             IForTubeBank(FORTUBE_BANK).deposit(BTCB, _btcb);
         }
-        uint256 _fBTCB = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));
-        if (_fBTCB == 0) {
+        uint256 _fbtc = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));
+        if (_fbtc == 0) {
             return;
         }
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _fBTCB.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(FORTUBE_BTCB).safeTransfer(ISinglePlus(plus).treasury(), _fee);
+            _fee = _fbtc.mul(performanceFee).div(PERCENT_MAX);
+            IERC20Upgradeable(FORTUBE_BTCB).safeTransfer(treasury, _fee);
         }
-        deposit();
+        // Reinvest to get compound yield.
+        invest();
+        // Also it's a good time to rebase!
+        rebase();
 
-        emit Harvested(FORTUBE_BTCB, _fBTCB, _fee);
+        emit Harvested(FORTUBE_BTCB, _fbtc, _fee);
     }
 
     /**
@@ -121,5 +90,14 @@ contract StrategyFBTCB is StrategyBase {
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
         return _token != FORTUBE_BTCB && _token != FOR;
+    }
+
+    /**
+     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
+     * ForTube's fToken interface is compactible with Compound's cToken.
+     */
+    function _conversionRate() internal view virtual override returns (uint256) {
+        // fBTC has 18 decimals and exchangeRate is in WAD
+        return ICToken(FORTUBE_BTCB).exchangeRateStored();
     }
 }
