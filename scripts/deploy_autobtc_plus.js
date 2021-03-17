@@ -11,30 +11,30 @@ module.exports = async function (callback) {
     try {
         const accounts = await web3.eth.getAccounts();
 
-        console.log('Deploying autoBTC+...');
-        const autoBTCPlusImpl = await AutoBTCPlus.new();
-        const autoBTCPlusProxy = await ERC20Proxy.new(autoBTCPlusImpl.address, accounts[1], Buffer.from(''));
-        const autoBTCPlus = await AutoBTCPlus.at(autoBTCPlusProxy.address);
-        await autoBTCPlus.initialize();
+        // console.log('Deploying autoBTC+...');
+        // const autoBTCPlusImpl = await AutoBTCPlus.new();
+        // const autoBTCPlusProxy = await ERC20Proxy.new(autoBTCPlusImpl.address, accounts[1], Buffer.from(''));
+        // const autoBTCPlus = await AutoBTCPlus.at(autoBTCPlusProxy.address);
+        // await autoBTCPlus.initialize();
 
-        console.log(`Proxy admin: ${accounts[1]}`);
-        console.log(`autoBTC+: ${autoBTCPlus.address}`);
-        console.log(`autoBTC+ implementation: ${autoBTCPlusImpl.address}`);
+        // console.log(`Proxy admin: ${accounts[1]}`);
+        // console.log(`autoBTC+: ${autoBTCPlus.address}`);
+        // console.log(`autoBTC+ implementation: ${autoBTCPlusImpl.address}`);
 
         const autoBTC = await ERC20Upgradeable.at(AUTOBTC);
-        // const vBTCPlus = await VenusBTCPlus.at("0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d");
+        const autoBTCPlus = await AutoBTCPlus.at("0x33938f7f60E276a5eD0474B905E77C9708C9135A");
 
         console.log('Total supply prev: ', (await autoBTCPlus.totalSupply()).toString());
         console.log('autoBTC+ balance prev: ', (await autoBTCPlus.balanceOf(accounts[0])).toString());
         console.log('autoBTC balance prev: ', (await autoBTC.balanceOf(accounts[0])).toString());
 
-        await autoBTC.approve(autoBTCPlus.address, toWei("0.001"));
-        await autoBTCPlus.mint(toWei("0.001"));
+        // await autoBTC.approve(autoBTCPlus.address, toWei("0.001"));
+        // await autoBTCPlus.mint(toWei("0.001"));
 
         // await vBTCPlus.mint("1000000");
-        // await vBTCPlus.invest();
+        // await autoBTCPlus.invest();
         // await vBTCPlus.redeem(MAX);
-        // await vBTCPlus.harvest();
+        await autoBTCPlus.harvest();
 
         console.log('Total supply after:', (await autoBTCPlus.totalSupply()).toString());
         console.log('autoBTC+ balance after: ', (await autoBTCPlus.balanceOf(accounts[0])).toString());

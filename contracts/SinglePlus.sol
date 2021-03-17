@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
+import "./interfaces/ISinglePlus.sol";
 import "./Plus.sol";
 
 /**
@@ -17,7 +18,7 @@ import "./Plus.sol";
  * A single plus token wraps an underlying ERC20 token, typically a yield token,
  * into a value peg token.
  */
-contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
+contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -28,7 +29,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
     
     // Underlying token of the single plus toke. Typically a yield token and not value peg.
-    address public token;
+    address public override token;
     // Whether minting is paused for the single plus token.
     bool public mintPaused;
     uint256 public performanceFee;
@@ -68,7 +69,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Mints the single plus token with the underlying token.
      * @dev _amount Amount of the underlying token used to mint single plus token.
      */
-    function mint(uint256 _amount) external nonReentrant {
+    function mint(uint256 _amount) external override nonReentrant {
         require(_amount > 0, "zero amount");
         require(!mintPaused, "mint paused");
 
@@ -113,7 +114,7 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
      * @dev Redeems the single plus token.
      * @param _amount Amount of single plus token to redeem. -1 means redeeming all shares.
      */
-    function redeem(uint256 _amount) external nonReentrant {
+    function redeem(uint256 _amount) external override nonReentrant {
         require(_amount > 0, "zero amount");
 
         // Rebase first to make index up-to-date
@@ -173,17 +174,17 @@ contract SinglePlus is Plus, ReentrancyGuardUpgradeable {
     /**
      * @dev Retrive the underlying assets from the investment.
      */
-    function divest() public virtual {}
+    function divest() public virtual override {}
 
     /**
      * @dev Invest the underlying assets for additional yield.
      */
-    function invest() public virtual {}
+    function invest() public virtual override {}
 
     /**
      * @dev Harvest additional yield from the investment.
      */
-    function harvest() public virtual {}
+    function harvest() public virtual override {}
 
     /**
      * @dev Checks whether a token can be salvaged via salvageToken().

@@ -19,4 +19,13 @@ interface IAutoBTC is ICToken {
      */
     function claimRewards() external;
 
+    /**
+     * @dev Redeems autoBTC to BTCB.
+     * @param _amount Amount of BTCB to redeem from autoBTC.
+     *
+     * Note: This accommodates AutoFarm's behavior to user BTCB amount, instead of share amount to withdraw. Also,
+     * if a number larger than user balance is provided, it will withdraw all balance of the user.
+     */
+    function redeem(uint256 _amount) external;
+
 }

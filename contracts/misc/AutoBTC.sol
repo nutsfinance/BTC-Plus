@@ -125,7 +125,7 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
      * Note: This accommodates AutoFarm's behavior to user BTCB amount, instead of share amount to withdraw. Also,
      * if a number larger than user balance is provided, it will withdraw all balance of the user.
      */
-    function redeem(uint256 _amount) public {
+    function redeem(uint256 _amount) public override {
         uint256 _before = IStrat(BTBC_STRAT).sharesTotal();
 
         // Each deposit and withdraw trigger AUTO distribution in AutoFarm
