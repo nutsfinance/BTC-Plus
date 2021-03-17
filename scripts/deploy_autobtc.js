@@ -22,10 +22,11 @@ module.exports = async function (callback) {
 
         console.log(`autoBTC implementation: ${autoBTCImpl.address}`);
         console.log(`autoBTC: ${autoBTC.address}`);
+        // const autoBTC = await AutoBTC.at("0x54fA94FD0F8231863930C7dbf612077f378F03fB");
 
         // console.log(`autoBTC: ${autoBTC.address}`);
-        await btcb.approve(autoBTC.address, toWei("0.003"));
-        await autoBTC.mint(toWei("0.003"));
+        await btcb.approve(autoBTC.address, toWei("0.003"), {from: DEPLOYER});
+        await autoBTC.mint(toWei("0.003"), {from: DEPLOYER});
 
         // console.log('Deploying fBTC+...');
         // const fBTCPlusImpl = await ForTubeBTCBPlus.new();
