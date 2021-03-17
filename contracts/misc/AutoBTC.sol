@@ -144,7 +144,7 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
      */
     function claimRewards() public override {
         // Triggers AUTO distribution with a zero deposit
-        IAutoFarm(AUTOFARM).withdraw(PID, 0);
+        IAutoFarm(AUTOFARM).deposit(PID, 0);
 
         // Updates the rewards before redeeming
         _updateReward(msg.sender);
@@ -155,6 +155,9 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
             rewards[msg.sender] = 0;
         }
 
+        // Need to update the reward balance again!
+        lastReward = IERC20Upgradeable(AUTOv2).balanceOf(address(this));
+
         emit Claimed(msg.sender, _reward);
     }
 
@@ -163,7 +166,7 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
      */
     function _transfer(address _from, address _to, uint256 _amount) internal virtual override {
         // Triggers AUTO distribution with a zero deposit
-        IAutoFarm(AUTOFARM).withdraw(PID, 0);
+        IAutoFarm(AUTOFARM).deposit(PID, 0);
 
         // Updates the rewards before the actual transfer
         _updateReward(_from);
