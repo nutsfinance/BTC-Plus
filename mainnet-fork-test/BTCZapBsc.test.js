@@ -15,7 +15,7 @@ const BN = web3.utils.BN;
 const toWei = web3.utils.toWei;
 const MAX = new BN(2).pow(new BN(256)).sub(new BN(1));
 
-const assertAlmostEqual = function(expectedOrig, actualOrig) {
+const assertAlmostEqual = function(actualOrig, expectedOrig) {
     const expected = new BN(expectedOrig);
     const actual = new BN(actualOrig);
     
@@ -52,7 +52,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         zap = await BTCZapBsc.new();
         await btcb.approve(zap.address, toWei("1"), {from: DEPLOYER});
     });
-    it("should mint vBTC+", async () => {
+    it("should mint and redeem vBTC+", async () => {
         const balance1 = await vbtcPlus.balanceOf(DEPLOYER);
         console.log('Balance 1: ' + balance1.toString());
         await zap.mintVBTCPlus(toWei("0.0001"), {from: DEPLOYER});
@@ -61,6 +61,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
 
         assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
 
+        await vbtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
         await zap.redeemVBTCPlus(balance2, {from: DEPLOYER});
 
         const balance3 = await vbtcPlus.balanceOf(DEPLOYER);
@@ -68,7 +69,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         assertAlmostEqual(balance3, "0");
     });
 
-    it("should mint fBTC+", async () => {
+    it("should mint and redeem fBTC+", async () => {
         const balance1 = await fbtcbPlus.balanceOf(DEPLOYER);
         console.log('Balance 1: ' + balance1.toString());
         await zap.mintFBTCBPlus(toWei("0.0001"), {from: DEPLOYER});
@@ -77,7 +78,8 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
 
         assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
 
-        await zap.redeemVBTCPlus(balance2, {from: DEPLOYER});
+        await fbtcbPlus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemFBTCBPlus(balance2, {from: DEPLOYER});
 
         const balance3 = await fbtcbPlus.balanceOf(DEPLOYER);
         console.log('Balance 3: ' + balance3.toString());

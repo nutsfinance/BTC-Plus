@@ -25,6 +25,7 @@ contract ForTubeBTCBPlus is SinglePlus {
     address public constant WBNB = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     address public constant FOR = address(0x658A109C5900BC6d2357c87549B651670E5b0539);
     address public constant FORTUBE_BTCB = address(0xb5C15fD55C73d9BeeC046CB4DAce1e7975DcBBBc);
+    address public constant FORTUBE_CONTROLLER = address(0xc78248D676DeBB4597e88071D3d889eCA70E5469);
     address public constant FORTUBE_BANK = address(0x0cEA0832e9cdBb5D476040D58Ea07ecfbeBB7672);
     address public constant FORTUBE_REWARD = address(0x55838F18e79cFd3EA22Eea08Bd3Ec18d67f314ed);
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
@@ -42,7 +43,10 @@ contract ForTubeBTCBPlus is SinglePlus {
      */
     function harvest() public virtual override onlyStrategist {
         // Harvest from FurTube rewards
-        IForTubeReward(FORTUBE_REWARD).claimReward();
+        uint256 _reward = IForTubeReward(FORTUBE_REWARD).checkBalance(address(this));
+        if (_reward > 0) {
+            IForTubeReward(FORTUBE_REWARD).claimReward();
+        }
 
         uint256 _for = IERC20Upgradeable(FOR).balanceOf(address(this));
         // PancakeSawp: FOR --> WBNB --> BTCB
@@ -60,8 +64,8 @@ contract ForTubeBTCBPlus is SinglePlus {
         // ForTube: BTCB --> fBTCB
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         if (_btcb > 0) {
-            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, 0);
-            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, _for);
+            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, 0);
+            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, _btcb);
             IForTubeBank(FORTUBE_BANK).deposit(BTCB, _btcb);
         }
         uint256 _fbtc = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));

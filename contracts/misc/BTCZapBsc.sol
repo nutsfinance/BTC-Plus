@@ -28,6 +28,7 @@ contract BTCZapBsc {
     address public constant VENUS_BTC_PLUS = address(0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d);
     address public constant FORTUBE_BTCB = address(0xb5C15fD55C73d9BeeC046CB4DAce1e7975DcBBBc);
     address public constant FORTUBE_BANK = address(0x0cEA0832e9cdBb5D476040D58Ea07ecfbeBB7672);
+    address public constant FORTUBE_CONTROLLER = address(0xc78248D676DeBB4597e88071D3d889eCA70E5469);
     address public constant FORTUBE_BTCB_PLUS = address(0xD7F984196392C7eA791F4A39e797e8dE19Ca898d);
     address public constant ACS_BTCB = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
     address public constant ACS_BTCB_PLUS = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
@@ -42,7 +43,7 @@ contract BTCZapBsc {
         IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(-1));
         IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(-1));
 
-        IERC20Upgradeable(BTCB).safeApprove(FORTUBE_BANK, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, uint256(-1));
         IERC20Upgradeable(FORTUBE_BTCB).safeApprove(FORTUBE_BTCB_PLUS, uint256(-1));
 
         IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, uint256(-1));
@@ -120,7 +121,7 @@ contract BTCZapBsc {
         ISinglePlus(FORTUBE_BTCB_PLUS).redeem(_amount);
 
         uint256 _fbtcb = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));
-        IVToken(FORTUBE_BTCB).redeem(_fbtcb);
+        IForTubeBank(FORTUBE_BANK).withdraw(BTCB, _fbtcb);
 
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
