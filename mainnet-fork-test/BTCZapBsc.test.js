@@ -39,7 +39,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let btcb;
     let vbtcPlus;
     let fbtcbPlus;
-    let acsbtcbPus;
+    let acsbtcbPlus;
     let autobtcPlus;
     let zap;
 
@@ -47,7 +47,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         btcb = await ERC20Upgradeable.at(BTCB);
         vbtcPlus = await ERC20Upgradeable.at(VBTC_PLUS);
         fbtcbPlus = await ERC20Upgradeable.at(FBTCB_PLUS);
-        acsbtcbPus = await ERC20Upgradeable.at(ACSBTCB_PLUS);
+        acsbtcbPlus = await ERC20Upgradeable.at(ACSBTCB_PLUS);
         autobtcPlus = await ERC20Upgradeable.at(AUTOBTC_PLUS);
         zap = await BTCZapBsc.new();
         await btcb.approve(zap.address, toWei("1"), {from: DEPLOYER});
@@ -82,6 +82,40 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         await zap.redeemFBTCBPlus(balance2, {from: DEPLOYER});
 
         const balance3 = await fbtcbPlus.balanceOf(DEPLOYER);
+        console.log('Balance 3: ' + balance3.toString());
+        assertAlmostEqual(balance3, "0");
+    });
+
+    it("should mint and redeem acsBTC+", async () => {
+        const balance1 = await acsbtcbPlus.balanceOf(DEPLOYER);
+        console.log('Balance 1: ' + balance1.toString());
+        await zap.mintAcsBTCBPlus(toWei("0.0001"), {from: DEPLOYER});
+        const balance2 = await acsbtcbPlus.balanceOf(DEPLOYER);
+        console.log('Balance 2: ' + balance2.toString());
+
+        assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
+
+        await acsbtcbPlus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAcsBTCBPlus(balance2, {from: DEPLOYER});
+
+        const balance3 = await acsbtcbPlus.balanceOf(DEPLOYER);
+        console.log('Balance 3: ' + balance3.toString());
+        assertAlmostEqual(balance3, "0");
+    });
+
+    it("should mint and redeem BTC+", async () => {
+        const balance1 = await autobtcPlus.balanceOf(DEPLOYER);
+        console.log('Balance 1: ' + balance1.toString());
+        await zap.mintAutoBTCPlus(toWei("0.0001"), {from: DEPLOYER});
+        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
+        console.log('Balance 2: ' + balance2.toString());
+
+        assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
+
+        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
+
+        const balance3 = await autobtcPlus.balanceOf(DEPLOYER);
         console.log('Balance 3: ' + balance3.toString());
         assertAlmostEqual(balance3, "0");
     });

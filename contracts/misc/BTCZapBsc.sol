@@ -31,7 +31,7 @@ contract BTCZapBsc {
     address public constant FORTUBE_CONTROLLER = address(0xc78248D676DeBB4597e88071D3d889eCA70E5469);
     address public constant FORTUBE_BTCB_PLUS = address(0xD7F984196392C7eA791F4A39e797e8dE19Ca898d);
     address public constant ACS_BTCB = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
-    address public constant ACS_BTCB_PLUS = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
+    address public constant ACS_BTCB_PLUS = address(0xf52F3E8fF896abC844BE2EbF4809Bc22123D3a57);
     address public constant AUTO_BTC = address(0x54fA94FD0F8231863930C7dbf612077f378F03fB);
     address public constant AUTO_BTC_PLUS = address(0x33938f7f60E276a5eD0474B905E77C9708C9135A);
     uint256 public constant WAD = 10 ** 18;
