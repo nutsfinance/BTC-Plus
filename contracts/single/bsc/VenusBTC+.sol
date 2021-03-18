@@ -149,8 +149,8 @@ contract VenusBTCPlus is SinglePlus {
      * Venus forks Compound so we use cToken interface from Compound.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
-        // vBTC has 8 decimals, and exchange rate is in WAD
-        return ICToken(VENUS_BTC).exchangeRateStored().mul(10 ** 10);
+        // The exchange rate is in WAD
+        return ICToken(VENUS_BTC).exchangeRateStored();
     }
 
     /**
