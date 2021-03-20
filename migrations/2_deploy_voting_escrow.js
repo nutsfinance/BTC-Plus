@@ -1,8 +1,16 @@
 const VotingEscrow = artifacts.require("VotingEscrow");
+const MockACoconut = artifacts.require("MockACoconut");
 const constants = require('../constant');
 
 const deployVotingEscrow = async (deployer, network, accounts) => {
-    const votingEscrow = await deployer.deploy(VotingEscrow, constants[network].AC, "Voting ACoconut", "vAC", "1.0.0");
+    let ac;
+    if (network === 'development') {
+        ac = (await deployer.deploy(MockACoconut)).address;
+        console.log(`AC: ${ac}`);
+    } else {
+        ac = constants[network].AC;
+    }
+    const votingEscrow = await deployer.deploy(VotingEscrow, ac, "Voting ACoconut", "vAC", "1.0.0");
 
     console.log(`Voting escrow: ${votingEscrow.address}`);
 }

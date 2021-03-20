@@ -113,11 +113,15 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             IERC20Upgradeable(_tokens[i]).safeTransferFrom(msg.sender, address(this), _amounts[i]);
         }
 
-        uint256 _newShare = _amount.mul(WAD).div(index);
-        totalShares = totalShares.add(_newShare);
-        userShare[msg.sender] = userShare[msg.sender].add(_newShare);
+        uint256 _share = _amount.mul(WAD).div(index);
+        uint256 _oldShare = userShare[msg.sender];
+        uint256 _newShare = _oldShare.add(_share);
+        uint256 _totalShares = totalShares.add(_share);
+        totalShares = _totalShares;
+        userShare[msg.sender] = _newShare;
 
-        emit Minted(msg.sender, _tokens, _amounts, _newShare, _amount);
+        emit UserShareUpdated(msg.sender, _oldShare, _newShare, _totalShares);
+        emit Minted(msg.sender, _tokens, _amounts, _share, _amount);
     }
 
     /**
@@ -196,9 +200,12 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         }
 
         // Updates the balance
+        uint256 _oldShare = userShare[msg.sender];
+        uint256 _newShare = _oldShare.sub(_share);
         totalShares = totalShares.sub(_share);
-        userShare[msg.sender] = userShare[msg.sender].sub(_share);
+        userShare[msg.sender] = _newShare;
 
+        emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
         emit Redeemed(msg.sender, _redeemTokens, _redeemAmounts, _share, _amount, _fee);
     }
 

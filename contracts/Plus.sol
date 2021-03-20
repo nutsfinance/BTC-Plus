@@ -22,6 +22,10 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
+    /**
+     * @dev Emitted each time the share of a user is updated.
+     */
+    event UserShareUpdated(address indexed account, uint256 oldShare, uint256 newShare, uint256 totalShares);
     event Rebased(uint256 oldIndex, uint256 newIndex, uint256 totalUnderlying);
     event Donated(address indexed account, uint256 amount, uint256 share);
 
@@ -191,9 +195,13 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
             _share  = _amount.mul(WAD).div(index);
         }
 
-        userShare[msg.sender] = userShare[msg.sender].sub(_share, "insufficient share");
-        totalShares = totalShares.sub(_share);
+        uint256 _oldShare = userShare[msg.sender];
+        uint256 _newShare = _oldShare.sub(_share, "insufficient share");
+        uint256 _newTotalShares = totalShares.sub(_share);
+        userShare[msg.sender] = _newShare;
+        totalShares = _newTotalShares;
 
+        emit UserShareUpdated(msg.sender, _oldShare, _newShare, _newTotalShares);
         emit Donated(msg.sender, _amount, _share);
     }
 
@@ -204,8 +212,18 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         // Rebase first to make index up-to-date
         rebase();
         uint256 _shareToTransfer = _amount.mul(WAD).div(index);
-        userShare[_sender] = userShare[_sender].sub(_shareToTransfer, "insufficient share");
-        userShare[_recipient] = userShare[_recipient].add(_shareToTransfer);
+
+        uint256 _oldSenderShare = userShare[_sender];
+        uint256 _newSenderShare = _oldSenderShare.sub(_shareToTransfer, "insufficient share");
+        uint256 _oldRecipientShare = userShare[_recipient];
+        uint256 _newRecipientShare = _oldRecipientShare.add(_shareToTransfer);
+        uint256 _totalShares = totalShares;
+
+        userShare[_sender] = _newSenderShare;
+        userShare[_recipient] = _newRecipientShare;
+
+        emit UserShareUpdated(_sender, _oldSenderShare, _newSenderShare, _totalShares);
+        emit UserShareUpdated(_recipient, _oldRecipientShare, _newRecipientShare, _totalShares);
     }
 
     /**

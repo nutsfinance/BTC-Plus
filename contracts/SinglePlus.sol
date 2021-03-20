@@ -81,11 +81,16 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
         uint256 _newAmount = _amount.mul(_conversionRate()).div(WAD);
         // Index is in WAD
-        uint256 _newShare = _newAmount.mul(WAD).div(index);
-        totalShares = totalShares.add(_newShare);
-        userShare[msg.sender] = userShare[msg.sender].add(_newShare);
+        uint256 _share = _newAmount.mul(WAD).div(index);
 
-        emit Minted(msg.sender, _amount, _newShare, _newAmount);
+        uint256 _oldShare = userShare[msg.sender];
+        uint256 _newShare = _oldShare.add(_share);
+        uint256 _totalShares = totalShares.add(_share);
+        totalShares = _totalShares;
+        userShare[msg.sender] = _newShare;
+
+        emit UserShareUpdated(msg.sender, _oldShare, _newShare, _totalShares);
+        emit Minted(msg.sender, _amount, _share, _newAmount);
     }
 
     /**
@@ -143,9 +148,12 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         _withdraw(msg.sender, _underlyingAmount);
 
         // Updates the balance
+        uint256 _oldShare = userShare[msg.sender];
+        uint256 _newShare = _oldShare.sub(_share);
         totalShares = totalShares.sub(_share);
-        userShare[msg.sender] = userShare[msg.sender].sub(_share);
+        userShare[msg.sender] = _newShare;
 
+        emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
         emit Redeemed(msg.sender, _underlyingAmount, _share, _amount, _fee);
     }
 
