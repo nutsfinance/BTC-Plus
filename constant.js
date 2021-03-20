@@ -31,6 +31,6 @@
  */
 module.exports = {
     bsc: {
-        AC: "0x365610A3c0BC0446a9a1e2ff54Ca8a8b7DCced20"
+        AC: "0xe9c1B8993A8750Ae65607Ef91ebCdE595DeB4EC3"
     }
 }

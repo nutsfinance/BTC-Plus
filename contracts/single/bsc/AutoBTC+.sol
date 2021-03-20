@@ -25,7 +25,7 @@ contract AutoBTCPlus is SinglePlus {
     address public constant WBNB = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     address public constant AUTOv2 = address(0xa184088a740c695E156F91f5cC086a06bb78b827);
     // Update when AUTO_BTC is deployed
-    address public constant AUTO_BTC = address(0x54fA94FD0F8231863930C7dbf612077f378F03fB);
+    address public constant AUTO_BTC = address(0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414);
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
     /**

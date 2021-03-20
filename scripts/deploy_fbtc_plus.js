@@ -12,30 +12,28 @@ module.exports = async function (callback) {
 
         console.log('Deploying fBTC+...');
         const fBTCPlusImpl = await ForTubeBTCBPlus.new();
-        // const fBTCPlusProxy = await PlusProxy.new(fBTCPlusImpl.address, accounts[1], Buffer.from(''));
-        // const fBTCPlus = await ForTubeBTCBPlus.at(fBTCPlusProxy.address);
-        // await fBTCPlus.initialize();
-        const fBTCPlusProxy = await ERC20Proxy.at("0xD7F984196392C7eA791F4A39e797e8dE19Ca898d");
-        await fBTCPlusProxy.upgradeTo(fBTCPlusImpl.address, {from: accounts[1]});
+        const fBTCPlusProxy = await ERC20Proxy.new(fBTCPlusImpl.address, accounts[1], Buffer.from(''));
+        const fBTCPlus = await ForTubeBTCBPlus.at(fBTCPlusProxy.address);
+        await fBTCPlus.initialize();
 
-        // console.log(`Proxy admin: ${accounts[1]}`);
-        // console.log(`fBTC+: ${fBTCPlus.address}`);
+        console.log(`Proxy admin: ${accounts[1]}`);
+        console.log(`fBTC+: ${fBTCPlus.address}`);
         console.log(`fBTC+ implementation: ${fBTCPlusImpl.address}`);
 
-        const fBTCPlus = await ForTubeBTCBPlus.at("0xD7F984196392C7eA791F4A39e797e8dE19Ca898d");
-        const fBTC = await ERC20Upgradeable.at(FBTC);
+        // const fBTCPlus = await ForTubeBTCBPlus.at("0xD7F984196392C7eA791F4A39e797e8dE19Ca898d");
+        // const fBTC = await ERC20Upgradeable.at(FBTC);
 
-        console.log('Total supply prev: ', (await fBTCPlus.totalSupply()).toString());
-        console.log('fBTC+ balance prev: ', (await fBTCPlus.balanceOf(accounts[0])).toString());
-        console.log('fBTC balance prev: ', (await fBTC.balanceOf(accounts[0])).toString());
+        // console.log('Total supply prev: ', (await fBTCPlus.totalSupply()).toString());
+        // console.log('fBTC+ balance prev: ', (await fBTCPlus.balanceOf(accounts[0])).toString());
+        // console.log('fBTC balance prev: ', (await fBTC.balanceOf(accounts[0])).toString());
 
         // await fBTC.approve(fBTCPlus.address, web3.utils.toWei("0.0001"));
         // await fBTCPlus.mint(web3.utils.toWei("0.0001"));
-        await fBTCPlus.harvest();
+        // await fBTCPlus.harvest();
 
-        console.log('Total supply after:', (await fBTCPlus.totalSupply()).toString());
-        console.log('fBTC+ balance after: ', (await fBTCPlus.balanceOf(accounts[0])).toString());
-        console.log('fBTC balance after: ', (await fBTC.balanceOf(accounts[0])).toString());
+        // console.log('Total supply after:', (await fBTCPlus.totalSupply()).toString());
+        // console.log('fBTC+ balance after: ', (await fBTCPlus.balanceOf(accounts[0])).toString());
+        // console.log('fBTC balance after: ', (await fBTC.balanceOf(accounts[0])).toString());
 
         callback();
     } catch (e) {

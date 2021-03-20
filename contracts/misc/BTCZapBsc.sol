@@ -25,15 +25,15 @@ contract BTCZapBsc {
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant VENUS_BTC = address(0x882C173bC7Ff3b7786CA16dfeD3DFFfb9Ee7847B);
-    address public constant VENUS_BTC_PLUS = address(0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d);
+    address public constant VENUS_BTC_PLUS = address(0xcf8D1D3Fce7C2138F85889068e50F0e7a18b5321);
     address public constant FORTUBE_BTCB = address(0xb5C15fD55C73d9BeeC046CB4DAce1e7975DcBBBc);
     address public constant FORTUBE_BANK = address(0x0cEA0832e9cdBb5D476040D58Ea07ecfbeBB7672);
     address public constant FORTUBE_CONTROLLER = address(0xc78248D676DeBB4597e88071D3d889eCA70E5469);
-    address public constant FORTUBE_BTCB_PLUS = address(0xD7F984196392C7eA791F4A39e797e8dE19Ca898d);
+    address public constant FORTUBE_BTCB_PLUS = address(0x73FddFb941c11d16C827169Bb94aCC227841C396);
     address public constant ACS_BTCB = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
-    address public constant ACS_BTCB_PLUS = address(0xf52F3E8fF896abC844BE2EbF4809Bc22123D3a57);
-    address public constant AUTO_BTC = address(0x54fA94FD0F8231863930C7dbf612077f378F03fB);
-    address public constant AUTO_BTC_PLUS = address(0x33938f7f60E276a5eD0474B905E77C9708C9135A);
+    address public constant ACS_BTCB_PLUS = address(0xD7806143A4206aa9A816b964e4c994F533b830b0);
+    address public constant AUTO_BTC = address(0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414);
+    address public constant AUTO_BTC_PLUS = address(0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604);
     uint256 public constant WAD = 10 ** 18;
 
     address public governance;

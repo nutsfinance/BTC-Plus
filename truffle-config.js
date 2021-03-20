@@ -75,7 +75,7 @@ module.exports = {
       network_id: 56,
       gas: 6700000,           // Gas sent with each transaction (default: ~6700000)
       gasPrice: 10000000000,  // 10 gwei (in wei) (default: 10 gwei)
-      confirmations: 10,
+      // confirmations: 10,
     },
 
     // Another network with more advanced options...

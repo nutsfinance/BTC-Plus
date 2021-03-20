@@ -3,11 +3,8 @@ const GaugeControllerProxy = artifacts.require("GaugeControllerProxy");
 const LiquidityGauge = artifacts.require("LiquidityGauge");
 const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
 
-const votingEscrow = '0x4eBb53744F0aE5b06F1b198f281D22e3Cf6Ab28D';
-const vBTCPlus = '0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d';
-const fBTCBPlus = '0xD7F984196392C7eA791F4A39e797e8dE19Ca898d';
-const acsBTCBPlus = '0xf52F3E8fF896abC844BE2EbF4809Bc22123D3a57';
-const autoBTCPlus = '0x33938f7f60E276a5eD0474B905E77C9708C9135A';
+const votingEscrow = '0x5b1783518FAA0298ada04d1aebaD6bc8EdB7f083';
+const token = '0x8Aa8f56A255b970971414A993DB754387A09E1EB';
 
 module.exports = async function (callback) {
     try {
@@ -16,13 +13,13 @@ module.exports = async function (callback) {
         console.log('Gauge controller: ' + gaugeController.address);
 
         // const gaugeImpl = await LiquidityGauge.new();
-        const gaugeImpl = await LiquidityGauge.at("0x4A71888Fdedbda7745754a7c5E5612cEe2CfFbCD");
+        const gaugeImpl = await LiquidityGauge.at("0x4cfFc147F4E5d6227D3adBa93bBa7d8bba124bA5");
         console.log('Gauge impl: ' + gaugeImpl.address);
         const gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
         console.log('Gauge proxy: ' + gaugeProxy.address)
         const gauge = await LiquidityGauge.at(gaugeProxy.address);
-        await gauge.initialize(autoBTCPlus, gaugeController.address, votingEscrow);
-        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
+        await gauge.initialize(token, gaugeController.address, votingEscrow);
+        await gaugeController.addGauge(gauge.address, false, web3.utils.toWei("1"), web3.utils.toWei("20"));
         console.log(`Gauge: ${gauge.address}`);
 
         callback();
