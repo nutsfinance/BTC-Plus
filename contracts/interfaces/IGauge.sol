@@ -27,4 +27,19 @@ interface IGauge is IERC20Upgradeable {
      * @dev Returns the amount of token staked by the user.
      */
     function userStaked(address _account) external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of AC token that the user can claim.
+     * @param _account Address of the account to check claimable reward.
+     */
+    function claimable(address _account) external view returns (uint256);
+
+    /**
+     * @dev Claims reward for the user. It transfers the claimable reward to the user and updates user's liquidity limit.
+     * Note: We allow anyone to claim other rewards on behalf of others, but not for the AC reward. This is because claiming AC
+     * reward also updates the user's liquidity limit. Therefore, only authorized claimer can do that on behalf of user.
+     * @param _account Address of the user to claim.
+     * @param _claimRewards Whether to claim other rewards as well.
+     */
+    function claim(address _account, bool _claimRewards) external;
 }

@@ -197,7 +197,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Returns the amount of AC token that the user can claim.
      * @param _account Address of the account to check claimable reward.
      */
-    function claimable(address _account) external view returns (uint256) {
+    function claimable(address _account) external view override returns (uint256) {
         return workingBalances[_account].mul(integral.sub(integralOf[_account])).div(WAD);
     }
 
@@ -217,7 +217,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _account Address of the user to claim.
      * @param _claimRewards Whether to claim other rewards as well.
      */
-    function claim(address _account, bool _claimRewards) external nonReentrant {
+    function claim(address _account, bool _claimRewards) external override nonReentrant {
         require(_account == msg.sender || IGaugeController(controller).claimers(msg.sender), "not authorized");
         _checkpoint(_account);
         _updateLiquidityLimit(_account);
