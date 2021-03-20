@@ -346,4 +346,6 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // For composite plus, all tokens in the basekt cannot be salvaged!
         return !tokenSupported[_token];
     }
+
+    uint256[50] private __gap;
 }

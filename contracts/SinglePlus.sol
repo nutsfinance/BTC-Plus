@@ -229,4 +229,6 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     function _withdraw(address _receiver, uint256  _amount) internal virtual {
         IERC20Upgradeable(token).safeTransfer(_receiver, _amount);
     }
+
+    uint256[50] private __gap;
 }

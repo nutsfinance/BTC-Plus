@@ -359,4 +359,6 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     function transactionSize() external view returns (uint256) {
         return transactions.length;
     }
+
+    uint256[50] private __gap;
 }
