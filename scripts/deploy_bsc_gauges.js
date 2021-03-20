@@ -1,86 +1,29 @@
-const BTCPlus = artifacts.require("BTCPlus");
-const PlusProxy = artifacts.require("PlusProxy");
-const SinglePlus = artifacts.require("SinglePlus");
-const CurveSinglePlus = artifacts.require("CurveSinglePlus");
-const CompoundSinglePlus = artifacts.require("CompoundSinglePlus");
 const GaugeController = artifacts.require("GaugeController");
 const GaugeControllerProxy = artifacts.require("GaugeControllerProxy");
 const LiquidityGauge = artifacts.require("LiquidityGauge");
 const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
-const VotingEscrow = artifacts.require("VotingEscrow");
-const {renCrv, sbtcCrv, acBTC, cWBTC, obtcCrv, renSwap, sbtcSwap, obtcSwap} = require('../constant');
 
-const renCrvPlus = '0x59A76E80DbB2b7EbC61e0a52c7C7771C443ADfcF';
-const sbtcCrvPlus = '0x91BeBB99F9aC1b54905000D057b02B0165f674A2';
-const acBtcPlus = '0xaAB27180b6f39502CD716A02EA21283B81FC0bae';
-const cWbtcPlus = '0x674FB8CBD83C5555BcCB36e46231B8788F14c120';
+const votingEscrow = '0x4eBb53744F0aE5b06F1b198f281D22e3Cf6Ab28D';
+const vBTCPlus = '0x0AbfEf458cc4C4f23ebc992F2B5CcEC9ECD1869d';
+const fBTCBPlus = '0xD7F984196392C7eA791F4A39e797e8dE19Ca898d';
+const acsBTCBPlus = '0xf52F3E8fF896abC844BE2EbF4809Bc22123D3a57';
+const autoBTCPlus = '0x33938f7f60E276a5eD0474B905E77C9708C9135A';
 
 module.exports = async function (callback) {
     try {
         const accounts = await web3.eth.getAccounts();
-        const btcPlus = await BTCPlus.at((await PlusProxy.deployed()).address);
         const gaugeController = await GaugeController.at((await GaugeControllerProxy.deployed()).address);
-        const votingEscrow = await VotingEscrow.deployed();
-        console.log(`Voting escrow: ${votingEscrow.address}`);
-        console.log(`Gauge controller: ${gaugeController.address}`);
-        
-        // console.log('Deploying renCrv+...');
-        // const renCrvPlus = await CurveSinglePlus.new();
-        // const renCrvPlusProxy = await PlusProxy.new(renCrvPlus.address, accounts[1], Buffer.from(''));
-        // const proxiedRenCrvPlus = await CurveSinglePlus.at(renCrvPlusProxy.address);
-        // await proxiedRenCrvPlus.initialize(renSwap, renCrv, '', '');
-        // await btcPlus.addToken(proxiedRenCrvPlus.address);
-        // console.log(`renCrv+ address: ${proxiedRenCrvPlus.address}`);
-        // const renCrvGauge = await deployGauge(proxiedRenCrvPlus.address, gaugeController, votingEscrow);
+        console.log('Gauge controller: ' + gaugeController.address);
 
-        // const renCrvGauge = await deployGauge(renCrvPlus, gaugeController, votingEscrow);
-        // console.log(`renCrv+ gauge: ${renCrvGauge.address}`);
-
-        // console.log('Deploying sbtcCrv+...');
-        // const sbtcCrvPlus = await CurveSinglePlus.new();
-        // const sbtcCrvPlusProxy = await PlusProxy.new(sbtcCrvPlus.address, accounts[1], Buffer.from(''));
-        // const proxiedSbtcCrvPlus = await CurveSinglePlus.at(sbtcCrvPlusProxy.address);
-        // await proxiedSbtcCrvPlus.initialize(sbtcSwap, sbtcCrv, '', '');
-        // await btcPlus.addToken(proxiedSbtcCrvPlus.address);
-        // console.log(`sbtcCrv+ address: ${proxiedSbtcCrvPlus.address}`);
-        // const sbtcCrvGauge = await deployGauge(proxiedSbtcCrvPlus.address, gaugeController, votingEscrow);
-
-        // const sbtcCrvGauge = await deployGauge(sbtcCrvPlus, gaugeController, votingEscrow);
-        // console.log(`sbtcCrv+ gauge: ${sbtcCrvGauge.address}`);
-
-        // console.log('Deploying acBTC+...');
-        // const acBtcPlus = await SinglePlus.new();
-        // const acBtcPlusProxy = await PlusProxy.new(acBtcPlus.address, accounts[1], Buffer.from(''));
-        // const proxiedAcBtcPlus = await SinglePlus.at(acBtcPlusProxy.address);
-        // await proxiedAcBtcPlus.initialize(acBTC, '', '');
-        // await btcPlus.addToken(proxiedAcBtcPlus.address);
-        // console.log(`acBTC++ address: ${proxiedAcBtcPlus.address}`);
-        // const acBtcGauge = await deployGauge(proxiedAcBtcPlus.address, gaugeController, votingEscrow);
-
-        // const acBtcGauge = await deployGauge(acBtcPlus, gaugeController, votingEscrow);
-        // console.log(`acBtc+ gauge: ${acBtcGauge.address}`);
-
-        // console.log('Deploying cWBTC+...');
-        // const cWBTCPlus = await CompoundSinglePlus.new();
-        // const cWBTCPlusProxy = await PlusProxy.new(cWBTCPlus.address, accounts[1], Buffer.from(''));
-        // const proxiedCWBTCPlus = await CompoundSinglePlus.at(cWBTCPlusProxy.address);
-        // await proxiedCWBTCPlus.initialize(cWBTC, '', '');
-        // await btcPlus.addToken(proxiedCWBTCPlus.address);
-        // console.log(`cWBTC++ address: ${proxiedCWBTCPlus.address}`);
-        // const cWBTCGauge = await deployGauge(proxiedCWBTCPlus.address, gaugeController, votingEscrow);
-
-        // const cWBTCGauge = await deployGauge(cWbtcPlus, gaugeController, votingEscrow);
-        // console.log(`cWBTC+ gauge: ${cWBTCGauge.address}`);
-
-        console.log('Deploying obtcCrv+...');
-        const obtcCrvPlus = await CurveSinglePlus.new();
-        const obtcCrvPlusProxy = await PlusProxy.new(obtcCrvPlus.address, accounts[1], Buffer.from(''));
-        const proxiedObtcCrvPlus = await CurveSinglePlus.at(obtcCrvPlusProxy.address);
-        await proxiedObtcCrvPlus.initialize(obtcSwap, obtcCrv, '', '');
-        await btcPlus.addToken(proxiedObtcCrvPlus.address);
-        console.log(`obtcCrv+ address: ${proxiedObtcCrvPlus.address}`);
-        const obtcCrvGauge = await deployGauge(proxiedObtcCrvPlus.address, gaugeController, votingEscrow);
-        console.log(`obtcCrv+ gauge: ${obtcCrvGauge.address}`);
+        // const gaugeImpl = await LiquidityGauge.new();
+        const gaugeImpl = await LiquidityGauge.at("0x4A71888Fdedbda7745754a7c5E5612cEe2CfFbCD");
+        console.log('Gauge impl: ' + gaugeImpl.address);
+        const gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
+        console.log('Gauge proxy: ' + gaugeProxy.address)
+        const gauge = await LiquidityGauge.at(gaugeProxy.address);
+        await gauge.initialize(autoBTCPlus, gaugeController.address, votingEscrow);
+        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
+        console.log(`Gauge: ${gauge.address}`);
 
         callback();
     } catch (e) {
@@ -89,13 +32,6 @@ module.exports = async function (callback) {
 }
 
 
-async function deployGauge(token, gaugeController, votingEscrow) {
-    const accounts = await web3.eth.getAccounts();
-    const gauge = await LiquidityGauge.new();
-    const gaugeProxy = await LiquidityGaugeProxy.new(gauge.address, accounts[1], Buffer.from(''));
-    const proxiedGauge = await LiquidityGauge.at(gaugeProxy.address);
-    await proxiedGauge.initialize(token, gaugeController.address, votingEscrow.address);
-    await gaugeController.addGauge(proxiedGauge.address, true, web3.utils.toWei("1"), "0");
-
-    return proxiedGauge;
+async function deployGauge(token, gaugeController) {
+    
 }
