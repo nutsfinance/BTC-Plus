@@ -198,7 +198,17 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _account Address of the account to check claimable reward.
      */
     function claimable(address _account) external view override returns (uint256) {
-        return workingBalances[_account].mul(integral.sub(integralOf[_account])).div(WAD);
+        // Reward claimable until the previous checkpoint
+        uint256 _reward = workingBalances[_account].mul(integral.sub(integralOf[_account])).div(WAD);
+        if (workingSupply > 0) {
+            uint256 _diffTime = block.timestamp.sub(lastCheckpoint);
+            // Both rate and integral are in WAD
+            uint256 _additionalReard = rate.mul(_diffTime).mul(workingBalances[_account]).div(workingSupply).div(WAD);
+
+            _reward = _reward.add(_additionalReard);
+        }
+
+        return _reward;
     }
 
     /**
