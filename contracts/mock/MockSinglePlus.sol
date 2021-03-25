@@ -55,6 +55,6 @@ contract MockSinglePlus is SinglePlus {
         if (_balance < _amount) {
             reward.withdraw(_amount - _balance);
         }
-        IERC20Upgradeable(token).safeTransfer(_receiver, _amount);
+        IERC20Upgradeable(token).transfer(_receiver, _amount);
     }
 }

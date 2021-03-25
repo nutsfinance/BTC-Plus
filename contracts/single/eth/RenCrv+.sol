@@ -73,7 +73,7 @@ contract RenCrvPlus is SinglePlus {
             _path[1] = WETH;
             _path[2] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_crv, uint256(0), _path, address(this), now.add(1800));
+            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_crv, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
         // Curve: WBTC --> renCRV
         uint256 _wbtc = IERC20Upgradeable(WBTC).balanceOf(address(this));

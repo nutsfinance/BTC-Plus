@@ -10,7 +10,7 @@ contract MockToken is ERC20Upgradeable {
     uint8 public override decimals;
 
     constructor (string memory _name, string memory _symbol, uint8 _decimals) public {
-        __ERC20_init(name, symbol);
+        __ERC20_init(_name, _symbol);
         decimals = _decimals;
     }
 

@@ -74,7 +74,7 @@ contract ObtcCrvPlus is SinglePlus {
             _path[1] = WETH;
             _path[2] = WBTC;
 
-            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_crv, uint256(0), _path, address(this), now.add(1800));
+            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_crv, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
         // Step 3: Claims BOR rewards
@@ -91,7 +91,7 @@ contract ObtcCrvPlus is SinglePlus {
             _path[1] = WETH;
             _path[2] = WBTC;
 
-            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_bor, uint256(0), _path, address(this), now.add(1800));
+            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_bor, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
         // Step 5: Curve WBTC --> obtcCrv

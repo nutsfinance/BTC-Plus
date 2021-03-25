@@ -201,7 +201,7 @@ contract GaugeController is Initializable, IGaugeController {
             if (gaugeData[_gauges[i]].isPlus) {
                 // gauge weighted plus is in WAD
                 // _ratePerPlus is also in WAD
-                // so now gauge rate is in WAD
+                // so block.timestamp gauge rate is in WAD
                 _gaugeRates[i] = _gaugeWeightedPlus[i].mul(_ratePerPlus).div(WAD);
             } else {
                 // AC emission rate for non-plus gauge is fixed and set by the governance.
@@ -249,7 +249,7 @@ contract GaugeController is Initializable, IGaugeController {
     }
 
     /**
-     * @dev Returns the total amount of rewards that can be claimed by user until now.
+     * @dev Returns the total amount of rewards that can be claimed by user until block.timestamp.
      * It can be seen as minimum amount of reward tokens should be buffered in the gauge controller.
      */
     function claimable() external view returns (uint256) {
