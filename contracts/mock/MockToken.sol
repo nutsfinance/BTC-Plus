@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
@@ -7,10 +7,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
  * @notice Mock ERC20 token.
  */
 contract MockToken is ERC20Upgradeable {
+    uint8 public override decimals;
 
-    constructor (string memory name, string memory symbol, uint8 decimals) public {
+    constructor (string memory _name, string memory _symbol, uint8 _decimals) public {
         __ERC20_init(name, symbol);
-        _setupDecimals(decimals);
+        decimals = _decimals;
     }
 
     function mint(address account, uint256 amount) public {
