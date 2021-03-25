@@ -56,7 +56,7 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
         // BTCB and AutoFarm BTCB share are both 18 decimals.
         __ERC20_init("AutoFarm BTC", "autoBTC");
         // We set infinite allowance since autoBTC does not hold any asset.
-        IERC20Upgradeable(BTCB).safeApprove(AUTOFARM, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(AUTOFARM, uint256(int256(-1)));
     }
 
     /**

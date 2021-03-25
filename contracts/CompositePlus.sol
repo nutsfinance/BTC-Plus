@@ -135,7 +135,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
         uint256 _share;
-        if (_amount == uint256(-1)) {
+        if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
             _amount = _share.mul(index).div(WAD);
         } else {
@@ -175,7 +175,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
         uint256 _share;
-        if (_amount == uint256(-1)) {
+        if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
             _amount = _share.mul(index).div(WAD);
         } else {

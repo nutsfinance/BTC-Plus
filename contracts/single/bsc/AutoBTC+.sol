@@ -34,7 +34,7 @@ contract AutoBTCPlus is SinglePlus {
     function initialize() public initializer {
         SinglePlus.initialize(AUTO_BTC, "", "");
         // Trust AutoBTC
-        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(int256(-1)));
     }
 
     /**

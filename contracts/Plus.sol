@@ -188,7 +188,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         // Special handling of -1 is required here in order to fully donate all shares, since interest
         // will be accrued between the donate transaction is signed and mined.
         uint256 _share;
-        if (_amount == uint256(-1)) {
+        if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
             _amount = _share.mul(index).div(WAD);
         } else {
