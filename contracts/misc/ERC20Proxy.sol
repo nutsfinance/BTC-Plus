@@ -7,5 +7,5 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
  * @title Proxy for ERC20 tokens.
  */
 contract ERC20Proxy is TransparentUpgradeableProxy {
-    constructor(address _logic, address _admin, bytes memory _data) TransparentUpgradeableProxy(_logic, _admin, _data) public payable {}
+    constructor(address _logic, address _admin, bytes memory _data) TransparentUpgradeableProxy(_logic, _admin, _data) payable {}
 }

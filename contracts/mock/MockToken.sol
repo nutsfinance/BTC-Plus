@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 contract MockToken is ERC20Upgradeable {
     uint8 private _dec;
 
-    constructor (string memory _name, string memory _symbol, uint8 _decimals) public {
+    constructor (string memory _name, string memory _symbol, uint8 _decimals) {
         __ERC20_init(_name, _symbol);
         _dec = _decimals;
     }

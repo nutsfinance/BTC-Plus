@@ -39,6 +39,7 @@ contract MockPlus is Plus {
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view override returns (bool) {
+        underlyingAmount;
         return _token != address(0x0);
     }
 

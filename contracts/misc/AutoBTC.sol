@@ -62,7 +62,7 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
     /**
      * @dev Returns the underlying token of the AutoFarm position.
      */
-    function underlying() public view override returns (address) {
+    function underlying() public pure override returns (address) {
         return BTCB;
     }
 

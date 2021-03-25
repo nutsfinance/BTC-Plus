@@ -38,7 +38,7 @@ contract BTCZapBsc {
 
     address public governance;
 
-    constructor() public {
+    constructor() {
         governance = msg.sender;
         IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(int256(-1)));
         IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(int256(-1)));

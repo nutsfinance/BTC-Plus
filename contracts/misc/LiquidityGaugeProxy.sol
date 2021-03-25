@@ -7,5 +7,5 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
  * @title Proxy for liquidity gauge.
  */
 contract LiquidityGaugeProxy is TransparentUpgradeableProxy {
-    constructor(address _logic, address _admin, bytes memory _data) TransparentUpgradeableProxy(_logic, _admin, _data) public payable {}
+    constructor(address _logic, address _admin, bytes memory _data) TransparentUpgradeableProxy(_logic, _admin, _data) payable {}
 }

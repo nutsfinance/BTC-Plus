@@ -8,5 +8,5 @@ import "./MockToken.sol";
  */
 contract MockACoconut is MockToken {
 
-    constructor() public MockToken("Mock ACoconut", "mAC", 18) {}
+    constructor() MockToken("Mock ACoconut", "mAC", 18) {}
 }

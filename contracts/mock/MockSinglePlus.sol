@@ -12,7 +12,7 @@ contract MockSinglePlus is SinglePlus {
 
     MockReward public reward;
 
-    constructor(address _token) public {
+    constructor(address _token) {
         SinglePlus.initialize(_token, '', '');
         reward = new MockReward(_token, new address[](0));
     }

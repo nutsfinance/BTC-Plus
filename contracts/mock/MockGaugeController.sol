@@ -16,7 +16,7 @@ contract MockGaugeController is IGaugeController {
     uint256 public rate;
     mapping(address => mapping(address => uint256)) public override claimed;
 
-    constructor(address _reward, address _governance, address _claimer) public {
+    constructor(address _reward, address _governance, address _claimer) {
         reward = _reward;
         governance = _governance;
         claimer = _claimer;
@@ -60,6 +60,9 @@ contract MockGaugeController is IGaugeController {
      * @param _token Address of the donated token.
      */
     function donate(address _token) external override {
+        if (false) {
+            claimer = msg.sender;
+        }
         _token;
     }
 }

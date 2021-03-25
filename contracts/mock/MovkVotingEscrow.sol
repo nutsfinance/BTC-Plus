@@ -21,11 +21,13 @@ contract MockVotingEscrow is IVotingEscrow {
     }
 
     function user_point_epoch(address _account) external view override returns (uint256) {
+        totalSupply;
         _account;
         return 20;
     }
 
     function user_point_history__ts(address _account, uint256 _epoch) external view override returns (uint256) {
+        totalSupply;
         _account;
         _epoch;
         return 1234566;
