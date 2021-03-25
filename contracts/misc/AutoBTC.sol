@@ -29,7 +29,9 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    event Claimed(address indexed claimer, uint256 amount);
+    event Minted(address indexed account, uint256 amount, uint256 mintAmount);
+    event Redeemed(address indexed account, uint256 amount, uint256 redeemAmount);
+    event Claimed(address indexed account, uint256 amount);
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant AUTOv2 = address(0xa184088a740c695E156F91f5cC086a06bb78b827);
@@ -116,6 +118,8 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
 
         // 1 autoBTC = 1 share in AutoFarm BTCB strategy
         _mint(msg.sender, _after.sub(_before));
+
+        emit Minted(msg.sender, _amount, _after.sub(_before));
     }
 
     /**
@@ -137,6 +141,11 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
 
         // 1 autoBTC = 1 share in AutoFarm BTCB strategy
         _burn(msg.sender, _before.sub(_after));
+
+        _amount = IERC20Upgradeable(BTCB).balanceOf(address(this));
+        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _amount);
+
+        emit Redeemed(msg.sender, _amount, _before.sub(_after));
     }
 
     /**

@@ -64,16 +64,21 @@ contract("AutoBTC", async ([owner, proxyAdmin, user, user2, treasury]) => {
     it("should mint and redeem autoBTC", async () => {
         const totalSupply1 = await autoBTC.totalSupply();
         const balance1 = await autoBTC.balanceOf(DEPLOYER);
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
         console.log('autoBTC total supply 1: ', totalSupply1.toString());
         console.log('autoBTC balance 1: ', balance1.toString());
+        console.log('BTCB balance 1: ', btcb1.toString());
 
         await btcb.approve(autoBTC.address, toWei("0.001"), {from: DEPLOYER});
         await autoBTC.mint(toWei("0.001"), {from: DEPLOYER});
 
         const totalSupply2 = await autoBTC.totalSupply();
         const balance2 = await autoBTC.balanceOf(DEPLOYER);
+        const btcb2 = await btcb.balanceOf(DEPLOYER);
         console.log('autoBTC total supply 2: ', totalSupply2.toString());
         console.log('autoBTC balance 2: ', balance2.toString());
+        console.log('BTCB balance 2: ', btcb2.toString());
+        assert.strictEqual(btcb1.toString(), btcb2.add(new BN(toWei("0.001"))).toString());
 
         const exchangeRate = await autoBTC.exchangeRateStored();
         console.log('Exchange rate: ' + exchangeRate.toString());
@@ -93,8 +98,11 @@ contract("AutoBTC", async ([owner, proxyAdmin, user, user2, treasury]) => {
         await autoBTC.redeem(toWei("0.001"), {from: DEPLOYER});
         const totalSupply3 = await autoBTC.totalSupply();
         const balance3 = await autoBTC.balanceOf(DEPLOYER);
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
         console.log('autoBTC total supply 3: ', totalSupply3.toString());
         console.log('autoBTC balance 3: ', balance3.toString());
+        console.log('BTCB balance 3: ', btcb3.toString());
+        assertAlmostEqual(btcb1, btcb3);
     });
     it("should claim rewards after transfer", async () => {
         await btcb.approve(autoBTC.address, toWei("0.001"), {from: DEPLOYER});
