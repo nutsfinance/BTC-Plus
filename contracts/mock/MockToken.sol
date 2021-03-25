@@ -7,11 +7,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
  * @notice Mock ERC20 token.
  */
 contract MockToken is ERC20Upgradeable {
-    uint8 public override decimals;
+    uint8 private _dec;
 
     constructor (string memory _name, string memory _symbol, uint8 _decimals) public {
         __ERC20_init(_name, _symbol);
-        decimals = _decimals;
+        _dec = _decimals;
     }
 
     function mint(address account, uint256 amount) public {
@@ -20,5 +20,9 @@ contract MockToken is ERC20Upgradeable {
 
     function burn(address account, uint256 amount) public {
         _burn(account, amount);
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _dec;
     }
 }
