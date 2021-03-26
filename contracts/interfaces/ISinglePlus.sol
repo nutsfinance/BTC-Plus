@@ -19,9 +19,22 @@ interface ISinglePlus is IPlus {
     function divest() external;
 
     /**
+     * @dev Returns the amount that can be invested now. The invested token
+     * does not have to be the underlying token.
+     * investable > 0 means it's time to call invest.
+     */
+    function investable() external view returns (uint256);
+
+    /**
      * @dev Invest the underlying assets for additional yield.
      */
     function invest() external;
+
+    /**
+     * @dev Returns the amount of reward that could be harvested now.
+     * harvestable > 0 means it's time to call harvest.
+     */
+    function harvestable() external view returns (uint256);
 
     /**
      * @dev Harvest additional yield from the investment.

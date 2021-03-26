@@ -45,6 +45,15 @@ contract ACryptoSBTCBPlus is SinglePlus {
     }
 
     /**
+     * @dev Returns the amount that can be invested now. The invested token
+     * does not have to be the underlying token.
+     * investable > 0 means it's time to call invest.
+     */
+    function investable() public view virtual override returns (uint256) {
+        return IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
+    }
+
+    /**
      * @dev Invest the underlying assets for additional yield.
      * Only governance or strategist can call this function.
      */
@@ -55,6 +64,17 @@ contract ACryptoSBTCBPlus is SinglePlus {
             IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_FARM, _balance);
             IFarm(ACS_FARM).deposit(ACS_BTCB, _balance);
         }
+    }
+
+    /**
+     * @dev Returns the amount of reward that could be harvested now.
+     * harvestable > 0 means it's time to call harvest.
+     */
+    function harvestable() public view virtual override returns (uint256) {
+        uint256 _pending = IFarm(ACS_FARM).pendingSushi(ACS_BTCB, address(this));
+        uint256 _minimum = IFarm(ACS_FARM).harvestFee();
+
+        return _pending <= _minimum ? 0 : _pending.sub(_minimum);
     }
 
     /**

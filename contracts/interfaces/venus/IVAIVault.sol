@@ -24,6 +24,12 @@ interface IVAIVault {
      */
     function claim() external;
 
+    /**
+     * @notice View function to see pending XVS on frontend
+     * @param _user The user to see pending XVS
+     */
+    function pendingXVS(address _user) external view returns (uint256);
+
     /// @notice Info of each user.
     struct UserInfo {
         uint256 amount;

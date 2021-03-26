@@ -64,6 +64,18 @@ contract VenusBTCPlus is SinglePlus {
     }
 
     /**
+     * @dev Returns the amount that can be invested now. The invested token
+     * does not have to be the underlying token.
+     * investable > 0 means it's time to call invest.
+     */
+    function investable() public view virtual override returns (uint256) {
+        (, uint256 _mintableVAI) = IVAIController(VAI_CONTROLLER).getMintableVAI(address(this));
+        uint256 _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
+
+        return _mintableVAI.add(_vai);
+    }
+
+    /**
      * @dev Invest the underlying assets for additional yield.
      * Only governance or strategist can call this function.
      */
@@ -82,6 +94,17 @@ contract VenusBTCPlus is SinglePlus {
             // Stakes VAI into VAI vault
             IVAIVault(VAI_VAULT).deposit(_vai);
         }
+    }
+
+    /**
+     * @dev Returns the amount of reward that could be harvested now.
+     * harvestable > 0 means it's time to call harvest.
+     */
+    function harvestable() public view virtual override returns (uint256) {
+        // It will take some code to estimate the pending Venus in Comptroller,
+        // and Comptroller does not provide such a view method. Therefore, we
+        // use the pending Venus in VAI Vault as an estimate!
+        return IVAIVault(VAI_VAULT).pendingXVS(address(this));
     }
 
     /**

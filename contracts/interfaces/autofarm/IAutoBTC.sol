@@ -15,11 +15,6 @@ interface IAutoBTC is ICToken {
     function mint(uint256 _amount) external;
 
     /**
-     * @dev Claims all AUTO available for the caller.
-     */
-    function claimRewards() external;
-
-    /**
      * @dev Redeems autoBTC to BTCB.
      * @param _amount Amount of BTCB to redeem from autoBTC.
      *
@@ -28,4 +23,13 @@ interface IAutoBTC is ICToken {
      */
     function redeem(uint256 _amount) external;
 
+    /**
+     * @dev Returns the pending AUTO to the account.
+     */
+    function pendingReward(address _account) external view returns (uint256);
+
+    /**
+     * @dev Claims all AUTO available for the caller.
+     */
+    function claimRewards() external;
 }

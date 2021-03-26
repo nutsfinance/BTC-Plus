@@ -149,6 +149,19 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
     }
 
     /**
+     * @dev Returns the pending AUTO to the account.
+     */
+    function pendingReward(address _account) public view override returns (uint256) {
+        uint256 _totalSupply = totalSupply();
+        if (_totalSupply == 0)  return 0;
+
+        uint256 _pendingReward = IAutoFarm(AUTOFARM).pendingAUTO(PID, address(this));
+        uint256 _rewardPerToken = _pendingReward.mul(WAD).div(_totalSupply).add(rewardPerTokenStored);
+        return _rewardPerToken.sub(rewardPerTokenPaid[_account]).mul(balanceOf(_account)).div(WAD)
+            .add(rewards[_account]);
+    }
+
+    /**
      * @dev Claims all AUTO available for the caller.
      */
     function claimRewards() public override {
