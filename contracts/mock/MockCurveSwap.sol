@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
 import "../interfaces/curve/ICurveFi.sol";
 
@@ -8,7 +8,7 @@ import "../interfaces/curve/ICurveFi.sol";
  */
 contract MockCurveSwap is ICurveFi {
 
-    function get_virtual_price() external view override returns (uint256) {
+    function get_virtual_price() external pure override returns (uint256) {
         return 11 * 10**17;
     }
 

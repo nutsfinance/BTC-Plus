@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./interfaces/IRebalancer.sol";
 import "./interfaces/ICompositePlus.sol";
@@ -135,7 +135,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
         uint256 _share;
-        if (_amount == uint256(-1)) {
+        if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
             _amount = _share.mul(index).div(WAD);
         } else {
@@ -175,7 +175,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
         // will be accrued between the redeem transaction is signed and mined.
         uint256 _share;
-        if (_amount == uint256(-1)) {
+        if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
             _amount = _share.mul(index).div(WAD);
         } else {

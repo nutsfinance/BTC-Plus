@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/autofarm/IAutoBTC.sol";
 import "../interfaces/autofarm/IAutoFarm.sol";
@@ -56,13 +56,13 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
         // BTCB and AutoFarm BTCB share are both 18 decimals.
         __ERC20_init("AutoFarm BTC", "autoBTC");
         // We set infinite allowance since autoBTC does not hold any asset.
-        IERC20Upgradeable(BTCB).safeApprove(AUTOFARM, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(AUTOFARM, uint256(int256(-1)));
     }
 
     /**
      * @dev Returns the underlying token of the AutoFarm position.
      */
-    function underlying() public view override returns (address) {
+    function underlying() public pure override returns (address) {
         return BTCB;
     }
 

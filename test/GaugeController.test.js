@@ -597,8 +597,14 @@ contract("LiquidityGauge", async ([owner, claimer, user1, user2, user3]) => {
         assertAlmostEqual((await controller.totalReward()).toString(), toWei("13.2"));
         assertAlmostEqual((await controller.claimable()).toString(), toWei("9.2"));
         assertAlmostEqual((await controller.claimed(gauge2.address, user2)).toString(), toWei("4"));
+        
         assertAlmostEqual((await controller.totalClaimed()).toString(), toWei("4"));
-        assertAlmostEqual((await gauge2.claimable(user2)).toString(), toWei("0"));
+        // user1 should get 0.01 * 600 = 6 AC
+        assertAlmostEqual((await gauge1.claimable(user1)).toString(), toWei("6"));
+        // user2 should get 0.01 * 200 = 2 AC
+        assertAlmostEqual((await gauge2.claimable(user2)).toString(), toWei("2"));
+        // user3 shoud get 0.002 * 600 = 1.2 AC
+        assertAlmostEqual((await gauge3.claimable(user3)).toString(), toWei("1.2"));
         assertAlmostEqual((await reward.balanceOf(user2)).toString(), toWei("4"));
         assertAlmostEqual((await reward.balanceOf(controller.address)).toString(), toWei("196"));
     });

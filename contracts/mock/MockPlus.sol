@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
 import "../Plus.sol";
 import "./MockToken.sol";
@@ -39,6 +39,7 @@ contract MockPlus is Plus {
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view override returns (bool) {
+        underlyingAmount;
         return _token != address(0x0);
     }
 

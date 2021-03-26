@@ -276,7 +276,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     if block.timestamp > last_point.ts:
         block_slope = MULTIPLIER * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
     # If last point is already recorded in this block, slope=0
-    # But that's ok b/c we know the block in such case
+    # But that's ok b/c we kblock.timestamp the block in such case
 
     # Go over weeks to fill history and calculate what the current point is
     t_i: uint256 = (last_checkpoint / WEEK) * WEEK
@@ -306,7 +306,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
             self.point_history[_epoch] = last_point
 
     self.epoch = _epoch
-    # Now point_history is filled until t=now
+    # Now point_history is filled until t=block.timestamp
 
     if addr != ZERO_ADDRESS:
         # If last point was in this block, the slope change has been applied already

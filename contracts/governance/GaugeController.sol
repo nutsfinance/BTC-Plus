@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/IPlus.sol";
 import "../interfaces/IGauge.sol";
@@ -201,7 +201,7 @@ contract GaugeController is Initializable, IGaugeController {
             if (gaugeData[_gauges[i]].isPlus) {
                 // gauge weighted plus is in WAD
                 // _ratePerPlus is also in WAD
-                // so now gauge rate is in WAD
+                // so block.timestamp gauge rate is in WAD
                 _gaugeRates[i] = _gaugeWeightedPlus[i].mul(_ratePerPlus).div(WAD);
             } else {
                 // AC emission rate for non-plus gauge is fixed and set by the governance.
@@ -249,7 +249,7 @@ contract GaugeController is Initializable, IGaugeController {
     }
 
     /**
-     * @dev Returns the total amount of rewards that can be claimed by user until now.
+     * @dev Returns the total amount of rewards that can be claimed by user until block.timestamp.
      * It can be seen as minimum amount of reward tokens should be buffered in the gauge controller.
      */
     function claimable() external view returns (uint256) {

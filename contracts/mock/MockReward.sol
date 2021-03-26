@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
 import "../interfaces/IUniPool.sol";
 import "./MockToken.sol";
@@ -12,7 +12,7 @@ contract MockReward is IUniPool {
     address[] public rewards;
     mapping(address => uint256) public amounts;
 
-    constructor(address _token, address[] memory _rewards) public {
+    constructor(address _token, address[] memory _rewards) {
         token = _token;
         rewards = _rewards;
     }

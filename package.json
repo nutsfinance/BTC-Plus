@@ -31,7 +31,7 @@
     "yargs": "^16.2.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^3.4.1",
-    "@openzeppelin/contracts-upgradeable": "^3.4.1"
+    "@openzeppelin/contracts": "^4.0.0",
+    "@openzeppelin/contracts-upgradeable": "^4.0.0"
   }
 }

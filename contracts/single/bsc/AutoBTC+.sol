@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../../SinglePlus.sol";
 import "../../interfaces/autofarm/IAutoBTC.sol";
@@ -34,7 +34,7 @@ contract AutoBTCPlus is SinglePlus {
     function initialize() public initializer {
         SinglePlus.initialize(AUTO_BTC, "", "");
         // Trust AutoBTC
-        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(int256(-1)));
     }
 
     /**
@@ -56,7 +56,7 @@ contract AutoBTCPlus is SinglePlus {
             _path[1] = WBNB;
             _path[2] = BTCB;
 
-            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_auto, uint256(0), _path, address(this), now.add(1800));
+            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_auto, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
         
         // BTCB --> AutoBTC

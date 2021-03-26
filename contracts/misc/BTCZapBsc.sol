@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/ISinglePlus.sol";
 import "../interfaces/venus/IVToken.sol";
@@ -38,19 +38,19 @@ contract BTCZapBsc {
 
     address public governance;
 
-    constructor() public {
+    constructor() {
         governance = msg.sender;
-        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(-1));
-        IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(int256(-1)));
+        IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(int256(-1)));
 
-        IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, uint256(-1));
-        IERC20Upgradeable(FORTUBE_BTCB).safeApprove(FORTUBE_BTCB_PLUS, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, uint256(int256(-1)));
+        IERC20Upgradeable(FORTUBE_BTCB).safeApprove(FORTUBE_BTCB_PLUS, uint256(int256(-1)));
 
-        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, uint256(-1));
-        IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_BTCB_PLUS, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, uint256(int256(-1)));
+        IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_BTCB_PLUS, uint256(int256(-1)));
 
-        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(-1));
-        IERC20Upgradeable(AUTO_BTC).safeApprove(AUTO_BTC_PLUS, uint256(-1));
+        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(int256(-1)));
+        IERC20Upgradeable(AUTO_BTC).safeApprove(AUTO_BTC_PLUS, uint256(int256(-1)));
     }
 
     /**

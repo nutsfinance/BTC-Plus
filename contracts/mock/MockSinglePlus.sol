@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.0;
 
 import "../SinglePlus.sol";
 import "./MockReward.sol";
@@ -12,7 +12,7 @@ contract MockSinglePlus is SinglePlus {
 
     MockReward public reward;
 
-    constructor(address _token) public {
+    constructor(address _token) {
         SinglePlus.initialize(_token, '', '');
         reward = new MockReward(_token, new address[](0));
     }
@@ -55,6 +55,6 @@ contract MockSinglePlus is SinglePlus {
         if (_balance < _amount) {
             reward.withdraw(_amount - _balance);
         }
-        IERC20Upgradeable(token).safeTransfer(_receiver, _amount);
+        IERC20Upgradeable(token).transfer(_receiver, _amount);
     }
 }
