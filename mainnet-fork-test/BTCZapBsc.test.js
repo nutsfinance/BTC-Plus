@@ -2,6 +2,7 @@ const { time } = require('@openzeppelin/test-helpers');
 const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 const assert = require('assert');
 const BTCZapBsc = artifacts.require("BTCZapBsc");
+const SinglePlus = artifacts.require("SinglePlus");
 const ERC20Upgradeable = artifacts.require("ERC20Upgradeable");
 
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
@@ -43,80 +44,144 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let autobtcPlus;
     let zap;
 
+    let testAmount = "0.001";
+
     beforeEach(async () => {
         btcb = await ERC20Upgradeable.at(BTCB);
-        vbtcPlus = await ERC20Upgradeable.at(VBTC_PLUS);
-        fbtcbPlus = await ERC20Upgradeable.at(FBTCB_PLUS);
-        acsbtcbPlus = await ERC20Upgradeable.at(ACSBTCB_PLUS);
-        autobtcPlus = await ERC20Upgradeable.at(AUTOBTC_PLUS);
+        vbtcPlus = await SinglePlus.at(VBTC_PLUS);
+        fbtcbPlus = await SinglePlus.at(FBTCB_PLUS);
+        acsbtcbPlus = await SinglePlus.at(ACSBTCB_PLUS);
+        autobtcPlus = await SinglePlus.at(AUTOBTC_PLUS);
         zap = await BTCZapBsc.new();
         await btcb.approve(zap.address, toWei("1"), {from: DEPLOYER});
     });
-    it("should mint and redeem vBTC+", async () => {
-        const balance1 = await vbtcPlus.balanceOf(DEPLOYER);
-        console.log('Balance 1: ' + balance1.toString());
-        await zap.mintVBTCPlus(toWei("0.0001"), {from: DEPLOYER});
-        const balance2 = await vbtcPlus.balanceOf(DEPLOYER);
-        console.log('Balance 2: ' + balance2.toString());
+    // it("should mint and redeem vBTC+", async () => {
+    //     const balance1 = await vbtcPlus.balanceOf(DEPLOYER);
+    //     const btcb1 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('vBTC+ Balance 1: ' + balance1.toString());
+    //     console.log(`BTCB balance 1: ${btcb1.toString()}`);
 
-        assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
+    //     await zap.mintVBTCPlus(toWei(testAmount), {from: DEPLOYER});
+    //     const balance2 = await vbtcPlus.balanceOf(DEPLOYER);
+    //     const btcb2 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('vBTC+ Balance 2: ' + balance2.toString());
+    //     console.log(`BTCB balance 2: ${btcb2.toString()}`);
+    //     console.log(`Liquidity ratio: ${(await vbtcPlus.liquidityRatio()).toString()}`);
 
-        await vbtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemVBTCPlus(balance2, {from: DEPLOYER});
+    //     assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+    //     assertAlmostEqual(balance2.sub(balance1), toWei(testAmount));
+    //     assertAlmostEqual(btcb2.add(new BN(toWei(testAmount))), btcb1);
 
-        const balance3 = await vbtcPlus.balanceOf(DEPLOYER);
-        console.log('Balance 3: ' + balance3.toString());
-        assertAlmostEqual(balance3, "0");
-    });
+    //     await vbtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
+    //     await zap.redeemVBTCPlus(balance2, {from: DEPLOYER});
 
-    it("should mint and redeem fBTC+", async () => {
-        const balance1 = await fbtcbPlus.balanceOf(DEPLOYER);
-        console.log('Balance 1: ' + balance1.toString());
-        await zap.mintFBTCBPlus(toWei("0.0001"), {from: DEPLOYER});
-        const balance2 = await fbtcbPlus.balanceOf(DEPLOYER);
-        console.log('Balance 2: ' + balance2.toString());
+    //     const balance3 = await vbtcPlus.balanceOf(DEPLOYER);
+    //     const btcb3 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('vBTC+ Balance 3: ' + balance3.toString());
+    //     console.log(`BTCB balance 3: ${btcb3.toString()}`);
+    //     assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+    //     assertAlmostEqual(balance3, "0");
+    //     assertAlmostEqual(btcb1, btcb3);
 
-        assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
+    //     const diff = btcb1.toNumber() - btcb3.toNumber();
+    //     console.log(`Diff: ${diff / 1000000000000000000}`);
+    //     console.log(`Diff ratio: ${diff * 100 / btcb1.toNumber()}`);
+    // });
 
-        await fbtcbPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemFBTCBPlus(balance2, {from: DEPLOYER});
+    // it("should mint and redeem fBTC+", async () => {
+    //     const balance1 = await fbtcbPlus.balanceOf(DEPLOYER);
+    //     const btcb1 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('fBTCB+ Balance 1: ' + balance1.toString());
+    //     console.log(`BTCB balance 1: ${btcb1.toString()}`);
 
-        const balance3 = await fbtcbPlus.balanceOf(DEPLOYER);
-        console.log('Balance 3: ' + balance3.toString());
-        assertAlmostEqual(balance3, "0");
-    });
+    //     await zap.mintFBTCBPlus(toWei(testAmount), {from: DEPLOYER});
+    //     const balance2 = await fbtcbPlus.balanceOf(DEPLOYER);
+    //     const btcb2 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('fBTCB+ Balance 2: ' + balance2.toString());
+    //     console.log(`BTCB balance 2: ${btcb2.toString()}`);
+    //     console.log(`Liquidity ratio: ${(await fbtcbPlus.liquidityRatio()).toString()}`);
+
+    //     assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+    //     assertAlmostEqual(balance2.sub(balance1), toWei(testAmount));
+    //     assertAlmostEqual(btcb2.add(new BN(toWei(testAmount))), btcb1);
+
+    //     await fbtcbPlus.approve(zap.address, balance2, {from: DEPLOYER});
+    //     await zap.redeemFBTCBPlus(balance2, {from: DEPLOYER});
+
+    //     const balance3 = await fbtcbPlus.balanceOf(DEPLOYER);
+    //     const btcb3 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('fBTCB+ Balance 3: ' + balance3.toString());
+    //     console.log(`BTCB balance 3: ${btcb3.toString()}`);
+    //     assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+    //     assertAlmostEqual(balance3, "0");
+    //     assertAlmostEqual(btcb1, btcb3);
+
+    //     const diff = btcb1.toNumber() - btcb3.toNumber();
+    //     console.log(`Diff: ${diff / 1000000000000000000}`);
+    //     console.log(`Diff ratio: ${diff * 100 / btcb1.toNumber()}`);
+    // });
 
     it("should mint and redeem acsBTC+", async () => {
         const balance1 = await acsbtcbPlus.balanceOf(DEPLOYER);
-        console.log('Balance 1: ' + balance1.toString());
-        await zap.mintAcsBTCBPlus(toWei("0.0001"), {from: DEPLOYER});
-        const balance2 = await acsbtcbPlus.balanceOf(DEPLOYER);
-        console.log('Balance 2: ' + balance2.toString());
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+        console.log('acsBTCB+ Balance 1: ' + balance1.toString());
+        console.log(`BTCB balance 1: ${btcb1.toString()}`);
 
-        assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
+        await zap.mintAcsBTCBPlus(toWei(testAmount), {from: DEPLOYER});
+        const balance2 = await acsbtcbPlus.balanceOf(DEPLOYER);
+        const btcb2 = await btcb.balanceOf(DEPLOYER);
+        console.log('acsBTCB+ Balance 2: ' + balance2.toString());
+        console.log(`BTCB balance 2: ${btcb2.toString()}`);
+        console.log(`Liquidity ratio: ${(await acsbtcbPlus.liquidityRatio()).toString()}`);
+
+        assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+        assertAlmostEqual(balance2.sub(balance1), toWei(testAmount));
+        assertAlmostEqual(btcb2.add(new BN(toWei(testAmount))), btcb1);
 
         await acsbtcbPlus.approve(zap.address, balance2, {from: DEPLOYER});
         await zap.redeemAcsBTCBPlus(balance2, {from: DEPLOYER});
 
         const balance3 = await acsbtcbPlus.balanceOf(DEPLOYER);
-        console.log('Balance 3: ' + balance3.toString());
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        console.log('acsBTCB+ Balance 3: ' + balance3.toString());
+        console.log(`BTCB balance 3: ${btcb3.toString()}`);
+        assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
         assertAlmostEqual(balance3, "0");
+        
+        const diff = (btcb1.toNumber() - btcb3.toNumber()) / 1000000000000000000;
+        console.log(`Diff: ${diff}`);
+        console.log(`Diff ratio: ${diff * 100 / 0.001}`);
     });
 
-    it("should mint and redeem BTC+", async () => {
-        const balance1 = await autobtcPlus.balanceOf(DEPLOYER);
-        console.log('Balance 1: ' + balance1.toString());
-        await zap.mintAutoBTCPlus(toWei("0.0001"), {from: DEPLOYER});
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        console.log('Balance 2: ' + balance2.toString());
+    // it("should mint and redeem autoBTC+", async () => {
+    //     const balance1 = await autobtcPlus.balanceOf(DEPLOYER);
+    //     const btcb1 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('autoBTC+ Balance 1: ' + balance1.toString());
+    //     console.log(`BTCB balance 1: ${btcb1.toString()}`);
 
-        assertAlmostEqual(balance2.sub(balance1), toWei("0.0001"));
+    //     await zap.mintAutoBTCPlus(toWei(testAmount), {from: DEPLOYER});
+    //     const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
+    //     const btcb2 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('autoBTC+ Balance 2: ' + balance2.toString());
+    //     console.log(`BTCB balance 2: ${btcb2.toString()}`);
 
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
+    //     assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+    //     assertAlmostEqual(balance2.sub(balance1), toWei(testAmount));
+    //     assertAlmostEqual(btcb2.add(new BN(toWei(testAmount))), btcb1);
 
-        const balance3 = await autobtcPlus.balanceOf(DEPLOYER);
-        console.log('Balance 3: ' + balance3.toString());
-        assertAlmostEqual(balance3, "0");
-    });
+    //     await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
+    //     await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
+
+    //     const balance3 = await autobtcPlus.balanceOf(DEPLOYER);
+    //     const btcb3 = await btcb.balanceOf(DEPLOYER);
+    //     console.log('autoBTC+ Balance 3: ' + balance3.toString());
+    //     console.log(`BTCB balance 3: ${btcb3.toString()}`);
+    //     assert.strictEqual((await btcb.balanceOf(zap.address)).toString(), "0");
+    //     assertAlmostEqual(balance3, "0");
+    //     assertAlmostEqual(btcb1, btcb3);
+
+    //     const diff = (btcb1.toNumber() - btcb3.toNumber()) / 1000000000000000000;
+    //     console.log(`Diff: ${diff}`);
+    //     console.log(`Diff ratio: ${diff * 100 / 0.001}`);
+    // });
 });
