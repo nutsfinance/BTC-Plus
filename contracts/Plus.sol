@@ -113,18 +113,18 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
     }
 
     /**
-     * @dev Returns the total value of the plus token in terms of the peg value.
-     * All underlying token amounts have been scaled to 18 decimals.
-     * For single plus, it's equal to its total supply.
-     * For composite plus, it's equal to the total amount of single plus tokens in its basket.
+     * @dev Returns the total value of the plus token in terms of the peg value in WAD.
+     * All underlying token amounts have been scaled to 18 decimals, then expressed in WAD.
      */
-    function _totalUnderlying() internal view virtual returns (uint256);
+    function _totalUnderlyingInWad() internal view virtual returns (uint256);
 
     /**
      * @dev Returns the total value of the plus token in terms of the peg value.
+     * For single plus, it's equal to its total supply.
+     * For composite plus, it's equal to the total amount of single plus tokens in its basket.
      */
     function totalUnderlying() external view override returns (uint256) {
-        return _totalUnderlying();
+        return _totalUnderlyingInWad().div(WAD);
     }
 
     /**
@@ -146,7 +146,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      */
     function liquidityRatio() public view returns (uint256) {
         uint256 _totalSupply = totalSupply();
-        return _totalSupply == 0 ? WAD : _totalUnderlying().mul(WAD).div(_totalSupply);
+        return _totalSupply == 0 ? WAD : _totalUnderlyingInWad().div(_totalSupply);
     }
 
     /**
@@ -156,14 +156,15 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         uint256 _totalShares = totalShares;
         if (_totalShares == 0)  return;
 
-        uint256 _underlying = _totalUnderlying();
-        uint256 _supply = totalSupply();
-        // _underlying - _supply is the interest generated and should be distributed via rebase.
-        // _supply might be larger than _underlying in a short period of time after rebalancing in composite plus.
-        if (_underlying > _supply) {
-            uint256 _oldIndex = index;
+        // underlying is in WAD, and index is also in WAD
+        uint256 _underlying = _totalUnderlyingInWad();
+        uint256 _oldIndex = index;
+        uint256 _newIndex = _underlying.div(_totalShares);
+
+        // _newIndex - oldIndex is the amount of interest generated for each share
+        // _oldIndex might be larger than _newIndex in a short period of time. In this period, the liquidity ratio is smaller than 1.
+        if (_newIndex > _oldIndex) {
             // Index can never decrease
-            uint256 _newIndex = _underlying.mul(WAD).div(_totalShares);
             index = _newIndex;
 
             for (uint256 i = 0; i < transactions.length; i++) {
@@ -173,8 +174,9 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
                     require(success, "rebase hook failed");
                 }
             }
-            // Interest generated can be computed as _underlying - _underlying * _oldIndex / _newIndex
-            emit Rebased(_oldIndex, _newIndex, _underlying);
+            
+            // In this event we are returning underlyiing() which can be used to compute the actual interest generated.
+            emit Rebased(_oldIndex, _newIndex, _underlying.div(WAD));
         }
     }
 

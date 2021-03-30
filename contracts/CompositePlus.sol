@@ -56,9 +56,9 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
     /**
      * @dev Returns the total value of the plus token in terms of the peg value.
-     * All underlying token amounts have been scaled to 18 decimals.
+     * All underlying token amounts have been scaled to 18 decimals and expressed in WAD.
      */
-    function _totalUnderlying() internal view virtual override returns (uint256) {
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _amount = 0;
         for (uint256 i = 0; i < tokens.length; i++) {
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
@@ -67,7 +67,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             _amount = _amount.add(IERC20Upgradeable(tokens[i]).balanceOf(address(this)));
         }
 
-        return _amount;
+        // Plus tokens are in 18 decimals, need to return in WAD.
+        return _amount.mul(WAD);
     }
 
     /**
@@ -318,7 +319,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
         // Rebase first to make index up-to-date
         rebase();
-        uint256 _underlyingBefore = _totalUnderlying();
+        uint256 _underlyingBefore = _totalUnderlyingInWad();
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             require(tokenSupported[_tokens[i]], "token not supported");
@@ -330,10 +331,10 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         IRebalancer(_rebalancer).rebalance(_tokens, _amounts, _data);
 
         // Check post-rebalance conditions.
-        uint256 _underlyingAfter = _totalUnderlying();
+        uint256 _underlyingAfter = _totalUnderlyingInWad();
         uint256 _supply = totalSupply();
         // _underlyingAfter / _supply > minLiquidityRatio
-        require(_underlyingAfter > _supply.mul(minLiquidityRatio).div(WAD), "too much loss");
+        require(_underlyingAfter > _supply.mul(minLiquidityRatio), "too much loss");
 
         emit Rebalanced(_underlyingBefore, _underlyingAfter, _supply);
     }

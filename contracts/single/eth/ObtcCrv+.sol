@@ -139,14 +139,15 @@ contract ObtcCrvPlus is SinglePlus {
     }
 
     /**
-     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals
+     * and expressed in WAD.
      */
-    function _totalUnderlying() internal view virtual override returns (uint256) {
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _balance = IERC20Upgradeable(OBTCCRV).balanceOf(address(this));
         _balance = _balance.add(ICurveGauge(OBTCCRV_GAUGE).balanceOf(address(this)));
 
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _balance.mul(_conversionRate()).div(WAD);
+        return _balance.mul(_conversionRate());
     }
 
     /**

@@ -147,14 +147,15 @@ contract ACryptoSBTCBPlus is SinglePlus {
     }
 
     /**
-     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals
+     * and expressed in WAD.
      */
-    function _totalUnderlying() internal view virtual override returns (uint256) {
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _balance = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
         _balance = _balance.add(IFarm(ACS_FARM).userInfo(ACS_BTCB, address(this)).amount);
 
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _balance.mul(_conversionRate()).div(WAD);
+        return _balance.mul(_conversionRate());
     }
 
     /**
