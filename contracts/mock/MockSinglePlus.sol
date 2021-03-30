@@ -20,12 +20,12 @@ contract MockSinglePlus is SinglePlus {
     /**
      * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals.
      */
-    function _totalUnderlying() internal view virtual override returns (uint256) {
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _balance = MockToken(token).balanceOf(address(this));
         uint256 _reward = MockToken(token).balanceOf(address(reward));
         uint256 _ratio = uint256(10) ** (18 - MockToken(token).decimals());
 
-        return (_balance + _reward) * _ratio;
+        return (_balance + _reward) * _ratio * WAD;
     }
 
     function invest() public override {
