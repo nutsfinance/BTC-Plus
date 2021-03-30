@@ -8,14 +8,16 @@ const gauges = [
     "0x138Af709446DaD527a837971471577B85cf90a19",
     "0x7e0FbE0ddc6ACAe136c9e0611A3C98DfC9310FA1",
     "0x99FfA758dB93A379FaBBdA268924903881B34649",
-    "0xd7CDcfB533cA4BC9E24A1C5f0dad597a20bbccD0"
+    "0xd7CDcfB533cA4BC9E24A1C5f0dad597a20bbccD0",
+    "0x7f0fe444702d421421a59A124aCC6AfB220c1683"
 ];
 
 module.exports = async function (callback) {
     try {
         const accounts = await web3.eth.getAccounts();
 
-        const gaugeImpl = await LiquidityGauge.new();
+        // const gaugeImpl = await LiquidityGauge.new();
+        const gaugeImpl = await LiquidityGauge.at("0xC487822707163B998883BE1D7CA4CD74ec1a1A7c");
         console.log('Gauge impl: ' + gaugeImpl.address);
 
         for (const gauge of gauges) {

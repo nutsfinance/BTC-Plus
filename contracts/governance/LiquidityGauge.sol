@@ -263,14 +263,14 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     /**
      * @dev Returns the total amount of token staked.
      */
-    function totalStaked() external view override returns (uint256) {
+    function totalStaked() public view override returns (uint256) {
         return IERC20Upgradeable(token).balanceOf(address(this));
     }
 
     /**
      * @dev Returns the amount staked by the user.
      */
-    function userStaked(address _account) external view override returns (uint256) {
+    function userStaked(address _account) public view override returns (uint256) {
         uint256 _totalSupply = totalSupply();
         uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
 
@@ -283,6 +283,10 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      */
     function deposit(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
+        if (_amount == uint256(int256(-1))) {
+            // -1 means deposit all
+            _amount = IERC20Upgradeable(token).balanceOf(msg.sender);
+        }
 
         _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
@@ -315,6 +319,10 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      */
     function withdraw(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
+        if (_amount == uint256(int256(-1))) {
+            // -1 means withdraw all
+            _amount = userStaked(msg.sender);
+        }
 
         _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);

@@ -14,15 +14,15 @@ module.exports = async function (callback) {
         const gaugeController = await GaugeController.at(GAUGE_CONTROLLER);
         console.log('Gauge controller: ' + gaugeController.address);
 
-        // const gaugeImpl = await LiquidityGauge.new();
-        const gaugeImpl = await LiquidityGauge.at("0x4cfFc147F4E5d6227D3adBa93bBa7d8bba124bA5");
+        const gaugeImpl = await LiquidityGauge.new();
+        // const gaugeImpl = await LiquidityGauge.at("0x4cfFc147F4E5d6227D3adBa93bBa7d8bba124bA5");
         console.log('Gauge impl: ' + gaugeImpl.address);
-        const gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
-        console.log('Gauge proxy: ' + gaugeProxy.address)
-        const gauge = await LiquidityGauge.at(gaugeProxy.address);
-        await gauge.initialize(TOKEN, gaugeController.address, VOTING_ESCROW);
-        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1.5"), web3.utils.toWei("20"));
-        console.log(`Gauge: ${gauge.address}`);
+        // const gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
+        // console.log('Gauge proxy: ' + gaugeProxy.address)
+        // const gauge = await LiquidityGauge.at(gaugeProxy.address);
+        // await gauge.initialize(TOKEN, gaugeController.address, VOTING_ESCROW);
+        // await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1.5"), web3.utils.toWei("20"));
+        // console.log(`Gauge: ${gauge.address}`);
 
         callback();
     } catch (e) {
