@@ -319,18 +319,20 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      */
     function withdraw(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
+        uint256 _burnAmount = 0;
         if (_amount == uint256(int256(-1))) {
             // -1 means withdraw all
             _amount = userStaked(msg.sender);
+            _burnAmount = balanceOf(msg.sender);
+        } else {
+            uint256 _totalSupply = totalSupply();
+            uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
+            require(_totalSupply > 0 && _balance > 0, "no balance");
+            _burnAmount = _amount.mul(_totalSupply).div(_balance);
         }
 
         _checkpoint(msg.sender);
         _checkpointRewards(msg.sender);
-
-        uint256 _totalSupply = totalSupply();
-        uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
-        require(_totalSupply > 0 && _balance > 0, "no balance");
-        uint256 _burnAmount = _amount.mul(_totalSupply).div(_balance);
 
         _burn(msg.sender, _burnAmount);
         _updateLiquidityLimit(msg.sender);

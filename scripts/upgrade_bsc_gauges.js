@@ -2,7 +2,7 @@ const LiquidityGauge = artifacts.require("LiquidityGauge");
 const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
 
 const VOTING_ESCROW = '0x64d8f840446aD5b06B8A0fFAfE2F9eed05adA8B0';
-const GAUGE_IMPL = "0x235Ab2df01323C5D24c9839f6D42A3e9CBb487ad";
+const GAUGE_IMPL = "0x6111835ded0d415cD3D102A4A1b1d2015c1ee8BE";
 const gauges = [
     "0xD5067c2Afb2EbfA0825fB77B4f03a8A97492b51A",
     "0x138Af709446DaD527a837971471577B85cf90a19",
@@ -17,7 +17,7 @@ module.exports = async function (callback) {
         const accounts = await web3.eth.getAccounts();
 
         // const gaugeImpl = await LiquidityGauge.new();
-        const gaugeImpl = await LiquidityGauge.at("0xC487822707163B998883BE1D7CA4CD74ec1a1A7c");
+        const gaugeImpl = await LiquidityGauge.at(GAUGE_IMPL);
         console.log('Gauge impl: ' + gaugeImpl.address);
 
         for (const gauge of gauges) {
