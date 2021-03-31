@@ -59,6 +59,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     mapping(address => uint256) public integralOf;
     // Timestamp of the last user checkpoint
     mapping(address => uint256) public checkpointOf;
+    // Mapping: User => Rewards accrued last checkpoint
+    mapping(address => uint256) public rewards;
 
     address public rewardContract;
     address[] public rewardTokens;
@@ -177,8 +179,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         uint256 _amount = workingBalances[_account].mul(_newIntegral.sub(integralOf[_account])).div(WAD);
         integralOf[_account] = _newIntegral;
         checkpointOf[_account] = block.timestamp;
-
-        IGaugeController(controller).claim(_account, _amount);
+        rewards[_account] = rewards[_account].add(_amount);
     }
 
     /**
@@ -200,6 +201,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     function claimable(address _account) external view override returns (uint256) {
         // Reward claimable until the previous checkpoint
         uint256 _reward = workingBalances[_account].mul(integral.sub(integralOf[_account])).div(WAD);
+        // Add the remaining claimable rewards
+        _reward = _reward.add(rewards[_account]);
         if (workingSupply > 0) {
             uint256 _diffTime = block.timestamp.sub(lastCheckpoint);
             // Both rate and integral are in WAD
@@ -231,6 +234,12 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         require(_account == msg.sender || IGaugeController(controller).claimers(msg.sender), "not authorized");
         _checkpoint(_account);
         _updateLiquidityLimit(_account);
+
+        uint256 _claimable = rewards[_account];
+        if (_claimable > 0) {
+            IGaugeController(controller).claim(_account, _claimable);
+            rewards[_account] = 0;
+        }
 
         if (_claimRewards) {
             _checkpointRewards(_account);
