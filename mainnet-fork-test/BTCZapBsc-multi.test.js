@@ -4,13 +4,17 @@ const assert = require('assert');
 const BTCZapBsc = artifacts.require("BTCZapBsc");
 const SinglePlus = artifacts.require("SinglePlus");
 const ERC20Upgradeable = artifacts.require("ERC20Upgradeable");
+const AutoBTC = artifacts.require("AutoBTC");
+const ERC20Proxy = artifacts.require("ERC20proxy");
 
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
+const AUTO_BTC = "0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414";
 const VBTC_PLUS = "0xcf8D1D3Fce7C2138F85889068e50F0e7a18b5321";
 const FBTCB_PLUS = "0x73FddFb941c11d16C827169Bb94aCC227841C396";
 const ACSBTCB_PLUS = "0xD7806143A4206aa9A816b964e4c994F533b830b0";
 const AUTOBTC_PLUS = "0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604";
 const DEPLOYER = "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161";
+const PROXY_ADMIN = "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814";
 
 const BN = web3.utils.BN;
 const toWei = web3.utils.toWei;
@@ -45,6 +49,13 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let zap;
 
     let testAmount = "0.001";
+
+    before(async () => {
+        // Deploy new autoBTC
+        const autoBTC = await ERC20Proxy.at(AUTO_BTC);
+        const autoBTCImpl = await AutoBTC.new();
+        await autoBTC.upgradeTo(autoBTCImpl.address, {from: PROXY_ADMIN});
+    });
 
     beforeEach(async () => {
         btcb = await ERC20Upgradeable.at(BTCB);
