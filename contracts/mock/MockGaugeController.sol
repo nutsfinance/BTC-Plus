@@ -15,6 +15,7 @@ contract MockGaugeController is IGaugeController {
     address public claimer;
     uint256 public rate;
     mapping(address => mapping(address => uint256)) public override claimed;
+    mapping(address => uint256) public override lastClaim;
 
     constructor(address _reward, address _governance, address _claimer) {
         reward = _reward;
@@ -53,6 +54,7 @@ contract MockGaugeController is IGaugeController {
         MockToken(reward).mint(_account, _amount);
 
         claimed[msg.sender][_account] = claimed[msg.sender][_account] + _amount;
+        lastClaim[msg.sender] = block.timestamp;
     }
 
     /**

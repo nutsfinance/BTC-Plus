@@ -42,6 +42,12 @@ interface IGaugeController {
     function claimed(address _gauge, address _account) external view returns (uint256);
 
     /**
+     * @dev Returns the last time the user claims from any gauge.
+     * @param _account Address of the user to claim.
+     */
+    function lastClaim(address _account) external view returns (uint256);
+
+    /**
      * @dev Claims rewards for a user. Only the supported gauge can call this function.
      * @param _account Address of the user to claim reward.
      * @param _amount Amount of AC to claim

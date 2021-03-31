@@ -89,6 +89,8 @@ contract GaugeController is Initializable, IGaugeController {
     uint256 public totalClaimed;
     // Mapping: Gauge address => Mapping: User address => Total claimed amount for this user in this gauge
     mapping(address => mapping(address => uint256)) public override claimed;
+    // Mapping: User address => Timestamp of the last claim
+    mapping(address => uint256) public override lastClaim;
 
     /**
      * @dev Initializes the gauge controller.
@@ -236,6 +238,7 @@ contract GaugeController is Initializable, IGaugeController {
         require(gaugeData[msg.sender].isSupported, "not gauge");
         totalClaimed = totalClaimed.add(_amount);
         claimed[msg.sender][_account] = claimed[msg.sender][_account].add(_amount);
+        lastClaim[msg.sender] = block.timestamp;
         IERC20Upgradeable(reward).safeTransfer(_account, _amount);
 
         emit RewardClaimed(msg.sender, _account, _amount);
