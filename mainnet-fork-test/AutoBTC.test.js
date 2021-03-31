@@ -5,11 +5,14 @@ const AutoBTC = artifacts.require("AutoBTC");
 const ERC20Upgradeable = artifacts.require("ERC20Upgradeable");
 const ERC20Proxy = artifacts.require("ERC20Proxy");
 const IAutoFarm = artifacts.require("IAutoFarm");
+const IStrat = artifacts.require("IStrat");
 
 const AUTO = "0xa184088a740c695E156F91f5cC086a06bb78b827";
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
 const DEPLOYER = "0x098d907E1A3F26cC65B8ACa1c37E41B208699bac";
 const AUTO_FARM = "0x0895196562C7868C5Be92459FaE7f877ED450452";
+const AUTOBTC = "0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414";
+const BTCB_STRAT = '0x8E24B8136c3076829A4eD0412cd8F302fA651D84';
 
 const BN = web3.utils.BN;
 const toWei = web3.utils.toWei;
@@ -46,22 +49,50 @@ contract("AutoBTC", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let btcb;
     let autoFarm;
     let autoBTC;
+    let btcbStrat;
     let startTime;
 
     beforeEach(async () => {
         btcb = await ERC20Upgradeable.at(BTCB);
         auto = await ERC20Upgradeable.at(AUTO);
         autoFarm = await IAutoFarm.at(AUTO_FARM);
-        const autoBTCImpl = await AutoBTC.new();
-        console.log(`autoBTC implementation: ${autoBTCImpl.address}`);
-        const autoBTCProxy = await ERC20Proxy.new(autoBTCImpl.address, proxyAdmin, Buffer.from(''));
-        autoBTC = await AutoBTC.at(autoBTCProxy.address);
-        autoBTC.initialize({from: DEPLOYER});
-        console.log(`autoBTC: ${autoBTC.address}`);
+        autoBTC = await AutoBTC.at(AUTOBTC);
+        btcbStrat = await IStrat.at(BTCB_STRAT);
+
+        // const autoBTCImpl = await AutoBTC.new();
+        // console.log(`autoBTC implementation: ${autoBTCImpl.address}`);
+        // const autoBTCProxy = await ERC20Proxy.new(autoBTCImpl.address, proxyAdmin, Buffer.from(''));
+        // autoBTC = await AutoBTC.at(autoBTCProxy.address);
+        // autoBTC.initialize({from: DEPLOYER});
+        // console.log(`autoBTC: ${autoBTC.address}`);
 
         startTime = (await time.latest()).addn(10);
     });
     it("should mint and redeem autoBTC", async () => {
+        // const btcb1 = await btcb.balanceOf(DEPLOYER);
+        // console.log(`BTCB balance 1: ${btcb1.toString()}`);
+        // const share1 = await btcbStrat.sharesTotal();
+        // const locked1 = await btcbStrat.wantLockedTotal();
+        // console.log(`Shares total 1: ${share1.toString()}`);
+        // console.log(`Locked total 1: ${locked1.toString()}\n`);
+        // await btcb.approve(AUTO_FARM, toWei("0.001"), {from: DEPLOYER});
+        // await autoFarm.deposit(3, toWei("0.001"), {from: DEPLOYER});
+
+        // const btcb2 = await btcb.balanceOf(DEPLOYER);
+        // console.log(`BTCB balance 2: ${btcb2.toString()}`);
+        // const share2 = await btcbStrat.sharesTotal();
+        // const locked2 = await btcbStrat.wantLockedTotal();
+        // console.log(`Shares total 2: ${share2.toString()}, diff: ${share2.sub(share1).toString()}`);
+        // console.log(`Locked total 2: ${locked2.toString()}, diff: ${locked2.sub(locked1).toString()}\n`);
+
+        // await autoFarm.withdraw(3, toWei("0.001"), {from: DEPLOYER});
+        // const btcb3 = await btcb.balanceOf(DEPLOYER);        
+        // console.log(`BTCB balance 3: ${btcb3.toString()}`);
+        // console.log(`Shares total 3: ${(await btcbStrat.sharesTotal()).toString()}`);
+        // console.log(`Locked total 3: ${(await btcbStrat.wantLockedTotal()).toString()}`);
+
+
+
         const totalSupply1 = await autoBTC.totalSupply();
         const balance1 = await autoBTC.balanceOf(DEPLOYER);
         const btcb1 = await btcb.balanceOf(DEPLOYER);
@@ -88,12 +119,12 @@ contract("AutoBTC", async ([owner, proxyAdmin, user, user2, treasury]) => {
         // The deposited value should be close 0.001 BTCB
         assertAlmostEqual(amount, toWei("0.001"));
 
-        const autoPrev = await auto.balanceOf(DEPLOYER);
-        console.log('Auto balance prev: ' + autoPrev.toString());
-        await timeIncreaseTo(startTime.addn(5000));
-        await autoBTC.claimRewards({from: DEPLOYER});
-        const autoAfter = await auto.balanceOf(DEPLOYER);
-        console.log('Auto balance after: ' + autoAfter.toString());
+        // const autoPrev = await auto.balanceOf(DEPLOYER);
+        // console.log('Auto balance prev: ' + autoPrev.toString());
+        // await timeIncreaseTo(startTime.addn(5000));
+        // await autoBTC.claimRewards({from: DEPLOYER});
+        // const autoAfter = await auto.balanceOf(DEPLOYER);
+        // console.log('Auto balance after: ' + autoAfter.toString());
 
         await autoBTC.redeem(toWei("0.001"), {from: DEPLOYER});
         const totalSupply3 = await autoBTC.totalSupply();
@@ -104,106 +135,106 @@ contract("AutoBTC", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log('BTCB balance 3: ', btcb3.toString());
         assertAlmostEqual(btcb1, btcb3);
     });
-    it("should claim rewards after transfer", async () => {
-        await btcb.approve(autoBTC.address, toWei("0.001"), {from: DEPLOYER});
-        await autoBTC.mint(toWei("0.001"), {from: DEPLOYER});
+    // it("should claim rewards after transfer", async () => {
+    //     await btcb.approve(autoBTC.address, toWei("0.001"), {from: DEPLOYER});
+    //     await autoBTC.mint(toWei("0.001"), {from: DEPLOYER});
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("1. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("1. ----------------------------------------------------");
 
-        await timeIncreaseTo(startTime.addn(5000));
-        const balance = await autoBTC.balanceOf(DEPLOYER);
+    //     await timeIncreaseTo(startTime.addn(5000));
+    //     const balance = await autoBTC.balanceOf(DEPLOYER);
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("2. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("2. ----------------------------------------------------");
 
-        await autoBTC.claimRewards({from: DEPLOYER});
+    //     await autoBTC.claimRewards({from: DEPLOYER});
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("3. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("3. ----------------------------------------------------");
 
-        await autoBTC.transfer(user, balance, {from: DEPLOYER});
+    //     await autoBTC.transfer(user, balance, {from: DEPLOYER});
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("4. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("4. ----------------------------------------------------");
 
-        await timeIncreaseTo(startTime.addn(7000));
+    //     await timeIncreaseTo(startTime.addn(7000));
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("5. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("5. ----------------------------------------------------");
 
-        const auto1 = await auto.balanceOf(DEPLOYER);
-        const auto2 = await auto.balanceOf(user);
-        console.log('AUTO 1: ' + auto1.toString());
-        console.log('AUTO 2: ' + auto2.toString());
-        await autoBTC.claimRewards({from: DEPLOYER});
+    //     const auto1 = await auto.balanceOf(DEPLOYER);
+    //     const auto2 = await auto.balanceOf(user);
+    //     console.log('AUTO 1: ' + auto1.toString());
+    //     console.log('AUTO 2: ' + auto2.toString());
+    //     await autoBTC.claimRewards({from: DEPLOYER});
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("6. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("6. ----------------------------------------------------");
 
-        await autoBTC.claimRewards({from: user});
+    //     await autoBTC.claimRewards({from: user});
 
-        console.log((await autoBTC.rewardPerTokenStored()).toString());
-        console.log((await autoBTC.lastReward()).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
-        console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
-        console.log((await autoBTC.rewards(DEPLOYER)).toString());
-        console.log((await autoBTC.rewards(user)).toString());
-        console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
-        console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
-        console.log("7. ----------------------------------------------------");
+    //     console.log((await autoBTC.rewardPerTokenStored()).toString());
+    //     console.log((await autoBTC.lastReward()).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewardPerTokenPaid(user)).toString());
+    //     console.log((await autoBTC.rewards(DEPLOYER)).toString());
+    //     console.log((await autoBTC.rewards(user)).toString());
+    //     console.log((await autoFarm.pendingAUTO(3, autoBTC.address)).toString());
+    //     console.log('Balance: ' + (await auto.balanceOf(autoBTC.address)).toString());
+    //     console.log("7. ----------------------------------------------------");
 
-        const auto3 = await auto.balanceOf(DEPLOYER);
-        const auto4 = await auto.balanceOf(user);
-        console.log('AUTO 3: ' + auto3.toString());
-        console.log('AUTO 4: ' + auto4.toString());
+    //     const auto3 = await auto.balanceOf(DEPLOYER);
+    //     const auto4 = await auto.balanceOf(user);
+    //     console.log('AUTO 3: ' + auto3.toString());
+    //     console.log('AUTO 4: ' + auto4.toString());
 
-        await autoBTC.redeem(toWei("0.001"), {from: user});
-        const totalSupply3 = await autoBTC.totalSupply();
-        const balance3 = await autoBTC.balanceOf(user);
-        console.log('autoBTC total supply 3: ', totalSupply3.toString());
-        console.log('autoBTC balance 3: ', balance3.toString());
-    });
+    //     await autoBTC.redeem(toWei("0.001"), {from: user});
+    //     const totalSupply3 = await autoBTC.totalSupply();
+    //     const balance3 = await autoBTC.balanceOf(user);
+    //     console.log('autoBTC total supply 3: ', totalSupply3.toString());
+    //     console.log('autoBTC balance 3: ', balance3.toString());
+    // });
 });

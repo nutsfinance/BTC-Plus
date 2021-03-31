@@ -124,28 +124,26 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
 
     /**
      * @dev Redeems autoBTC to BTCB.
-     * @param _amount Amount of BTCB to redeem from autoBTC.
-     *
-     * Note: This accommodates AutoFarm's behavior to user BTCB amount, instead of share amount to withdraw. Also,
-     * if a number larger than user balance is provided, it will withdraw all balance of the user.
+     * @param _amount Amount of autoBTC to redeem.
      */
     function redeem(uint256 _amount) public override {
-        uint256 _before = IStrat(BTBC_STRAT).sharesTotal();
+        uint256 _btcbTotal = IStrat(BTBC_STRAT).wantLockedTotal();
+        uint256 _shareTotal = IStrat(BTBC_STRAT).sharesTotal();
+        uint256 _btcb = _amount.mul(_btcbTotal).div(_shareTotal);
 
         // Each deposit and withdraw trigger AUTO distribution in AutoFarm
-        IAutoFarm(AUTOFARM).withdraw(PID, _amount);
-        uint256 _after = IStrat(BTBC_STRAT).sharesTotal();
+        IAutoFarm(AUTOFARM).withdraw(PID, _btcb);
 
         // Updates the rewards before redeeming
         _updateReward(msg.sender);
 
         // 1 autoBTC = 1 share in AutoFarm BTCB strategy
-        _burn(msg.sender, _before.sub(_after));
+        _burn(msg.sender, _amount);
 
-        _amount = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _amount);
+        _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
+        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
-        emit Redeemed(msg.sender, _amount, _before.sub(_after));
+        emit Redeemed(msg.sender, _btcb, _amount);
     }
 
     /**
