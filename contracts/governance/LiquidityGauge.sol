@@ -83,7 +83,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         controller = _controller;
         reward = IGaugeController(_controller).reward();
         votingEscrow = _votingEscrow;
-        directClaimCooldown = 15 days;  // A default 15 day direct claim cool down
+        directClaimCooldown = 14 days;  // A default 14 day direct claim cool down
 
         // Should not salvage token from the gauge
         unsalvageable[token] = true;
