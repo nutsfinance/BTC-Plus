@@ -202,6 +202,13 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
+     * @dev Returns the next time user can trigger a direct claim.
+     */
+    function nextDirectClaim(address _account) external view returns (uint256) {
+        return MathUpgradeable.max(block.timestamp, lastDirectClaim[_account].add(directClaimCooldown));
+    }
+
+    /**
      * @dev Returns the amount of AC token that the user can claim.
      * @param _account Address of the account to check claimable reward.
      */
@@ -231,6 +238,25 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
+     * @dev Claims reward for the user. 
+     * @param _account Address of the user to claim.
+     * @param _claimRewards Whether to claim other rewards as well.
+     */
+    function claim(address _account, bool _claimRewards) external nonReentrant {
+        _claim(_account, _account, _claimRewards);
+    }
+
+    /**
+     * @dev Claims reward for the user. 
+     * @param _account Address of the user to claim.
+     * @param _receiver Address that receives the claimed reward
+     * @param _claimRewards Whether to claim other rewards as well.
+     */
+    function claim(address _account, address _receiver, bool _claimRewards) external override nonReentrant {
+        _claim(_account, _receiver, _claimRewards);
+    }
+
+    /**
      * @dev Claims reward for the user. It transfers the claimable reward to the user and updates user's liquidity limit.
      * Note: We allow anyone to claim other rewards on behalf of others, but not for the AC reward. This is because claiming AC
      * reward also updates the user's liquidity limit. Therefore, only authorized claimer can do that on behalf of user.
@@ -238,7 +264,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _receiver Address that receives the claimed reward
      * @param _claimRewards Whether to claim other rewards as well.
      */
-    function claim(address _account, address _receiver, bool _claimRewards) external override nonReentrant {
+    function _claim(address _account, address _receiver, bool _claimRewards) internal {
         // Direct claim mean user claiming directly to the gauge. Cooldown applies to direct claim.
         // Indirect claim means user claimsing via claimers. There is no cooldown in indirect claim.
         require((_account == msg.sender && block.timestamp >= lastDirectClaim[_account].add(directClaimCooldown))

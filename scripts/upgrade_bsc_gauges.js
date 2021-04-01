@@ -2,7 +2,7 @@ const LiquidityGauge = artifacts.require("LiquidityGauge");
 const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
 
 const VOTING_ESCROW = '0x64d8f840446aD5b06B8A0fFAfE2F9eed05adA8B0';
-const GAUGE_IMPL = "0x6111835ded0d415cD3D102A4A1b1d2015c1ee8BE";
+const GAUGE_IMPL = "0xB2175E8B1432Be81a2F52835eC7ea6b740db6bE7";
 const gauges = [
     "0xD5067c2Afb2EbfA0825fB77B4f03a8A97492b51A",
     "0x138Af709446DaD527a837971471577B85cf90a19",
