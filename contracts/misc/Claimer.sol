@@ -2,35 +2,27 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/IGauge.sol";
+import "../interfaces/IVotingEscrow.sol";
 
 /**
  * @dev A utility contract that helps to claims from multiple liquidity gauges.
  */
 contract Claimer {
-
     using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /**
-     * @dev Claims AC reward from multiple gauges.
-     */
-    function claim(address[] memory _gauges) external {
-        for (uint256 i = 0; i < _gauges.length; i++) {
-            IGauge(_gauges[i]).claim(msg.sender, false);
-        }
-    }
+    IVotingEscrow public votingEscrow;
+    IERC20Upgradeable public reward;
 
-    /**
-     * @dev Check whether the list of gauges can be kicked.
-     */
-    function kickable(address _account, address[] memory _gauges) external view returns (bool[] memory) {
-        bool[] memory _result = new bool[](_gauges.length);
-        for (uint256 i = 0; i < _gauges.length; i++) {
-            _result[i] = IGauge(_gauges[i]).kickable(_account);
-        }
+    constructor(address _votingEscrow, address _reward) {
+        votingEscrow = IVotingEscrow(_votingEscrow);
+        reward = IERC20Upgradeable(_reward);
 
-        return _result;
+        reward.safeApprove(_votingEscrow, uint256(int256(-1)));
     }
 
     /**
@@ -53,5 +45,21 @@ contract Claimer {
         }
 
         return _total;
+    }
+
+    /**
+     * @dev Claims the AC and then locks in voting escrow.
+     */
+    function claimAndLock(address[] memory _gauges) external {
+        // Users must have a locking position in order to use claimAbdLock
+        // VotingEscrow allows deposit for others, but does not allow creating new position for others.
+        require(votingEscrow.balanceOf(msg.sender) > 0, "no lock");
+
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            IGauge(_gauges[i]).claim(msg.sender, address(this), false);
+        }
+        uint256 _reward = reward.balanceOf(address(this));
+
+        votingEscrow.deposit_for(msg.sender, _reward);
     }
 }

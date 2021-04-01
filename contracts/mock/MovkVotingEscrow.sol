@@ -10,7 +10,11 @@ import "../interfaces/IVotingEscrow.sol";
 contract MockVotingEscrow is IVotingEscrow {
 
     uint256 public totalSupply;
-    mapping(address => uint256) public balanceOf;
+    mapping(address => uint256) public override balanceOf;
+
+    function deposit_for(address _account, uint256 _amount) external override {
+        balanceOf[_account] = balanceOf[_account] + _amount;
+    }
 
     function setTotalSupply(uint256 _totalSupply) external {
         totalSupply = _totalSupply;

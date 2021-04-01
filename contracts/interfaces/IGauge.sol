@@ -39,9 +39,10 @@ interface IGauge is IERC20Upgradeable {
      * Note: We allow anyone to claim other rewards on behalf of others, but not for the AC reward. This is because claiming AC
      * reward also updates the user's liquidity limit. Therefore, only authorized claimer can do that on behalf of user.
      * @param _account Address of the user to claim.
+     * @param _receiver Address that receives the claimed reward
      * @param _claimRewards Whether to claim other rewards as well.
      */
-    function claim(address _account, bool _claimRewards) external;
+    function claim(address _account, address _receiver, bool _claimRewards) external;
 
     /**
      * @dev Checks whether an account can be kicked.

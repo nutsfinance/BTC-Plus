@@ -235,9 +235,10 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * Note: We allow anyone to claim other rewards on behalf of others, but not for the AC reward. This is because claiming AC
      * reward also updates the user's liquidity limit. Therefore, only authorized claimer can do that on behalf of user.
      * @param _account Address of the user to claim.
+     * @param _receiver Address that receives the claimed reward
      * @param _claimRewards Whether to claim other rewards as well.
      */
-    function claim(address _account, bool _claimRewards) external override nonReentrant {
+    function claim(address _account, address _receiver, bool _claimRewards) external override nonReentrant {
         // Direct claim mean user claiming directly to the gauge. Cooldown applies to direct claim.
         // Indirect claim means user claimsing via claimers. There is no cooldown in indirect claim.
         require((_account == msg.sender && block.timestamp >= lastDirectClaim[_account].add(directClaimCooldown))
@@ -248,7 +249,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
 
         uint256 _claimable = rewards[_account];
         if (_claimable > 0) {
-            IGaugeController(controller).claim(_account, _claimable);
+            IGaugeController(controller).claim(_account, _receiver, _claimable);
             rewards[_account] = 0;
         }
 

@@ -36,7 +36,7 @@ contract GaugeController is Initializable, IGaugeController {
     event GaugeRemoved(address indexed gauge);
     event GaugeUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight, uint256 oldGaugeRate, uint256 newGaugeRate);
     event Checkpointed(uint256 oldRate, uint256 newRate, uint256 totalSupply, uint256 ratePerToken, address[] gauges, uint256[] guageRates);
-    event RewardClaimed(address indexed gauge, address indexed user, uint256 amount);
+    event RewardClaimed(address indexed gauge, address indexed user, address indexed receiver, uint256 amount);
     event FeeProcessed(address indexed gauge, address indexed token, uint256 amount);
 
     uint256 constant WAD = 10 ** 18;
@@ -232,16 +232,18 @@ contract GaugeController is Initializable, IGaugeController {
     /**
      * @dev Claims rewards for a user. Only the liquidity gauge can call this function.
      * @param _account Address of the user to claim reward.
+     * @param _receiver Address that receives the claimed reward
      * @param _amount Amount of AC to claim
      */
-    function claim(address _account, uint256 _amount) external override {
+    function claim(address _account, address _receiver, uint256 _amount) external override {
         require(gaugeData[msg.sender].isSupported, "not gauge");
+
         totalClaimed = totalClaimed.add(_amount);
         claimed[msg.sender][_account] = claimed[msg.sender][_account].add(_amount);
         lastClaim[msg.sender] = block.timestamp;
-        IERC20Upgradeable(reward).safeTransfer(_account, _amount);
+        IERC20Upgradeable(reward).safeTransfer(_receiver, _amount);
 
-        emit RewardClaimed(msg.sender, _account, _amount);
+        emit RewardClaimed(msg.sender, _account, _receiver, _amount);
     }
 
     /**

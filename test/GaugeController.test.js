@@ -584,7 +584,7 @@ contract("LiquidityGauge", async ([owner, claimer, user1, user2, user3]) => {
         // Mint enough rewards token to gauge controller first
         await reward.mint(controller.address, toWei("200"));
         // user2 claims
-        await gauge2.claim(user2, true, {from: user2});
+        await gauge2.claim(user2, user2, true, {from: user2});
         assertAlmostEqual((await controller.totalReward()).toString(), toWei("8.8"));
         assertAlmostEqual((await controller.claimable()).toString(), toWei("4.8"));
         assertAlmostEqual((await controller.claimed(gauge2.address, user2)).toString(), toWei("4"));

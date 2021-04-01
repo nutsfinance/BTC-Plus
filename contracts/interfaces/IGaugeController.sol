@@ -50,9 +50,10 @@ interface IGaugeController {
     /**
      * @dev Claims rewards for a user. Only the supported gauge can call this function.
      * @param _account Address of the user to claim reward.
+     * @param _receiver Address that receives the claimed reward
      * @param _amount Amount of AC to claim
      */
-    function claim(address _account, uint256 _amount) external;
+    function claim(address _account, address _receiver, uint256 _amount) external;
 
     /**
      * @dev Donate the gauge fee. Only liqudity gauge can call this function.

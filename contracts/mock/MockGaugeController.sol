@@ -48,10 +48,11 @@ contract MockGaugeController is IGaugeController {
     /**
      * @dev Claims rewards for a user. Only the supported gauge can call this function.
      * @param _account Address of the user to claim reward.
+     * @param _receiver Address that receives the claimed reward
      * @param _amount Amount of AC to claim
      */
-    function claim(address _account, uint256 _amount) external override {
-        MockToken(reward).mint(_account, _amount);
+    function claim(address _account, address _receiver, uint256 _amount) external override {
+        MockToken(reward).mint(_receiver, _amount);
 
         claimed[msg.sender][_account] = claimed[msg.sender][_account] + _amount;
         lastClaim[msg.sender] = block.timestamp;
