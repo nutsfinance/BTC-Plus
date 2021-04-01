@@ -56,7 +56,6 @@ DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
-INCREASE_LOCK_AMOUNT_AND_UNLOCK_TIME: constant(int128) = 4
 
 
 event CommitOwnership:
@@ -278,7 +277,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     if block.timestamp > last_point.ts:
         block_slope = MULTIPLIER * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
     # If last point is already recorded in this block, slope=0
-    # But that's ok b/c we kblock.timestamp the block in such case
+    # But that's ok b/c we know the block in such case
 
     # Go over weeks to fill history and calculate what the current point is
     t_i: uint256 = (last_checkpoint / WEEK) * WEEK
@@ -465,28 +464,6 @@ def increase_unlock_time(_unlock_time: uint256):
     assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
 
     self._deposit_for(msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
-
-
-@external
-@nonreentrant('lock')
-def increase_lock(_value: uint256, _unlock_time: uint256):
-    """
-    @notice Deposit `_value` additional tokens for `msg.sender`
-            and modify the unlock time
-    @param _value Amount of tokens to deposit and add to the lock
-    @param _unlock_time New epoch time for unlocking
-    """
-    self.assert_not_contract(msg.sender)
-    _locked: LockedBalance = self.locked[msg.sender]
-    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
-
-    assert _locked.end > block.timestamp, "Lock expired"
-    assert _locked.amount > 0, "Nothing is locked"
-    assert unlock_time >= _locked.end, "Can only increase lock duration"
-    assert unlock_time >= block.timestamp + MINTIME, "Voting lock can be 30 days min"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
-
-    self._deposit_for(msg.sender, _value, unlock_time, _locked, INCREASE_LOCK_AMOUNT_AND_UNLOCK_TIME)
 
 @external
 @nonreentrant('lock')
