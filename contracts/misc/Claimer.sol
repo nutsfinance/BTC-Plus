@@ -22,6 +22,28 @@ contract Claimer {
     }
 
     /**
+     * @dev Check whether the list of gauges can be kicked.
+     */
+    function kickable(address _account, address[] memory _gauges) external view returns (bool[] memory) {
+        bool[] memory _result = new bool[](_gauges.length);
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            _result[i] = IGauge(_gauges[i]).kickable(_account);
+        }
+
+        return _result;
+    }
+
+    /**
+     * @dev Updates voting power in multiple gauges.
+     * kick works only when there is a new voting event since last checkpoint.
+     */
+    function kick(address[] memory _gauges) external {
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            IGauge(_gauges[i]).kick(msg.sender);
+        }
+    }
+
+    /**
      * @dev Returns the sum of claimable AC from multiple gauges.
      */
     function claimable(address _account, address[] memory _gauges) external view returns (uint256) {

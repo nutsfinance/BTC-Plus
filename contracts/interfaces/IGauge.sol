@@ -42,4 +42,17 @@ interface IGauge is IERC20Upgradeable {
      * @param _claimRewards Whether to claim other rewards as well.
      */
     function claim(address _account, bool _claimRewards) external;
+
+    /**
+     * @dev Checks whether an account can be kicked.
+     * An account is kickable if the account has another voting event since last checkpoint,
+     * or the lock of the account expires.
+     */
+    function kickable(address _account) external view returns (bool);
+
+    /**
+     * @dev Kicks an account for abusing their boost. Only kick if the user
+     * has another voting event, or their lock expires.
+     */
+    function kick(address _account) external;
 }

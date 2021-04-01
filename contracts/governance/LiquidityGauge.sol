@@ -31,6 +31,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     event Withdrawn(address indexed account, uint256 withdrawAmount, uint256 fee, uint256 burnAmount);
     event RewardContractUpdated(address indexed oldRewardContract, address indexed newRewardContract, address[] rewardTokens);
     event WithdrawFeeUpdated(uint256 oldWithdrawFee, uint256 newWithdrawFee);
+    event DirectClaimCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 
     uint256 constant TOKENLESS_PRODUCTION = 40;
     uint256 constant WAD = 10**18;
@@ -61,6 +62,11 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     mapping(address => uint256) public checkpointOf;
     // Mapping: User => Rewards accrued last checkpoint
     mapping(address => uint256) public rewards;
+    // Mapping: User => Last time the user claims directly from the gauge
+    // Users can claim directly from gauge or indirectly via a claimer
+    mapping(address => uint256) public lastDirectClaim;
+    // The cooldown interval between two direct claims from the gauge
+    uint256 public directClaimCooldown;
 
     address public rewardContract;
     address[] public rewardTokens;
@@ -77,6 +83,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         controller = _controller;
         reward = IGaugeController(_controller).reward();
         votingEscrow = _votingEscrow;
+        directClaimCooldown = 15 days;  // A default 15 day direct claim cool down
 
         // Should not salvage token from the gauge
         unsalvageable[token] = true;
@@ -231,7 +238,11 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _claimRewards Whether to claim other rewards as well.
      */
     function claim(address _account, bool _claimRewards) external override nonReentrant {
-        require(_account == msg.sender || IGaugeController(controller).claimers(msg.sender), "not authorized");
+        // Direct claim mean user claiming directly to the gauge. Cooldown applies to direct claim.
+        // Indirect claim means user claimsing via claimers. There is no cooldown in indirect claim.
+        require((_account == msg.sender && block.timestamp >= lastDirectClaim[_account].add(directClaimCooldown))
+            || IGaugeController(controller).claimers(msg.sender), "cannot claim");
+
         _checkpoint(_account);
         _updateLiquidityLimit(_account);
 
@@ -244,6 +255,11 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         if (_claimRewards) {
             _checkpointRewards(_account);
         }
+
+        // Cooldown applies only to direct claim
+        if (_account == msg.sender) {
+            lastDirectClaim[msg.sender] = block.timestamp;
+        }
     }
 
     /**
@@ -255,15 +271,24 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
-     * @dev Kicks an account for abusing their boost. Only kick if the user
-     * has another voting event, or their lock expires.
+     * @dev Checks whether an account can be kicked.
+     * An account is kickable if the account has another voting event since last checkpoint,
+     * or the lock of the account expires.
      */
-    function kick(address _account) external nonReentrant {
+    function kickable(address _account) public view override returns (bool) {
         address _votingEscrow = votingEscrow;
         uint256 _lastUserCheckpoint = checkpointOf[_account];
         uint256 _lastUserEvent = IVotingEscrow(_votingEscrow).user_point_history__ts(_account, IVotingEscrow(_votingEscrow).user_point_epoch(_account));
 
-        require(IERC20Upgradeable(_votingEscrow).balanceOf(_account) == 0 || _lastUserEvent > _lastUserCheckpoint, "kick not allowed");
+        return IERC20Upgradeable(_votingEscrow).balanceOf(_account) == 0 || _lastUserEvent > _lastUserCheckpoint;
+    }
+
+    /**
+     * @dev Kicks an account for abusing their boost. Only kick if the user
+     * has another voting event, or their lock expires.
+     */
+    function kick(address _account) external override nonReentrant {
+        require(kickable(_account), "kick not allowed");
 
         _checkpoint(_account);
         _updateLiquidityLimit(_account);
@@ -446,6 +471,16 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         withdrawFee = _withdrawFee;
 
         emit WithdrawFeeUpdated(_oldWithdrawFee, _withdrawFee);
+    }
+
+    /**
+     * @dev Updates the cooldown between two direct claims.
+     */
+    function setDirectClaimCooldown(uint256 _cooldown) external onlyGovernance {
+        uint256 _oldCooldown = directClaimCooldown;
+        directClaimCooldown = _cooldown;
+
+        emit DirectClaimCooldownUpdated(_oldCooldown, _cooldown);
     }
 
     /**
