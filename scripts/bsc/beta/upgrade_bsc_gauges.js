@@ -36,8 +36,3 @@ module.exports = async function (callback) {
         callback(e);
     }
 }
-
-
-async function deployGauge(token, gaugeController) {
-    
-}
