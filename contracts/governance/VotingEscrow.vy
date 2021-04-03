@@ -114,9 +114,11 @@ smart_wallet_checker: public(address)
 admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 
+initialized: public(bool)
+
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], _version: String[32]):
+def initialize(token_addr: address, _name: String[64], _symbol: String[32], _version: String[32]):
     """
     @notice Contract constructor
     @param token_addr `ERC20CRV` token address
@@ -124,6 +126,8 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _versi
     @param _symbol Token symbol
     @param _version Contract version - required for Aragon compatibility
     """
+    assert not self.initialized
+
     self.admin = msg.sender
     self.token = token_addr
     self.point_history[0].blk = block.number
@@ -138,6 +142,8 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _versi
     self.name = _name
     self.symbol = _symbol
     self.version = _version
+
+    self.initialized = True
 
 
 @external
@@ -387,25 +393,6 @@ def checkpoint():
     @notice Record global data to checkpoint
     """
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
-
-
-@external
-@nonreentrant('lock')
-def deposit_for(_addr: address, _value: uint256):
-    """
-    @notice Deposit `_value` tokens for `_addr` and add to the lock
-    @dev Anyone (even a smart contract) can deposit for someone else, but
-         cannot extend their locktime and deposit for a brand new user
-    @param _addr User's wallet address
-    @param _value Amount to add to user's lock
-    """
-    _locked: LockedBalance = self.locked[_addr]
-
-    assert _value > 0  # dev: need non-zero value
-    assert _locked.amount > 0, "No existing lock found"
-    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
-
-    self._deposit_for(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE)
 
 
 @external
