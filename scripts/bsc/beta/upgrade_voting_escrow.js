@@ -1,7 +1,7 @@
 const VotingEscrow = artifacts.require("VotingEscrow");
 const VotingEscrowProxy = artifacts.require("VotingEscrowProxy");
 
-const VOTING_ESCROW = "0x19F8246F5eadfE0dc46E62BE5fc995Aca16efAb4";
+const VOTING_ESCROW = "0x17580529d7a21be535E05960b167c4d6c961947c";
 
 module.exports = async function (callback) {
     try {
