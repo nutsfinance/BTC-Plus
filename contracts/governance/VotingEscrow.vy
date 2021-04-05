@@ -355,9 +355,10 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
 
 
 @internal
-def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
+def _deposit_for(_sender: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
     """
     @notice Deposit and lock tokens for a user
+    @param _sender Wallet address that sends out the token
     @param _addr User's wallet address
     @param _value Amount to deposit
     @param unlock_time New time when to unlock the tokens, or 0 if unchanged
@@ -381,7 +382,7 @@ def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_b
     self._checkpoint(_addr, old_locked, _locked)
 
     if _value != 0:
-        assert ERC20(self.token).transferFrom(_addr, self, _value)
+        assert ERC20(self.token).transferFrom(_sender, self, _value)
 
     log Deposit(_addr, _value, _locked.end, type, block.timestamp)
     log Supply(supply_before, supply_before + _value)
@@ -393,6 +394,26 @@ def checkpoint():
     @notice Record global data to checkpoint
     """
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+
+@external
+@nonreentrant('lock')
+def deposit_for(_addr: address, _value: uint256):
+    """
+    @notice Deposit `_value` tokens for `_addr` and add to the lock
+    @dev Anyone (even a smart contract) can deposit for someone else, but
+         cannot extend their locktime and deposit for a brand new user. The difference
+         to Curve's Voting Escrow is that we allow anyone to add their token to others'
+         lock position
+    @param _addr User's wallet address
+    @param _value Amount to add to user's lock
+    """
+    _locked: LockedBalance = self.locked[_addr]
+
+    assert _value > 0  # dev: need non-zero value
+    assert _locked.amount > 0, "No existing lock found"
+    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
+
+    self._deposit_for(msg.sender, _addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE)
 
 
 @external
@@ -412,7 +433,7 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     assert unlock_time >= block.timestamp + MINTIME, "Voting lock can be 30 days min"
     assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
 
-    self._deposit_for(msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
+    self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
 
 @external
@@ -430,7 +451,7 @@ def increase_amount(_value: uint256):
     assert _locked.amount > 0, "No existing lock found"
     assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
 
-    self._deposit_for(msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
+    self._deposit_for(msg.sender, msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
 
 
 @external
@@ -450,7 +471,7 @@ def increase_unlock_time(_unlock_time: uint256):
     assert unlock_time >= block.timestamp + MINTIME, "Voting lock can be 30 days min"
     assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
 
-    self._deposit_for(msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
+    self._deposit_for(msg.sender, msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
 
 @external
 @nonreentrant('lock')
