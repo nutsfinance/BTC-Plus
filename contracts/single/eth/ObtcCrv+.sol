@@ -14,7 +14,7 @@ import "../../interfaces/curve/ICurveGauge.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
- * @dev Single plus for renCrv.
+ * @dev Single plus for obtcCrv.
  */
 contract ObtcCrvPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -31,6 +31,13 @@ contract ObtcCrvPlus is SinglePlus {
     address public constant OBTCCRV = address(0x2fE94ea3d5d4a175184081439753DE15AeF9d614);
     address public constant OBTCCRV_GAUGE = address(0x11137B10C210b579405c21A07489e28F3c040AB1); // obtcCrv gauge
     address public constant OBTC_DEPOSIT = address(0xd5BCf53e2C81e1991570f33Fa881c49EEa570C8D); // OBTC deposit
+
+    /**
+     * @dev Initializes oBTCCrv+.
+     */
+    function initialize() public initializer {
+        SinglePlus.initialize(OBTCCRV, "", "");
+    }
 
     /**
      * @dev Retrive the underlying assets from the investment.

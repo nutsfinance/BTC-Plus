@@ -32,6 +32,13 @@ contract RenCrvPlus is SinglePlus {
     address public constant REN_SWAP = address(0x93054188d876f558f4a66B2EF1d97d16eDf0895B); // REN swap
 
     /**
+     * @dev Initializes renCrv+.
+     */
+    function initialize() public initializer {
+        SinglePlus.initialize(RENCRV, "", "");
+    }
+
+    /**
      * @dev Retrive the underlying assets from the investment.
      * Only governance or strategist can call this function.
      */

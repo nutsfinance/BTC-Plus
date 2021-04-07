@@ -32,6 +32,13 @@ contract SbtcCrvPlus is SinglePlus {
     address public constant SBTC_SWAP = address(0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714); // SBTC swap
 
     /**
+     * @dev Initializes sBTCCrv+.
+     */
+    function initialize() public initializer {
+        SinglePlus.initialize(SBTCCRV, "", "");
+    }
+
+    /**
      * @dev Retrive the underlying assets from the investment.
      * Only governance or strategist can call this function.
      */
