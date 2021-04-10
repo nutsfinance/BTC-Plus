@@ -99,8 +99,6 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @return Amount of underlying token received as well as fee collected.
      */
     function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256) {
-        require(_amount > 0, "zero amount");
-
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
         // Liquidity ratio is in WAD and redeem fee is in 0.01%
         uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
