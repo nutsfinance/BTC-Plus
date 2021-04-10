@@ -75,14 +75,14 @@ contract AutoBTCv2 is ERC20Upgradeable, IAutoBTC {
     function exchangeRateCurrent() public override returns (uint256) {
         // Note: This function will throw if onlyGov = true in BTCB strategy!
         IStrat(BTBC_STRAT).earn();
-        return IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
+        return totalSupply() == 0 ? WAD : IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
     }
 
     /**
      * @dev Returns the current exchange rate between AutoBTC and BTCB.
      */
     function exchangeRateStored() public view override returns (uint256) {
-        return IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
+        return totalSupply() == 0 ? WAD : IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
     }
 
     /**
