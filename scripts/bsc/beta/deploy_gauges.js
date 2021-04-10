@@ -1,11 +1,10 @@
 const GaugeController = artifacts.require("GaugeController");
-const GaugeControllerProxy = artifacts.require("GaugeControllerProxy");
 const LiquidityGauge = artifacts.require("LiquidityGauge");
 const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
 
-const VOTING_ESCROW = '0x64d8f840446aD5b06B8A0fFAfE2F9eed05adA8B0';
+const VOTING_ESCROW = '0x17580529d7a21be535E05960b167c4d6c961947c';
 const GAUGE_CONTROLLER = '0x19F8246F5eadfE0dc46E62BE5fc995Aca16efAb4';
-const TOKEN = '0xd051003a60be3B2feA427448cdc085D08c6E2dcC';
+const TOKEN = '0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3';
 
 module.exports = async function (callback) {
     try {
@@ -14,15 +13,15 @@ module.exports = async function (callback) {
         const gaugeController = await GaugeController.at(GAUGE_CONTROLLER);
         console.log('Gauge controller: ' + gaugeController.address);
 
-        const gaugeImpl = await LiquidityGauge.new();
-        // const gaugeImpl = await LiquidityGauge.at("0x4cfFc147F4E5d6227D3adBa93bBa7d8bba124bA5");
+        // const gaugeImpl = await LiquidityGauge.new();
+        const gaugeImpl = await LiquidityGauge.at("0xB2175E8B1432Be81a2F52835eC7ea6b740db6bE7");
         console.log('Gauge impl: ' + gaugeImpl.address);
-        // const gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
-        // console.log('Gauge proxy: ' + gaugeProxy.address)
-        // const gauge = await LiquidityGauge.at(gaugeProxy.address);
-        // await gauge.initialize(TOKEN, gaugeController.address, VOTING_ESCROW);
-        // await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1.5"), web3.utils.toWei("20"));
-        // console.log(`Gauge: ${gauge.address}`);
+        const gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
+        console.log('Gauge proxy: ' + gaugeProxy.address)
+        const gauge = await LiquidityGauge.at(gaugeProxy.address);
+        await gauge.initialize(TOKEN, gaugeController.address, VOTING_ESCROW);
+        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
+        console.log(`Gauge: ${gauge.address}`);
 
         callback();
     } catch (e) {
