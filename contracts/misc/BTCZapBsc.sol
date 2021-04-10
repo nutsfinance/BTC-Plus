@@ -20,8 +20,8 @@ contract BTCZapBsc {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    event Minted(address indexed target, uint256 amount, uint256 mintAmount);
-    event Redeemed(address indexed source, uint256 amount, uint256 redeemAmount);
+    event Minted(address indexed account, address indexed target, uint256 amount, uint256 mintAmount);
+    event Redeemed(address indexed account, address indexed source, uint256 amount, uint256 redeemAmount);
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant VENUS_BTC = address(0x882C173bC7Ff3b7786CA16dfeD3DFFfb9Ee7847B);
@@ -34,6 +34,8 @@ contract BTCZapBsc {
     address public constant ACS_BTCB_PLUS = address(0xD7806143A4206aa9A816b964e4c994F533b830b0);
     address public constant AUTO_BTC = address(0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414);
     address public constant AUTO_BTC_PLUS = address(0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604);
+    address public constant AUTO_BTC_V2 = address(0x5AA676577F7A69F8761F5A19ae6057A386D6a48e);
+    address public constant AUTO_BTC_V2_PLUS = address(0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3);
     uint256 public constant WAD = 10 ** 18;
 
     address public governance;
@@ -51,6 +53,9 @@ contract BTCZapBsc {
 
         IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC, uint256(int256(-1)));
         IERC20Upgradeable(AUTO_BTC).safeApprove(AUTO_BTC_PLUS, uint256(int256(-1)));
+
+        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC_V2, uint256(int256(-1)));
+        IERC20Upgradeable(AUTO_BTC_V2).safeApprove(AUTO_BTC_V2_PLUS, uint256(int256(-1)));
     }
 
     /**
@@ -69,7 +74,7 @@ contract BTCZapBsc {
         uint256 _vbtcPlus = IERC20Upgradeable(VENUS_BTC_PLUS).balanceOf(address(this));
         IERC20Upgradeable(VENUS_BTC_PLUS).safeTransfer(msg.sender, _vbtcPlus);
 
-        emit Minted(VENUS_BTC_PLUS, _amount, _vbtcPlus);
+        emit Minted(msg.sender, VENUS_BTC_PLUS, _amount, _vbtcPlus);
     }
 
     /**
@@ -88,7 +93,7 @@ contract BTCZapBsc {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
-        emit Redeemed(VENUS_BTC_PLUS, _btcb, _amount);
+        emit Redeemed(msg.sender, VENUS_BTC_PLUS, _btcb, _amount);
     }
 
     /**
@@ -107,7 +112,7 @@ contract BTCZapBsc {
         uint256 _fbtcbPlus = IERC20Upgradeable(FORTUBE_BTCB_PLUS).balanceOf(address(this));
         IERC20Upgradeable(FORTUBE_BTCB_PLUS).safeTransfer(msg.sender, _fbtcbPlus);
 
-        emit Minted(FORTUBE_BTCB_PLUS, _amount, _fbtcbPlus);
+        emit Minted(msg.sender, FORTUBE_BTCB_PLUS, _amount, _fbtcbPlus);
     }
 
     /**
@@ -126,7 +131,7 @@ contract BTCZapBsc {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
-        emit Redeemed(FORTUBE_BTCB_PLUS, _btcb, _amount);
+        emit Redeemed(msg.sender, FORTUBE_BTCB_PLUS, _btcb, _amount);
     }
 
     /**
@@ -145,7 +150,7 @@ contract BTCZapBsc {
         uint256 _acsBtcbPlus = IERC20Upgradeable(ACS_BTCB_PLUS).balanceOf(address(this));
         IERC20Upgradeable(ACS_BTCB_PLUS).safeTransfer(msg.sender, _acsBtcbPlus);
 
-        emit Minted(ACS_BTCB_PLUS, _amount, _acsBtcbPlus);
+        emit Minted(msg.sender, ACS_BTCB_PLUS, _amount, _acsBtcbPlus);
     }
 
     /**
@@ -164,7 +169,7 @@ contract BTCZapBsc {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
-        emit Redeemed(ACS_BTCB_PLUS, _btcb, _amount);
+        emit Redeemed(msg.sender, ACS_BTCB_PLUS, _btcb, _amount);
     }
 
     /**
@@ -183,7 +188,7 @@ contract BTCZapBsc {
         uint256 _autoBtcPlus = IERC20Upgradeable(AUTO_BTC_PLUS).balanceOf(address(this));
         IERC20Upgradeable(AUTO_BTC_PLUS).safeTransfer(msg.sender, _autoBtcPlus);
 
-        emit Minted(AUTO_BTC_PLUS, _amount, _autoBtcPlus);
+        emit Minted(msg.sender, AUTO_BTC_PLUS, _amount, _autoBtcPlus);
     }
 
     /**
@@ -202,6 +207,44 @@ contract BTCZapBsc {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
-        emit Redeemed(AUTO_BTC_PLUS, _btcb, _amount);
+        emit Redeemed(msg.sender, AUTO_BTC_PLUS, _btcb, _amount);
+    }
+
+    /**
+     * @dev Mints autoBTCv2+ with BTCB.
+     * @param _amount Amount of BTCB used to mint autoBTCv2+
+     */
+    function mintAutoBTCV2Plus(uint256 _amount) public {
+        require(_amount > 0, "zero amount");
+        
+        IERC20Upgradeable(BTCB).safeTransferFrom(msg.sender, address(this), _amount);
+        IAutoBTC(AUTO_BTC_V2).mint(_amount);
+
+        uint256 _autoBtcV2 = IERC20Upgradeable(AUTO_BTC_V2).balanceOf(address(this));
+        ISinglePlus(AUTO_BTC_V2_PLUS).mint(_autoBtcV2);
+
+        uint256 _autoBtcV2Plus = IERC20Upgradeable(AUTO_BTC_V2_PLUS).balanceOf(address(this));
+        IERC20Upgradeable(AUTO_BTC_V2_PLUS).safeTransfer(msg.sender, _autoBtcV2Plus);
+
+        emit Minted(msg.sender, AUTO_BTC_V2_PLUS, _amount, _autoBtcV2Plus);
+    }
+
+    /**
+     * @dev Redeems autoBTCv2+ to BTCB.
+     * @param _amount Amount of autoTCBv2+ to redeem.
+     */
+    function redeemAutoBTCV2Plus(uint256 _amount) public {
+        require(_amount > 0, "zero amount");
+
+        IERC20Upgradeable(AUTO_BTC_V2_PLUS).safeTransferFrom(msg.sender, address(this), _amount);
+        ISinglePlus(AUTO_BTC_V2_PLUS).redeem(_amount);
+
+        uint256 _autoBtcV2 = IERC20Upgradeable(AUTO_BTC_V2).balanceOf(address(this));
+        IAutoBTC(AUTO_BTC_V2).redeem(_autoBtcV2);
+
+        uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
+        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
+
+        emit Redeemed(msg.sender, AUTO_BTC_V2_PLUS, _btcb, _amount);
     }
 }

@@ -13,6 +13,7 @@ const VBTC_PLUS = "0xcf8D1D3Fce7C2138F85889068e50F0e7a18b5321";
 const FBTCB_PLUS = "0x73FddFb941c11d16C827169Bb94aCC227841C396";
 const ACSBTCB_PLUS = "0xD7806143A4206aa9A816b964e4c994F533b830b0";
 const AUTOBTC_PLUS = "0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604";
+const AUTOBTC_V2_PLUS = "0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3";
 const DEPLOYER = "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161";
 const PROXY_ADMIN = "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814";
 
@@ -35,7 +36,7 @@ const assertAlmostEqual = function(actualOrig, expectedOrig) {
 
 /**
  * Start Mainnet fork node on BSC:
- * ganache-cli --fork https://bsc-dataseed.binance.org/ -u "0x098d907E1A3F26cC65B8ACa1c37E41B208699bac"
+ * ganache-cli --fork https://bsc-dataseed.binance.org/ -u "0x098d907E1A3F26cC65B8ACa1c37E41B208699bac" -u "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161" -u "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814"
  * 
  * Run test:
  * truffle test mainnet-fork-test/BTCZapBsc.test.js
@@ -46,6 +47,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let fbtcbPlus;
     let acsbtcbPlus;
     let autobtcPlus;
+    let autobtcV2Plus;
     let zap;
 
     let testAmount = "0.001";
@@ -63,6 +65,7 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         fbtcbPlus = await SinglePlus.at(FBTCB_PLUS);
         acsbtcbPlus = await SinglePlus.at(ACSBTCB_PLUS);
         autobtcPlus = await SinglePlus.at(AUTOBTC_PLUS);
+        autobtcV2Plus = await SinglePlus.at(AUTOBTC_V2_PLUS);
         zap = await BTCZapBsc.new();
         await btcb.approve(zap.address, toWei("1000"), {from: DEPLOYER});
     });
@@ -127,6 +130,21 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`autoBTC+, 0.0001, ${diff}, ${diffRatio}%`);
     });
 
+    it("should mint and redeem 0.0001 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("0.0001"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100 / 0.0001;
+        console.log(`autoBTCv2+, 0.0001, ${diff}, ${diffRatio}%`);
+    });
+
     it("should mint and redeem 0.001 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -185,6 +203,21 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
         const diffRatio = diff * 100 / 0.001;
         console.log(`autoBTC+, 0.001, ${diff}, ${diffRatio}%`);
+    });
+
+    it("should mint and redeem 0.001 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("0.001"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100 / 0.001;
+        console.log(`autoBTCv2+, 0.001, ${diff}, ${diffRatio}%`);
     });
 
     it("should mint and redeem 0.01 vBTC+", async () => {
@@ -247,6 +280,21 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`autoBTC+, 0.01, ${diff}, ${diffRatio}%`);
     });
 
+    it("should mint and redeem 0.01 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("0.01"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100 / 0.01;
+        console.log(`autoBTCv2+, 0.01, ${diff}, ${diffRatio}%`);
+    });
+
     it("should mint and redeem 0.1 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -305,6 +353,21 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
         const diffRatio = diff * 100 / 0.1;
         console.log(`autoBTC+, 0.1, ${diff}, ${diffRatio}%`);
+    });
+
+    it("should mint and redeem 0.1 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("0.1"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100 / 0.1;
+        console.log(`autoBTCv2+, 0.1, ${diff}, ${diffRatio}%`);
     });
 
     it("should mint and redeem 1 vBTC+", async () => {
@@ -367,6 +430,21 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`autoBTC+, 1, ${diff}, ${diffRatio}%`);
     });
 
+    it("should mint and redeem 1 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("1"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100;
+        console.log(`autoBTCv2+, 1, ${diff}, ${diffRatio}%`);
+    });
+
     it("should mint and redeem 10 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -427,6 +505,22 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`autoBTC+, 10, ${diff}, ${diffRatio}%`);
     });
 
+
+    it("should mint and redeem 10 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("10"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100 / 10;
+        console.log(`autoBTCv2+, 10, ${diff}, ${diffRatio}%`);
+    });
+
     it("should mint and redeem 100 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -485,5 +579,20 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
         const diffRatio = diff * 100 / 100;
         console.log(`autoBTC+, 100, ${diff}, ${diffRatio}%`);
+    });
+
+    it("should mint and redeem 100 autoBTCv2+", async () => {
+        const btcb1 = await btcb.balanceOf(DEPLOYER);
+
+        await zap.mintAutoBTCV2Plus(toWei("100"), {from: DEPLOYER});
+
+        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
+        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
+        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
+
+        const btcb3 = await btcb.balanceOf(DEPLOYER);
+        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
+        const diffRatio = diff * 100 / 100;
+        console.log(`autoBTCv2+, 100, ${diff}, ${diffRatio}%`);
     });
 });
