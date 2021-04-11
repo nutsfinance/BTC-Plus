@@ -4,7 +4,7 @@ pragma solidity 0.8.0;
 /**
  * @dev Interface for Venus Comptroller
  */
-interface IComptroller {
+interface IVenusComptroller {
 
     /**
      * @notice Add assets to be included in account liquidity calculation

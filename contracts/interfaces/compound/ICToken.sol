@@ -6,6 +6,10 @@ pragma solidity 0.8.0;
  */
 interface ICToken {
 
+    function mint(uint _amount) external returns (uint256);
+
+    function redeem(uint256 _amount) external returns (uint256);
+
     function underlying() external view returns (address);
 
     function exchangeRateCurrent() external returns (uint256);

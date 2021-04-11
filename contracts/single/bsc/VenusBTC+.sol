@@ -11,7 +11,7 @@ import "../../SinglePlus.sol";
 import "../../interfaces/venus/IVAIVault.sol";
 import "../../interfaces/venus/IVToken.sol";
 import "../../interfaces/venus/IVAIController.sol";
-import "../../interfaces/venus/IComptroller.sol";
+import "../../interfaces/venus/IVenusComptroller.sol";
 import "../../interfaces/compound/ICToken.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
@@ -40,7 +40,7 @@ contract VenusBTCPlus is SinglePlus {
 
         address[] memory _markets = new address[](1);
         _markets[0] = VENUS_BTC;
-        IComptroller(VENUS_COMPTROLLER).enterMarkets(_markets);
+        IVenusComptroller(VENUS_COMPTROLLER).enterMarkets(_markets);
     }
 
     /**
@@ -113,7 +113,7 @@ contract VenusBTCPlus is SinglePlus {
      */
     function harvest() public virtual override onlyStrategist {
         // Harvest from Venus comptroller
-        IComptroller(VENUS_COMPTROLLER).claimVenus(address(this));
+        IVenusComptroller(VENUS_COMPTROLLER).claimVenus(address(this));
 
         // Harvest from VAI controller
         IVAIVault(VAI_VAULT).claim();
@@ -182,7 +182,7 @@ contract VenusBTCPlus is SinglePlus {
      * @param _amount Amount of underlying token withdraw.
      */
     function _withdraw(address _receiver, uint256  _amount) internal virtual override {
-        (,,uint256 _shortfall) = IComptroller(VENUS_COMPTROLLER).getHypotheticalAccountLiquidity(address(this), VENUS_BTC, _amount, 0);
+        (,,uint256 _shortfall) = IVenusComptroller(VENUS_COMPTROLLER).getHypotheticalAccountLiquidity(address(this), VENUS_BTC, _amount, 0);
         if (_shortfall > 0) {
             IVAIVault(VAI_VAULT).withdraw(_shortfall);
             IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
