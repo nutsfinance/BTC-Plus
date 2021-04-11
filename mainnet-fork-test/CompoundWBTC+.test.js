@@ -46,10 +46,11 @@ contract("CompoundWBTC+", async ([owner, proxyAdmin, user, user2, treasury]) => 
     beforeEach(async () => {
         cWBTC = await ERC20Upgradeable.at(CWBTC);
 
-        const cWBTCPlusImpl = await CompoundWBTCPlus.new();
-        console.log(`cWBTC+ implementation: ${cWBTCPlusImpl.address}`);
-        const cWBTCPlusProxy = await ERC20Proxy.new(cWBTCPlusImpl.address, proxyAdmin, Buffer.from(''));
-        cWBTCPlus = await CompoundWBTCPlus.at(cWBTCPlusProxy.address);
+        // const cWBTCPlusImpl = await CompoundWBTCPlus.new();
+        // console.log(`cWBTC+ implementation: ${cWBTCPlusImpl.address}`);
+        // const cWBTCPlusProxy = await ERC20Proxy.new(cWBTCPlusImpl.address, proxyAdmin, Buffer.from(''));
+        // cWBTCPlus = await CompoundWBTCPlus.at(cWBTCPlusProxy.address);
+        cWBTCPlus = await CompoundWBTCPlus.new({from: DEPLOYER});
         cWBTCPlus.initialize({from: DEPLOYER});
         console.log(`cWBTC+: ${cWBTCPlus.address}`);
 
@@ -62,8 +63,8 @@ contract("CompoundWBTC+", async ([owner, proxyAdmin, user, user2, treasury]) => 
         console.log('cWBTC+ balance 1: ', balance1.toString());
         console.log('cWBTC balance 1: ', (await cWBTC.balanceOf(DEPLOYER)).toString());
 
-        await cWBTC.approve(cWBTCPlus.address, toWei("0.1"), {from: DEPLOYER});
-        await cWBTCPlus.mint(toWei("0.1"), {from: DEPLOYER});
+        await cWBTC.approve(cWBTCPlus.address, toWei("0.001"), {from: DEPLOYER});
+        await cWBTCPlus.mint(toWei("0.001"), {from: DEPLOYER});
 
         const totalSupply2 = await cWBTCPlus.totalSupply();
         const balance2 = await cWBTCPlus.balanceOf(DEPLOYER);

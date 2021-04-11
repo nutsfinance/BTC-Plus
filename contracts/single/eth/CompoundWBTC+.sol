@@ -98,6 +98,8 @@ contract CompoundWBTCPlus is SinglePlus {
      */
     function _conversionRate() internal view virtual override returns (uint256) {
         // The exchange rate is in WAD
-        return ICToken(COMPOUND_WBTC).exchangeRateStored();
+        // WBTC has 8 decimals
+        // so it's cWBTC exchange rate * 10**(18 - 8)
+        return ICToken(COMPOUND_WBTC).exchangeRateStored().mul(uint256(10) ** 10);
     }
 }
