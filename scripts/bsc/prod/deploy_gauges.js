@@ -13,6 +13,7 @@ const ACSBTCB_PLUS = "0xD7806143A4206aa9A816b964e4c994F533b830b0";
 const AUTOBTC_PLUS = "0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604";
 const ACBTC_BSC_PLUS = "0xd051003a60be3B2feA427448cdc085D08c6E2dcC";
 const DODO_AC_BUSD = "0x8Aa8f56A255b970971414A993DB754387A09E1EB";
+const AUTOBTC_V2_PLUS = "0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3";
 
 module.exports = async function (callback) {
     try {
@@ -61,12 +62,19 @@ module.exports = async function (callback) {
         // await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1.5"), "0");
         // console.log(`acBTC-BSC+ Gauge: ${gauge.address}`);
 
-        console.log('Deploying liquidity gauge for DODO-AC-BUSD...');
+        // console.log('Deploying liquidity gauge for DODO-AC-BUSD...');
+        // gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
+        // gauge = await LiquidityGauge.at(gaugeProxy.address);
+        // await gauge.initialize(DODO_AC_BUSD, GAUGE_CONTROLLER, VOTING_ESCROW);
+        // await gaugeController.addGauge(gauge.address, false, "0", "0");
+        // console.log(`DODO-AC-BUSD Gauge: ${gauge.address}`);
+
+        console.log('Deploying liquidity gauge for autoBTCv2+...');
         gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
         gauge = await LiquidityGauge.at(gaugeProxy.address);
-        await gauge.initialize(DODO_AC_BUSD, GAUGE_CONTROLLER, VOTING_ESCROW);
-        await gaugeController.addGauge(gauge.address, false, "0", "0");
-        console.log(`DODO-AC-BUSD Gauge: ${gauge.address}`);
+        await gauge.initialize(AUTOBTC_V2_PLUS, GAUGE_CONTROLLER, VOTING_ESCROW);
+        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
+        console.log(`autoBTCv2+ Gauge: ${gauge.address}`);
 
         callback();
     } catch (e) {
