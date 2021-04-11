@@ -60,25 +60,9 @@ contract AutoBTC is ERC20Upgradeable, IAutoBTC {
     }
 
     /**
-     * @dev Returns the underlying token of the AutoFarm position.
-     */
-    function underlying() public pure override returns (address) {
-        return BTCB;
-    }
-
-    /**
-     * @dev Returns the update-to-date exchange rate between AutoBTC and BTCB.
-     */
-    function exchangeRateCurrent() public override returns (uint256) {
-        // Note: This function will throw if onlyGov = true in BTCB strategy!
-        IStrat(BTBC_STRAT).earn();
-        return IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
-    }
-
-    /**
      * @dev Returns the current exchange rate between AutoBTC and BTCB.
      */
-    function exchangeRateStored() public view override returns (uint256) {
+    function exchangeRate() public view override returns (uint256) {
         return IAutoFarm(AUTOFARM).stakedWantTokens(PID, address(this)).mul(WAD).div(totalSupply());
     }
 

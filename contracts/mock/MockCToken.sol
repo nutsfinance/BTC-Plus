@@ -14,6 +14,16 @@ contract MockCToken is ICToken, MockToken {
         token = new MockToken("Mock Token", "Mock Token", 18);
     }
 
+    function mint(uint _amount) external override returns (uint256) {
+        _mint(msg.sender, _amount);
+        return 0;
+    }
+
+    function redeem(uint _amount) external override returns (uint256) {
+        _burn(msg.sender, _amount);
+        return 0;
+    }
+
     function underlying() external view override returns (address) {
         return address(token);
     }

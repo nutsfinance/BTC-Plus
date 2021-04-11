@@ -102,10 +102,9 @@ contract AutoBTCV2Plus is SinglePlus {
 
     /**
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
-     * AutoBTC is compactible with Compound's cToken.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
         // AutoBTC has 18 decimals and exchangeRate is in WAD
-        return IAutoBTC(AUTO_BTCv2).exchangeRateStored();
+        return IAutoBTC(AUTO_BTCv2).exchangeRate();
     }
 }
