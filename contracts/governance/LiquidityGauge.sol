@@ -315,7 +315,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * has another voting event, or their lock expires.
      */
     function kick(address _account) external override nonReentrant {
-        require(kickable(_account), "kick not allowed");
+        // We allow claimers to kick since kick can be seen as subset of claim.
+        require(kickable(_account) || IGaugeController(controller).claimers(msg.sender), "kick not allowed");
 
         _checkpoint(_account);
         _updateLiquidityLimit(_account);

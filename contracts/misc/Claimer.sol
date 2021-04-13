@@ -29,7 +29,7 @@ contract Claimer {
      * @dev Updates voting power in multiple gauges.
      * kick works only when there is a new voting event since last checkpoint.
      */
-    function kick(address[] memory _gauges) external {
+    function kick(address[] memory _gauges) public {
         for (uint256 i = 0; i < _gauges.length; i++) {
             IGauge(_gauges[i]).kick(msg.sender);
         }
@@ -49,17 +49,24 @@ contract Claimer {
 
     /**
      * @dev Claims the AC and then locks in voting escrow.
+     * Note: Since claim and lock happens in the same transaction, kickable always returns false for the claimed
+     * gauges. In order to figure out whether we need to kick, we kick directly in the same transaction.
+     * @param _gaugesToClaim The list of gauges to claim.
+     * @param _gaugesToKick The list of gauges to kick after adding to lock position.
      */
-    function claimAndLock(address[] memory _gauges) external {
+    function claimAndLock(address[] memory _gaugesToClaim, address[] memory _gaugesToKick) external {
         // Users must have a locking position in order to use claimAbdLock
         // VotingEscrow allows deposit for others, but does not allow creating new position for others.
         require(votingEscrow.balanceOf(msg.sender) > 0, "no lock");
 
-        for (uint256 i = 0; i < _gauges.length; i++) {
-            IGauge(_gauges[i]).claim(msg.sender, address(this), false);
+        for (uint256 i = 0; i < _gaugesToClaim.length; i++) {
+            IGauge(_gaugesToClaim[i]).claim(msg.sender, address(this), false);
         }
-        uint256 _reward = reward.balanceOf(address(this));
 
+        uint256 _reward = reward.balanceOf(address(this));
         votingEscrow.deposit_for(msg.sender, _reward);
+
+        // Kick after lock
+        kick(_gaugesToKick);
     }
 }
