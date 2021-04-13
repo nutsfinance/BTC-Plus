@@ -100,7 +100,9 @@ contract VesperWBTCPlus is SinglePlus {
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
-        // The share price is in WAD.
-        return IVPool(VESPER_WBTC).getPricePerShare();
+        // WBTC has 8 decimals, vWBTC has 18 decimals
+        // The share price is in WAD
+        // Therefore, the conversion rate must scaled 10**10!
+        return IVPool(VESPER_WBTC).getPricePerShare().mul(uint256(10) ** 10);
     }
 }
