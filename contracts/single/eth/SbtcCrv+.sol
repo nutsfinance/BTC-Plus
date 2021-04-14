@@ -48,6 +48,15 @@ contract SbtcCrvPlus is SinglePlus {
     }
 
     /**
+     * @dev Returns the amount that can be invested now. The invested token
+     * does not have to be the underlying token.
+     * investable > 0 means it's time to call invest.
+     */
+    function investable() public view virtual override returns (uint256) {
+        return IERC20Upgradeable(SBTCCRV).balanceOf(address(this));
+    }
+
+    /**
      * @dev Invest the underlying assets for additional yield.
      * Only governance or strategist can call this function.
      */
