@@ -71,6 +71,14 @@ contract RenCrvPlus is SinglePlus {
     }
 
     /**
+     * @dev Returns the amount of reward that could be harvested now.
+     * harvestable > 0 means it's time to call harvest.
+     */
+    function harvestable() public view virtual override returns (uint256) {
+        return ICurveGauge(RENCRV_GAUGE).claimable_tokens(address(this));
+    }
+
+    /**
      * @dev Harvest additional yield from the investment.
      * Only governance or strategist can call this function.
      */
