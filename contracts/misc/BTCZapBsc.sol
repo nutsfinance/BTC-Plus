@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/ISinglePlus.sol";
+import "../interfaces/ICompositePlus.sol";
 import "../interfaces/venus/IVToken.sol";
 import "../interfaces/fortube/IForTubeBank.sol";
 import "../interfaces/yfi/IVault.sol";
@@ -36,6 +37,7 @@ contract BTCZapBsc {
     address public constant AUTO_BTC_PLUS = address(0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604);
     address public constant AUTO_BTC_V2 = address(0x5AA676577F7A69F8761F5A19ae6057A386D6a48e);
     address public constant AUTO_BTC_V2_PLUS = address(0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3);
+    address public constant BTCB_PLUS = address(0xe884E6695C4cB3c8DEFFdB213B50f5C2a1a9E0A2);
     uint256 public constant WAD = 10 ** 18;
 
     address public governance;
@@ -56,6 +58,9 @@ contract BTCZapBsc {
 
         IERC20Upgradeable(BTCB).safeApprove(AUTO_BTC_V2, uint256(int256(-1)));
         IERC20Upgradeable(AUTO_BTC_V2).safeApprove(AUTO_BTC_V2_PLUS, uint256(int256(-1)));
+
+        IERC20Upgradeable(VENUS_BTC_PLUS).safeApprove(BTCB_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(ACS_BTCB_PLUS).safeApprove(BTCB_PLUS, uint256(int256(-1)));
     }
 
     /**
@@ -246,5 +251,59 @@ contract BTCZapBsc {
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
         emit Redeemed(msg.sender, AUTO_BTC_V2_PLUS, _btcb, _amount);
+    }
+
+    /**
+     * @dev Mints BTCB+ with BTCB.
+     * @param _amount Amount of BTCB used to mint BTCB+
+     */
+    function mintBTCBPlus(uint256 _amount) public {
+        require(_amount > 0, "zero amount");
+        
+        // Always starts with vBTC+!
+        IERC20Upgradeable(BTCB).safeTransferFrom(msg.sender, address(this), _amount);
+        IVToken(VENUS_BTC).mint(_amount);
+
+        uint256 _vbtc = IERC20Upgradeable(VENUS_BTC).balanceOf(address(this));
+        ISinglePlus(VENUS_BTC_PLUS).mint(_vbtc);
+
+        uint256 _vbtcPlus = IERC20Upgradeable(VENUS_BTC_PLUS).balanceOf(address(this));
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = VENUS_BTC_PLUS;
+        uint256[] memory _amounts = new uint256[](1);
+        _amounts[0] = _vbtcPlus;
+        ICompositePlus(BTCB).mint(_tokens, _amounts);
+
+        uint256 _btcbPlus = IERC20Upgradeable(BTCB_PLUS).balanceOf(address(this));
+        IERC20Upgradeable(BTCB_PLUS).safeTransfer(msg.sender, _btcbPlus);
+
+        emit Minted(msg.sender, BTCB_PLUS, _amount, _btcbPlus);
+    }
+
+    /**
+     * @dev Redeems BTCB+ to BTCB.
+     * @param _amount Amount of BTCB+ to redeem.
+     */
+    function redeemBTCBPlus(uint256 _amount) public {
+        require(_amount > 0, "zero amount");
+
+        IERC20Upgradeable(BTCB_PLUS).safeTransferFrom(msg.sender, address(this), _amount);
+        ICompositePlus(BTCB_PLUS).redeem(_amount);
+
+        uint256 _vbtcPlus = IERC20Upgradeable(VENUS_BTC_PLUS).balanceOf(address(this));
+        ISinglePlus(VENUS_BTC_PLUS).redeem(_vbtcPlus);
+        uint256 _vbtc = IERC20Upgradeable(VENUS_BTC).balanceOf(address(this));
+        IVToken(VENUS_BTC).redeem(_vbtc);
+
+        uint256 _acsBtcbPlus = IERC20Upgradeable(ACS_BTCB_PLUS).balanceOf(address(this));
+        ISinglePlus(ACS_BTCB_PLUS).redeem(_acsBtcbPlus);
+        uint256 _acsBtcb = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
+        IVault(ACS_BTCB).withdraw(_acsBtcb);
+
+        uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
+        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
+
+        emit Redeemed(msg.sender, BTCB_PLUS, _btcb, _amount);
+
     }
 }

@@ -98,7 +98,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @dev _tokens The tokens used to mint the composite plus token. The composite plus token must have sufficient allownance on the token.
      * @dev _amounts Amount of tokens used to mint the composite plus token.
      */
-    function mint(address[] calldata _tokens, uint256[] calldata _amounts) external nonReentrant {
+    function mint(address[] calldata _tokens, uint256[] calldata _amounts) external override nonReentrant {
         require(_tokens.length == _amounts.length, "invalid input");
 
         // Rebase first to make index up-to-date
@@ -167,7 +167,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @dev Redeems the composite plus token. In the current implementation only proportional redeem is supported.
      * @param _amount Amount of composite plus token to redeem. -1 means redeeming all shares.
      */
-    function redeem(uint256 _amount) external nonReentrant {
+    function redeem(uint256 _amount) external override nonReentrant {
         require(_amount > 0, "zero amount");
 
         // Rebase first to make index up-to-date
