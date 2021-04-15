@@ -12,6 +12,7 @@ const ACBTC_PLUS = "0x0CE9884B5d395655f5DB697598fD95D0Dc19e776";
 const AWBTC_PLUS = "0xCb52eC77e3d9b5b46758ccab2877F0344a4281dA";
 const CWBTC_PLUS = "0x60af76465c372768b72e0Fc9b43c61780Bd54163";
 const VWBTC_PLUS = "0x7ea60fED61f3b242b2012d92bCab5451e10F04f6";
+const UNI_AC_ETH = "0xF2c6706af78d15549c9376d04E40957A3B357de4";
 
 module.exports = async function (callback) {
     try {
@@ -19,8 +20,8 @@ module.exports = async function (callback) {
         const gaugeController = await GaugeController.at(GAUGE_CONTROLLER);
         console.log('Gauge controller: ' + gaugeController.address);
 
-        const gaugeImpl = await LiquidityGauge.new();
-        // const gaugeImpl = await LiquidityGauge.at("0xeFd2cDfB1017899d32F157Ff238C6A94d47B1745");
+        // const gaugeImpl = await LiquidityGauge.new();
+        const gaugeImpl = await LiquidityGauge.at("0x54229ea287571F10149a02416be41c6023fb86DB");
         console.log('Gauge impl: ' + gaugeImpl.address);
 
         let gaugeProxy, gauge;
@@ -60,19 +61,19 @@ module.exports = async function (callback) {
         // await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
         // console.log(`cWBTC+ Gauge: ${gauge.address}`);
 
-        console.log('Deploying liquidity gauge for vWBTC+...');
-        gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
-        gauge = await LiquidityGauge.at(gaugeProxy.address);
-        await gauge.initialize(VWBTC_PLUS, GAUGE_CONTROLLER, VOTING_ESCROW);
-        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
-        console.log(`cWBTC+ Gauge: ${gauge.address}`);
-
-        // console.log('Deploying liquidity gauge for DODO-AC-BUSD...');
+        // console.log('Deploying liquidity gauge for vWBTC+...');
         // gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
         // gauge = await LiquidityGauge.at(gaugeProxy.address);
-        // await gauge.initialize(DODO_AC_BUSD, GAUGE_CONTROLLER, VOTING_ESCROW);
-        // await gaugeController.addGauge(gauge.address, false, "0", "0");
-        // console.log(`DODO-AC-BUSD Gauge: ${gauge.address}`);
+        // await gauge.initialize(VWBTC_PLUS, GAUGE_CONTROLLER, VOTING_ESCROW);
+        // await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
+        // console.log(`cWBTC+ Gauge: ${gauge.address}`);
+
+        console.log('Deploying liquidity gauge for UNI-AC-ETH...');
+        gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
+        gauge = await LiquidityGauge.at(gaugeProxy.address);
+        await gauge.initialize(UNI_AC_ETH, GAUGE_CONTROLLER, VOTING_ESCROW);
+        await gaugeController.addGauge(gauge.address, false, "0", "0");
+        console.log(`UNI-AC-ETh Gauge: ${gauge.address}`);
 
         callback();
     } catch (e) {
