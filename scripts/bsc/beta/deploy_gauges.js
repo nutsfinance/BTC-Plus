@@ -4,7 +4,7 @@ const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
 
 const VOTING_ESCROW = '0x17580529d7a21be535E05960b167c4d6c961947c';
 const GAUGE_CONTROLLER = '0x19F8246F5eadfE0dc46E62BE5fc995Aca16efAb4';
-const TOKEN = '0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3';
+const TOKEN = '0xe884E6695C4cB3c8DEFFdB213B50f5C2a1a9E0A2';
 
 module.exports = async function (callback) {
     try {
@@ -20,7 +20,7 @@ module.exports = async function (callback) {
         console.log('Gauge proxy: ' + gaugeProxy.address)
         const gauge = await LiquidityGauge.at(gaugeProxy.address);
         await gauge.initialize(TOKEN, gaugeController.address, VOTING_ESCROW);
-        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1"), "0");
+        await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1.5"), "0");
         console.log(`Gauge: ${gauge.address}`);
 
         callback();
