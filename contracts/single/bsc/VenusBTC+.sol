@@ -22,6 +22,8 @@ contract VenusBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
+    event VaiMintRateUpdated(uint256 oldLower, uint256 oldTarget, uint256 oldUpper, uint256 newLower, uint256 newTarget, uint256 newUpper);
+
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant WBNB = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     address public constant VAI = address(0x4BD17003473389A42DAF6a0a729f6Fdb328BbBd7);
@@ -32,6 +34,11 @@ contract VenusBTCPlus is SinglePlus {
     address public constant VENUS_COMPTROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
+    // VAI mint rates bounds based on Venus's VAI mint rate
+    uint256 public lower;   // Lower bound of VAI mint rate = lower * VenusComptroller.vaiMintRate()
+    uint256 public target;  // Target VAI mint rate = target * VenusComptroller.vaiMintRate()
+    uint256 public upper;   // Upper bound of VAI mint rate = upper * VenusComptroller.vaiMintRate()
+
     /**
      * @dev Initializes vBTC+.
      */
@@ -41,6 +48,32 @@ contract VenusBTCPlus is SinglePlus {
         address[] memory _markets = new address[](1);
         _markets[0] = VENUS_BTC;
         IVenusComptroller(VENUS_COMPTROLLER).enterMarkets(_markets);
+
+        lower = 7000;   // 70% * 60% = 42%
+        target = 8000;  // 80% * 60% = 48%;
+        upper = 9000;   // 90% * 60% = 54%;
+    }
+
+    /**
+     * @dev Determines the current liquidity of vBTC+
+     * @return Total account collateral, total account debt, current ltv
+     */
+    function getLiquidity() public view returns (uint256, uint256, uint256) {
+        // The only debt is VAI
+        uint256 _vai = IVenusComptroller(VENUS_COMPTROLLER).mintedVAIs(address(this));
+        // The only collateral is BTCB
+        (, uint256 _liquidity, uint256 _shortfall) = IVenusComptroller(VENUS_COMPTROLLER).getAccountLiquidity(address(this));
+        uint256 _collateral;
+
+        if (_liquidity > 0) {
+            // Account liquidity is in excess of collateral requirement
+            _collateral = _vai.add(_liquidity);
+        } else {
+            // Account shortfall below collateral requirement
+            _collateral = _vai.sub(_shortfall);
+        }
+
+        return (_collateral, _vai, _vai.mul(PERCENT_MAX).div(_collateral));
     }
 
     /**
@@ -69,10 +102,15 @@ contract VenusBTCPlus is SinglePlus {
      * investable > 0 means it's time to call invest.
      */
     function investable() public view virtual override returns (uint256) {
-        (, uint256 _mintableVAI) = IVAIController(VAI_CONTROLLER).getMintableVAI(address(this));
-        uint256 _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
+        (uint256 _collateral, uint256 _debt, ) = getLiquidity();
+        uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
-        return _mintableVAI.add(_vai);
+        // vaiMintRate is scaled with 10000
+        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lower).div(PERCENT_MAX).div(10000);
+        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(target).div(PERCENT_MAX).div(10000);
+        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upper).div(PERCENT_MAX).div(10000);
+
+        return _debt < _lowerDebt ? _targetDebt.sub(_debt) : (_debt > _upperDebt ? _debt.sub(_targetDebt) : 0);
     }
 
     /**
@@ -80,19 +118,32 @@ contract VenusBTCPlus is SinglePlus {
      * Only governance or strategist can call this function.
      */
     function invest() public virtual override onlyStrategist {
-        (, uint256 _mintableVAI) = IVAIController(VAI_CONTROLLER).getMintableVAI(address(this));
-        if (_mintableVAI > 0) {
-            // Mints maximum VAI using vBTC as collateral
-            IVAIController(VAI_CONTROLLER).mintVAI(_mintableVAI);
-        }
+        (uint256 _collateral, uint256 _debt, ) = getLiquidity();
+        uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
-        uint256 _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
-        if (_vai > 0) {
+        // vaiMintRate is scaled with 10000
+        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lower).div(PERCENT_MAX).div(10000);
+        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(target).div(PERCENT_MAX).div(10000);
+        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upper).div(PERCENT_MAX).div(10000);
+
+        if (_debt < _lowerDebt) {
+            // We need to mint more VAI!
+            // Mints maximum VAI using vBTC as collateral
+            IVAIController(VAI_CONTROLLER).mintVAI(_targetDebt.sub(_debt));
+            uint256 _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
+
             IERC20Upgradeable(VAI).safeApprove(VAI_VAULT, 0);
             IERC20Upgradeable(VAI).safeApprove(VAI_VAULT, _vai);
 
             // Stakes VAI into VAI vault
             IVAIVault(VAI_VAULT).deposit(_vai);
+        } else if (_debt > _upperDebt) {
+            // We need to repay some VAI!
+            uint256 _shortfall = _debt.sub(_targetDebt);
+            IVAIVault(VAI_VAULT).withdraw(_shortfall);
+            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
+            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _shortfall);
+            IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
         }
     }
 
@@ -191,5 +242,28 @@ contract VenusBTCPlus is SinglePlus {
         }
 
         IERC20Upgradeable(VENUS_BTC).safeTransfer(_receiver, _amount);
+
+        // Time to re-invest after withdraw!
+        invest();
+    }
+
+    /**
+     * @dev Updates VAI mint rate. Only strategist can update VAI mint rate.
+     */
+    function setVaiMintRates(uint256 _lower, uint256 _target, uint256 _upper) public onlyStrategist {
+        require(_lower <= _target && _target <= _upper && _upper <= PERCENT_MAX, "invalid rates");
+
+        uint256 _oldLower = lower;
+        uint256 _oldTarget = target;
+        uint256 _oldUpper = upper;
+
+        lower = _lower;
+        target = _target;
+        upper = _upper;
+
+        // Time to re-invest after setting new rates!
+        invest();
+
+        emit VaiMintRateUpdated(_oldLower, _oldTarget, _oldUpper, _lower, _target, _upper);
     }
 }
