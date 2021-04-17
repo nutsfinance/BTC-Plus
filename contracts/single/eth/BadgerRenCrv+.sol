@@ -133,8 +133,8 @@ contract BadgerRenCrvPlus is SinglePlus {
         // 5: renCrv --> brenCrv
         address _converter = converter;
         uint256 _renCrv = IERC20Upgradeable(RENCRV).balanceOf(address(this));
-        IERC20Upgradeable(REN_SWAP).safeApprove(_converter, 0);
-        IERC20Upgradeable(REN_SWAP).safeApprove(_converter, _renCrv);
+        IERC20Upgradeable(RENCRV).safeApprove(_converter, 0);
+        IERC20Upgradeable(RENCRV).safeApprove(_converter, _renCrv);
 
         uint256 _before = IERC20Upgradeable(BADGER_RENCRV).balanceOf(address(this));
         uint256 _target = _renCrv.mul(WAD).div(IBadgerSett(BADGER_RENCRV).getPricePerFullShare());
