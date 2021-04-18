@@ -22,7 +22,7 @@ contract VenusBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    event VaiMintRateUpdated(uint256 oldLower, uint256 oldTarget, uint256 oldUpper, uint256 newLower, uint256 newTarget, uint256 newUpper);
+    event VaiRatioUpdated(uint256 oldLower, uint256 oldTarget, uint256 oldUpper, uint256 newLower, uint256 newTarget, uint256 newUpper);
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant WBNB = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
@@ -34,10 +34,10 @@ contract VenusBTCPlus is SinglePlus {
     address public constant VENUS_COMPTROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
-    // VAI mint rates bounds based on Venus's VAI mint rate
-    uint256 public lower;   // Lower bound of VAI mint rate = lower * VenusComptroller.vaiMintRate()
-    uint256 public target;  // Target VAI mint rate = target * VenusComptroller.vaiMintRate()
-    uint256 public upper;   // Upper bound of VAI mint rate = upper * VenusComptroller.vaiMintRate()
+    // VAI ratios based on Venus's VAI mint rate
+    uint256 public lowerRatio;  // Lower bound of VAI mint rate = lower ratio * VenusComptroller.vaiMintRate()
+    uint256 public targetRatio; // Target VAI mint rate = target ratio * VenusComptroller.vaiMintRate()
+    uint256 public upperRatio;  // Upper bound of VAI mint rate = upper ratio * VenusComptroller.vaiMintRate()
 
     /**
      * @dev Initializes vBTC+.
@@ -49,9 +49,9 @@ contract VenusBTCPlus is SinglePlus {
         _markets[0] = VENUS_BTC;
         IVenusComptroller(VENUS_COMPTROLLER).enterMarkets(_markets);
 
-        lower = 7000;   // 70% * 60% = 42%
-        target = 8000;  // 80% * 60% = 48%;
-        upper = 9000;   // 90% * 60% = 54%;
+        lowerRatio = 7000;   // 70% * 60% = 42%
+        targetRatio = 8000;  // 80% * 60% = 48%;
+        upperRatio = 9000;   // 90% * 60% = 54%;
     }
 
     /**
@@ -106,9 +106,9 @@ contract VenusBTCPlus is SinglePlus {
         uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
         // vaiMintRate is scaled with 10000
-        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lower).div(PERCENT_MAX).div(10000);
-        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(target).div(PERCENT_MAX).div(10000);
-        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upper).div(PERCENT_MAX).div(10000);
+        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lowerRatio).div(PERCENT_MAX).div(10000);
+        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(targetRatio).div(PERCENT_MAX).div(10000);
+        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upperRatio).div(PERCENT_MAX).div(10000);
 
         return _debt < _lowerDebt ? _targetDebt.sub(_debt) : (_debt > _upperDebt ? _debt.sub(_targetDebt) : 0);
     }
@@ -122,9 +122,9 @@ contract VenusBTCPlus is SinglePlus {
         uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
         // vaiMintRate is scaled with 10000
-        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lower).div(PERCENT_MAX).div(10000);
-        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(target).div(PERCENT_MAX).div(10000);
-        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upper).div(PERCENT_MAX).div(10000);
+        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lowerRatio).div(PERCENT_MAX).div(10000);
+        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(targetRatio).div(PERCENT_MAX).div(10000);
+        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upperRatio).div(PERCENT_MAX).div(10000);
 
         if (_debt < _lowerDebt) {
             // We need to mint more VAI!
@@ -248,22 +248,22 @@ contract VenusBTCPlus is SinglePlus {
     }
 
     /**
-     * @dev Updates VAI mint rate. Only strategist can update VAI mint rate.
+     * @dev Updates VAI ratios. Only strategist can update VAI ratios.
      */
-    function setVaiMintRates(uint256 _lower, uint256 _target, uint256 _upper) public onlyStrategist {
-        require(_lower <= _target && _target <= _upper && _upper <= PERCENT_MAX, "invalid rates");
+    function setVaiRatios(uint256 _lower, uint256 _target, uint256 _upper) public onlyStrategist {
+        require(_lower <= _target && _target <= _upper && _upper <= PERCENT_MAX, "invalid ratio");
 
-        uint256 _oldLower = lower;
-        uint256 _oldTarget = target;
-        uint256 _oldUpper = upper;
+        uint256 _oldLower = lowerRatio;
+        uint256 _oldTarget = targetRatio;
+        uint256 _oldUpper = upperRatio;
 
-        lower = _lower;
-        target = _target;
-        upper = _upper;
+        lowerRatio = _lower;
+        targetRatio = _target;
+        upperRatio = _upper;
 
         // Time to re-invest after setting new rates!
         invest();
 
-        emit VaiMintRateUpdated(_oldLower, _oldTarget, _oldUpper, _lower, _target, _upper);
+        emit VaiRatioUpdated(_oldLower, _oldTarget, _oldUpper, _lower, _target, _upper);
     }
 }
