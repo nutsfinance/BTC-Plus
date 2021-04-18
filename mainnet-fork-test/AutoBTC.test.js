@@ -11,8 +11,8 @@ const AUTO = "0xa184088a740c695E156F91f5cC086a06bb78b827";
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
 const DEPLOYER = "0x098d907E1A3F26cC65B8ACa1c37E41B208699bac";
 const AUTO_FARM = "0x0895196562C7868C5Be92459FaE7f877ED450452";
-const AUTOBTC = "0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414";
-const BTCB_STRAT = '0x8E24B8136c3076829A4eD0412cd8F302fA651D84';
+const AUTOBTC = "0x5AA676577F7A69F8761F5A19ae6057A386D6a48e";
+const BTCB_STRAT = '0xA8c50e9F552886612109fE27CB94111A2F8006DE';
 
 const BN = web3.utils.BN;
 const toWei = web3.utils.toWei;
@@ -111,7 +111,7 @@ contract("AutoBTC", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log('BTCB balance 2: ', btcb2.toString());
         assert.strictEqual(btcb1.toString(), btcb2.add(new BN(toWei("0.001"))).toString());
 
-        const exchangeRate = await autoBTC.exchangeRateStored();
+        const exchangeRate = await autoBTC.exchangeRate();
         console.log('Exchange rate: ' + exchangeRate.toString());
         // The deposited value in BTCB
         const amount = totalSupply2.sub(totalSupply1).mul(exchangeRate).div(new BN(toWei("1")));
