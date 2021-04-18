@@ -14,6 +14,24 @@ interface IVenusComptroller {
     function enterMarkets(address[] calldata vTokens) external returns (uint[] memory);
 
     /**
+     * @notice Returns the minted VAI amount to an account.
+     */
+    function mintedVAIs(address account) external view returns (uint256);
+
+    /**
+     * @notice Returns the VAI mint rate as a percentage.
+     */
+    function vaiMintRate() external view returns (uint256);
+
+    /**
+     * @notice Determine the current account liquidity wrt collateral requirements
+     * @return (possible error code (semi-opaque),
+                account liquidity in excess of collateral requirements,
+     *          account shortfall below collateral requirements)
+     */
+    function getAccountLiquidity(address account) external view returns (uint, uint, uint);
+
+    /**
      * @notice Determine what the account liquidity would be if the given amounts were redeemed/borrowed
      * @param vTokenModify The market to hypothetically redeem/borrow in
      * @param account The account to determine liquidity for
