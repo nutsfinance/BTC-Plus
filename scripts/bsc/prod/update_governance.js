@@ -1,7 +1,6 @@
 const ERC20Proxy = artifacts.require("ERC20Proxy");
 const Plus = artifacts.require("Plus");
 const LiquidityGaugeProxy = artifacts.require("LiquidityGaugeProxy");
-const LiquidityGauge = artifacts.require("LiquidityGauge");
 const GaugeControllerProxy = artifacts.require("GaugeControllerProxy");
 const GaugeController = artifacts.require("GaugeController");
 const VotingEscrowProxy = artifacts.require("VotingEscrowProxy");
@@ -20,14 +19,14 @@ const PLUSES = [
     "0xcf8D1D3Fce7C2138F85889068e50F0e7a18b5321",
     "0x73FddFb941c11d16C827169Bb94aCC227841C396",
     "0xD7806143A4206aa9A816b964e4c994F533b830b0",
-    "0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604",
+    "0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3",
     "0xd051003a60be3B2feA427448cdc085D08c6E2dcC"
 ];
 const GAUGES = [
     "0x82123A434A968403D6ca370F16612322146B8FC4",
     "0x2F2379A38EEC183fa4F89Fdc5EC709493f95D305",
     "0x8b327b36E390f3b74aDd16442e3cBF8348f4D64B",
-    "0x5f7f26a767398630753C59026D4250D5A059f9F4",
+    "0x7EB9fe8107E587Bc7288C65E64D49A6A2d9493d4",
     "0x00f80eA8Ef9a7C974Fa4Cc3F049bE59ba758d906",
     "0xa1DB7a3D26F151c5b93445b2da46f7bed5bcD5Fa"
 ];
