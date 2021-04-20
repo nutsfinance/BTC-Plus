@@ -10,8 +10,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../../SinglePlus.sol";
 import "../../interfaces/autofarm/IAutoBTC.sol";
-import "../../interfaces/fortube/IForTubeReward.sol";
-import "../../interfaces/fortube/IForTubeBank.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
