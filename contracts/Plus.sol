@@ -211,6 +211,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * @dev Moves tokens `amount` from `sender` to `recipient`.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual override {
+        require(_sender != _recipient, "recipient cannot be sender");
         // Rebase first to make index up-to-date
         rebase();
         uint256 _shareToTransfer = _amount.mul(WAD).div(index);

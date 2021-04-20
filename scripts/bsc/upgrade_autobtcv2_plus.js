@@ -10,16 +10,11 @@ module.exports = async function (callback) {
         console.log('Upgrading autoBTC+...');
         const autoBTCV2PlusImpl = await AutoBTCV2Plus.new();
         const autoBTCV2PlusProxy = await ERC20Proxy.at(AUTOBTC_V2_PLUS);
-        await autoBTCV2PlusProxy.upgradeTo(autoBTCV2PlusImpl.address, {from: "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814"});
+        await autoBTCV2PlusProxy.upgradeTo(autoBTCV2PlusImpl.address, {from: accounts[1]});
 
         console.log(`Proxy admin: ${accounts[1]}`);
         console.log(`autoBTC+: ${autoBTCV2PlusProxy.address}`);
         console.log(`autoBTC+ implementation: ${autoBTCV2PlusImpl.address}`);
-
-        const autoBTCV2Plus = await AutoBTCV2Plus.at(AUTOBTC_V2_PLUS);
-        const values = await autoBTCV2Plus.getRedeemAmount("0");
-        console.log(values[0].toString());
-        console.log(values[1].toString());
 
         callback();
     } catch (e) {
