@@ -115,9 +115,8 @@ contract VenusBTCPlus is SinglePlus {
 
     /**
      * @dev Invest the underlying assets for additional yield.
-     * Only governance or strategist can call this function.
      */
-    function invest() public virtual override onlyStrategist {
+    function _invest() internal {
         (uint256 _collateral, uint256 _debt, ) = getLiquidity();
         uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
@@ -145,6 +144,14 @@ contract VenusBTCPlus is SinglePlus {
             IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _shortfall);
             IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
         }
+    }
+
+    /**
+     * @dev Invest the underlying assets for additional yield.
+     * Only governance or strategist can call this function.
+     */
+    function invest() public virtual override onlyStrategist {
+        _invest();
     }
 
     /**
@@ -199,7 +206,7 @@ contract VenusBTCPlus is SinglePlus {
         IVToken(VENUS_BTC).mint(_btcb);
 
         // Reinvest to get compound yield.
-        invest();
+        _invest();
         // Also it's a good time to rebase!
         rebase();
 
@@ -244,7 +251,7 @@ contract VenusBTCPlus is SinglePlus {
         IERC20Upgradeable(VENUS_BTC).safeTransfer(_receiver, _amount);
 
         // Time to re-invest after withdraw!
-        invest();
+        _invest();
     }
 
     /**
@@ -262,7 +269,7 @@ contract VenusBTCPlus is SinglePlus {
         upperRatio = _upper;
 
         // Time to re-invest after setting new rates!
-        invest();
+        _invest();
 
         emit VaiRatioUpdated(_oldLower, _oldTarget, _oldUpper, _lower, _target, _upper);
     }
