@@ -107,7 +107,7 @@ contract BadgerRenCrvPlus is SinglePlus {
             IERC20Upgradeable(DIGG).safeApprove(UNISWAP, 0);
             IERC20Upgradeable(DIGG).safeApprove(UNISWAP, _digg);
 
-            address[] memory _path = new address[](3);
+            address[] memory _path = new address[](2);
             _path[0] = DIGG;
             _path[1] = WBTC;
 

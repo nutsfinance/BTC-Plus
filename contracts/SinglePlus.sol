@@ -81,7 +81,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
         uint256 _newAmount = _amount.mul(_conversionRate()).div(WAD);
         // Index is in WAD
-        uint256 _share = _newAmount.mul(WAD).div(index);
+        uint256 _share = _amount.mul(_conversionRate()).div(index);
 
         uint256 _oldShare = userShare[msg.sender];
         uint256 _newShare = _oldShare.add(_share);
