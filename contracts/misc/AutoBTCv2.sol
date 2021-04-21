@@ -111,27 +111,8 @@ contract AutoBTCv2 is ERC20Upgradeable, IAutoBTC {
 
     /**
      * @dev Redeems autoBTC to BTCB.
-     * @param _amount Amount of autoBTC to redeem.
      */
-    function redeem(uint256 _amount) public override {
-        uint256 _btcbTotal = IStrat(BTBC_STRAT).wantLockedTotal();
-        uint256 _shareTotal = IStrat(BTBC_STRAT).sharesTotal();
-        uint256 _btcb = _amount.mul(_btcbTotal).div(_shareTotal);
-
-        // Each deposit and withdraw trigger AUTO distribution in AutoFarm
-        IAutoFarm(AUTOFARM).withdraw(PID, _btcb);
-
-        // Updates the rewards before redeeming
-        _updateReward(msg.sender);
-
-        // 1 autoBTC = 1 share in AutoFarm BTCB strategy
-        _burn(msg.sender, _amount);
-
-        _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
-
-        emit Redeemed(msg.sender, _btcb, _amount);
-    }
+    function redeem(uint256) public override {}
 
     /**
      * @dev Returns the pending AUTO to the account.

@@ -26,28 +26,9 @@ contract AutoBTCV2Plus is SinglePlus {
     address public constant AUTO_BTCv2 = address(0x5AA676577F7A69F8761F5A19ae6057A386D6a48e);
     address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
-    /**
-     * @dev Initializes fBTCB+.
-     */
-    function initialize() public initializer {
-        SinglePlus.initialize(AUTO_BTCv2, "", "");
-        // Trust AutoBTC
-        IERC20Upgradeable(BTCB).safeApprove(AUTO_BTCv2, uint256(int256(-1)));
-    }
+    bool public cleared;
 
-    /**
-     * @dev Returns the amount of reward that could be harvested now.
-     * harvestable > 0 means it's time to call harvest.
-     */
-    function harvestable() public view virtual override returns (uint256) {
-        return IAutoBTC(AUTO_BTCv2).pendingReward(address(this));
-    }
-
-    /**
-     * @dev Harvest additional yield from the investment.
-     * Only governance or strategist can call this function.
-     */
-    function harvest() public virtual override onlyStrategist {
+    function clear() public onlyStrategist {
         // Harvest from AutoBTC
         IAutoBTC(AUTO_BTCv2).claimRewards();
 
@@ -64,27 +45,22 @@ contract AutoBTCV2Plus is SinglePlus {
 
             IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_auto, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
-        
-        // BTCB --> AutoBTC
-        uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        if (_btcb == 0) return;
 
-        // If there is performance fee, charged in BTCB
-        uint256 _fee = 0;
-        if (performanceFee > 0) {
-            _fee = _btcb.mul(performanceFee).div(PERCENT_MAX);
-            IERC20Upgradeable(BTCB).safeTransfer(treasury, _fee);
-            _btcb = _btcb.sub(_fee);
-        }
+        // Redeem BTCB from all autoBTC
+        uint256 _autoBTC = IERC20Upgradeable(AUTO_BTCv2).balanceOf(address(this));
+        IAutoBTC(AUTO_BTCv2).redeem(_autoBTC);
 
-        IAutoBTC(AUTO_BTCv2).mint(_btcb);
-
-        // Reinvest to get compound yield.
-        invest();
-        // Also it's a good time to rebase!
         rebase();
 
-        emit Harvested(AUTO_BTCv2, _btcb, _fee);
+        cleared = true;
+    }
+
+    /**
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals
+     * and expressed in WAD.
+     */
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
+        return IERC20Upgradeable(BTCB).balanceOf(address(this)).mul(WAD);
     }
 
     /**
@@ -95,14 +71,23 @@ contract AutoBTCV2Plus is SinglePlus {
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
-        return _token != AUTO_BTCv2 && _token != AUTOv2;
+        return _token != AUTO_BTCv2 && _token != AUTOv2 && _token != BTCB;
     }
 
     /**
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
-        // AutoBTC has 18 decimals and exchangeRate is in WAD
-        return IAutoBTC(AUTO_BTCv2).exchangeRate();
+        return WAD;
+    }
+
+    /**
+     * @dev Withdraws underlying tokens.
+     * @param _receiver Address to receive the token withdraw.
+     * @param _amount Amount of underlying token withdraw.
+     */
+    function _withdraw(address _receiver, uint256  _amount) internal override {
+        require(cleared, "not clear");
+        IERC20Upgradeable(BTCB).safeTransfer(_receiver, _amount);
     }
 }
