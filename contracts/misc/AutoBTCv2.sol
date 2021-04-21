@@ -111,8 +111,9 @@ contract AutoBTCv2 is ERC20Upgradeable, IAutoBTC {
 
     /**
      * @dev Redeems autoBTC to BTCB.
+     * @param _amount Amount of autoBTC to redeem.
      */
-    function redeem(uint256) public override {}
+    function redeem(uint256 _amount) public override {}
 
     /**
      * @dev Returns the pending AUTO to the account.

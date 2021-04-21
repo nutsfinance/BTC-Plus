@@ -28,6 +28,8 @@ contract AutoBTCV2Plus is SinglePlus {
 
     bool public cleared;
 
+    bool public withdrawEnabled;
+
     function clear() public onlyStrategist {
         // Harvest from AutoBTC
         IAutoBTC(AUTO_BTCv2).claimRewards();
@@ -49,10 +51,6 @@ contract AutoBTCV2Plus is SinglePlus {
         // Redeem BTCB from all autoBTC
         uint256 _autoBTC = IERC20Upgradeable(AUTO_BTCv2).balanceOf(address(this));
         IAutoBTC(AUTO_BTCv2).redeem(_autoBTC);
-
-        rebase();
-
-        cleared = true;
     }
 
     /**
@@ -71,7 +69,7 @@ contract AutoBTCV2Plus is SinglePlus {
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
-        return _token != AUTO_BTCv2 && _token != AUTOv2 && _token != BTCB;
+        return _token != AUTO_BTCv2 && _token != AUTOv2;
     }
 
     /**
@@ -87,7 +85,15 @@ contract AutoBTCV2Plus is SinglePlus {
      * @param _amount Amount of underlying token withdraw.
      */
     function _withdraw(address _receiver, uint256  _amount) internal override {
-        require(cleared, "not clear");
+        require(withdrawEnabled, "not enabled");
         IERC20Upgradeable(BTCB).safeTransfer(_receiver, _amount);
+    }
+
+    function enableWithdraw() public onlyStrategist {
+        withdrawEnabled = true;
+    }
+
+    function salvageBTCB(uint256 _amount) public onlyStrategist {
+        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _amount);
     }
 }
