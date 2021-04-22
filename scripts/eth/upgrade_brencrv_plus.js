@@ -8,8 +8,7 @@ module.exports = async function (callback) {
         const accounts = await web3.eth.getAccounts();
 
         console.log('Upgrading brenCrv+...');
-        // const brenCrvPlusImpl = await BadgerRenCrvPlus.new();
-        const brenCrvPlusImpl = await BadgerRenCrvPlus.at("0xD26bBEF34C7FF772f36d2cBf80d79A73BE6FFC41");
+        const brenCrvPlusImpl = await BadgerRenCrvPlus.new();
         const brenCrvPlusProxy = await ERC20Proxy.at(BRENCRV_PLUS);
         await brenCrvPlusProxy.upgradeTo(brenCrvPlusImpl.address, {from: accounts[1]});
 
