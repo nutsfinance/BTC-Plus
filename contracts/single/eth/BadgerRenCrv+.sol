@@ -82,10 +82,10 @@ contract BadgerRenCrvPlus is SinglePlus {
      * @dev Harvest additional yield from the investment.
      * Only governance or strategist can call this function.
      */
-    function harvest(address[] calldata _tokens, uint256[] calldata _cumulativeAmounts,
-        uint256 _index, uint256 _cycle, bytes32[] calldata _merkleProof) public virtual onlyStrategist {
+    function harvest(address[] calldata _tokens, uint256[] calldata _cumulativeAmounts, uint256 _index, uint256 _cycle,
+        bytes32[] calldata _merkleProof, uint256[] calldata _amountsToClaim) public virtual onlyStrategist {
         // 1. Harvest from Badger Tree
-        IBadgerTree(BADGER_TREE).claim(_tokens, _cumulativeAmounts, _index, _cycle, _merkleProof);
+        IBadgerTree(BADGER_TREE).claim(_tokens, _cumulativeAmounts, _index, _cycle, _merkleProof, _amountsToClaim);
 
         // 2. Badger --> WETH --> WBTC
         uint256 _badger = IERC20Upgradeable(BADGER).balanceOf(address(this));

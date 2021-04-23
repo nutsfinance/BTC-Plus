@@ -12,6 +12,7 @@ interface IBadgerTree {
         uint256[] calldata cumulativeAmounts,
         uint256 index,
         uint256 cycle,
-        bytes32[] calldata merkleProof
+        bytes32[] calldata merkleProof,
+        uint256[] calldata amountsToClaim
     ) external;
 }
