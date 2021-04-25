@@ -71,12 +71,16 @@ contract ACoconutBTCPlus is SinglePlus {
     }
 
     /**
-     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
-     * ACoconutMaker's exchange rate is already in WAD.
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals
+     * and expressed in WAD.
      */
-    function _conversionRate() internal view virtual override returns (uint256) {
-        // The share price is in WAD.
-        return IACoconutMaker(ACOCONUT_MAKER).exchangeRate();
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
+        uint256 _acbtc = IERC20Upgradeable(ACOCONUT_BTC).balanceOf(address(this));
+        uint256 _acbtcx = IERC20Upgradeable(ACOCONUT_MAKER).balanceOf(address(this));
+        uint256 _exchangeRate = IACoconutMaker(ACOCONUT_MAKER).exchangeRate();
+
+        // _exchangeRate is already in WAD.
+        return _acbtc.mul(WAD).add(_acbtcx.mul(_exchangeRate));
     }
 
     /**

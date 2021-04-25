@@ -19,16 +19,16 @@ contract ACoconutBTCBscPlus is SinglePlus {
     using SafeMathUpgradeable for uint256;
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
-    address public constant ACBTC_BSC = address(0xCEF9Ddbf860551cC8505C0BcfF0Bc8C10d59e229);
-    address public constant ACMAKER = address(0x1FacDB7951541Bd4bf78B34590cf52E65E938b5A);
+    address public constant ACOCONUT_BTC_BSC = address(0xCEF9Ddbf860551cC8505C0BcfF0Bc8C10d59e229);
+    address public constant ACOCONUT_MAKER = address(0x1FacDB7951541Bd4bf78B34590cf52E65E938b5A);
 
     /**
      * @dev Initializes acBTC-BSC+.
      */
     function initialize() public initializer {
-        SinglePlus.initialize(ACBTC_BSC, "", "");
+        SinglePlus.initialize(ACOCONUT_BTC_BSC, "", "");
 
-        IERC20Upgradeable(ACBTC_BSC).safeApprove(ACMAKER, uint256(int256(-1)));
+        IERC20Upgradeable(ACOCONUT_BTC_BSC).safeApprove(ACOCONUT_MAKER, uint256(int256(-1)));
     }
 
     /**
@@ -36,8 +36,8 @@ contract ACoconutBTCBscPlus is SinglePlus {
      * Only governance or strategist can call this function.
      */
     function divest() public virtual override onlyStrategist {
-        uint256 _share = IERC20Upgradeable(ACMAKER).balanceOf(address(this));
-        IACoconutMaker(ACMAKER).redeem(_share);
+        uint256 _share = IERC20Upgradeable(ACOCONUT_MAKER).balanceOf(address(this));
+        IACoconutMaker(ACOCONUT_MAKER).redeem(_share);
     }
 
     /**
@@ -46,7 +46,7 @@ contract ACoconutBTCBscPlus is SinglePlus {
      * investable > 0 means it's time to call invest.
      */
     function investable() public view virtual override returns (uint256) {
-        return IERC20Upgradeable(ACBTC_BSC).balanceOf(address(this));
+        return IERC20Upgradeable(ACOCONUT_BTC_BSC).balanceOf(address(this));
     }
 
     /**
@@ -54,9 +54,9 @@ contract ACoconutBTCBscPlus is SinglePlus {
      * Only governance or strategist can call this function.
      */
     function invest() public virtual override onlyStrategist {
-        uint256 _balance = IERC20Upgradeable(ACBTC_BSC).balanceOf(address(this));
+        uint256 _balance = IERC20Upgradeable(ACOCONUT_BTC_BSC).balanceOf(address(this));
         if (_balance > 0) {
-            IACoconutMaker(ACMAKER).mint(_balance);
+            IACoconutMaker(ACOCONUT_MAKER).mint(_balance);
         }
     }
 
@@ -68,16 +68,20 @@ contract ACoconutBTCBscPlus is SinglePlus {
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
-        return _token != ACBTC_BSC && _token != ACMAKER;
+        return _token != ACOCONUT_BTC_BSC && _token != ACOCONUT_MAKER;
     }
 
     /**
-     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
-     * ACoconutMaker's exchange rate is already in WAD.
+     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals
+     * and expressed in WAD.
      */
-    function _conversionRate() internal view virtual override returns (uint256) {
-        // The share price is in WAD.
-        return IACoconutMaker(ACMAKER).exchangeRate();
+    function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
+        uint256 _acbtc = IERC20Upgradeable(ACOCONUT_BTC_BSC).balanceOf(address(this));
+        uint256 _acbtcx = IERC20Upgradeable(ACOCONUT_MAKER).balanceOf(address(this));
+        uint256 _exchangeRate = IACoconutMaker(ACOCONUT_MAKER).exchangeRate();
+
+        // _exchangeRate is already in WAD.
+        return _acbtc.mul(WAD).add(_acbtcx.mul(_exchangeRate));
     }
 
     /**
@@ -86,12 +90,12 @@ contract ACoconutBTCBscPlus is SinglePlus {
      * @param _amount Amount of underlying token withdraw.
      */
     function _withdraw(address _receiver, uint256  _amount) internal virtual override {
-        IERC20Upgradeable _token = IERC20Upgradeable(ACBTC_BSC);
+        IERC20Upgradeable _token = IERC20Upgradeable(ACOCONUT_BTC_BSC);
         uint256 _balance = _token.balanceOf(address(this));
         if (_balance < _amount) {
             // Redeem from acBTCx
             uint256 _share = _amount.sub(_balance).mul(WAD).div(_conversionRate());
-            IACoconutMaker(ACMAKER).redeem(_share);
+            IACoconutMaker(ACOCONUT_MAKER).redeem(_share);
 
             // In case of rounding errors
             _amount = MathUpgradeable.min(_amount, _token.balanceOf(address(this)));
