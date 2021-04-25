@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interfaces/ISinglePlus.sol";
 import "../interfaces/ICompositePlus.sol";
@@ -17,7 +18,7 @@ import "../interfaces/autofarm/IAutoBTC.sol";
 /**
  * @dev Zap for BTC plus on BSC.
  */
-contract BTCZapBsc {
+contract BTCZapBsc is Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -42,7 +43,10 @@ contract BTCZapBsc {
 
     address public governance;
 
-    constructor() {
+    /**
+     * @dev Initializes the Zap contract.
+     */
+    function initialize() public initializer {
         governance = msg.sender;
         IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(int256(-1)));
         IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(int256(-1)));
@@ -272,7 +276,7 @@ contract BTCZapBsc {
         _tokens[0] = VENUS_BTC_PLUS;
         uint256[] memory _amounts = new uint256[](1);
         _amounts[0] = _vbtcPlus;
-        ICompositePlus(BTCB).mint(_tokens, _amounts);
+        ICompositePlus(BTCB_PLUS).mint(_tokens, _amounts);
 
         uint256 _btcbPlus = IERC20Upgradeable(BTCB_PLUS).balanceOf(address(this));
         IERC20Upgradeable(BTCB_PLUS).safeTransfer(msg.sender, _btcbPlus);
