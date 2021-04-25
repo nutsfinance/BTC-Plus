@@ -37,7 +37,6 @@ contract GaugeController is Initializable, IGaugeController {
     event GaugeUpdated(address indexed gauge, uint256 oldWeight, uint256 newWeight, uint256 oldGaugeRate, uint256 newGaugeRate);
     event Checkpointed(uint256 oldRate, uint256 newRate, uint256 totalSupply, uint256 ratePerToken, address[] gauges, uint256[] guageRates);
     event RewardClaimed(address indexed gauge, address indexed user, address indexed receiver, uint256 amount);
-    event FeeProcessed(address indexed gauge, address indexed token, uint256 amount);
 
     uint256 constant WAD = 10 ** 18;
     uint256 constant LOG_10_2 = 301029995663981195;  // log10(2) = 0.301029995663981195
