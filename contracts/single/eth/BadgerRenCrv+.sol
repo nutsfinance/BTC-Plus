@@ -165,7 +165,8 @@ contract BadgerRenCrvPlus is SinglePlus {
      * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
      */
     function _conversionRate() internal view virtual override returns (uint256) {
-        return IBadgerSett(BADGER_RENCRV).getPricePerFullShare();
+        // Both Badger's share price and Curve's virtual price are in WAD
+        return IBadgerSett(BADGER_RENCRV).getPricePerFullShare().mul(ICurveFi(REN_SWAP).get_virtual_price()).div(WAD);
     }
 
     /**
