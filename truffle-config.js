@@ -67,14 +67,14 @@ module.exports = {
       provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY, 0, 10),
       network_id: 1,          // Main's id
       gas: 6700000,           // Gas sent with each transaction (default: ~5000000)
-      gasPrice: 40000000000,  // 75 gwei (in wei) (default: 100 gwei)
+      gasPrice: 50000000000,  // 75 gwei (in wei) (default: 100 gwei)
     },
 
     bsc: {
       provider: () => new HDWalletProvider(process.env.MNENOMIC, `https://bsc-dataseed1.binance.org`, 0, 10),
       network_id: 56,
       gas: 6700000,           // Gas sent with each transaction (default: ~6700000)
-      gasPrice: 5000000000,  // 10 gwei (in wei) (default: 10 gwei)
+      gasPrice: 500000000,  // 10 gwei (in wei) (default: 10 gwei)
       // confirmations: 10,
     },
 
