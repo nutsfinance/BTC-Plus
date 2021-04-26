@@ -15,8 +15,13 @@ import "./Plus.sol";
 /**
  * @title Single plus token.
  *
- * A single plus token wraps an underlying ERC20 token, typically a yield token,
- * into a value peg token.
+ * A single plus token wraps an LP token, typically not value-pegged, into a value peg token.
+ *
+ * Note: LP token vs underlying token
+ * - LP token is the token wrapped by single plus. It's typically not value peg, and it applies to
+ *   single plus only;
+ * - Underlying token is the peg token. It applies to both single plus and composite plus.
+ * E.g. For renCrv+, the LP token is renCrv and underlying token is BTC.
  */
 contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -28,7 +33,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     event Harvested(address indexed token, uint256 amount, uint256 feeAmount);
     event PerformanceFeeUpdated(uint256 oldPerformanceFee, uint256 newPerformanceFee);
     
-    // Underlying token of the single plus toke. Typically a yield token and not value peg.
+    // LP token of the single plus toke. Typically a yield token and not value peg.
     address public override token;
     // Whether minting is paused for the single plus token.
     bool public mintPaused;
@@ -37,7 +42,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
 
     /**
      * @dev Initializes the single plus contract.
-     * @param _token Underlying token of the single plus.
+     * @param _token LP token of the single plus.
      * @param _nameOverride If empty, the single plus name will be `token_name Plus`
      * @param _symbolOverride If empty. the single plus name will be `token_symbol+`
      */
@@ -57,17 +62,17 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Returns the amount of single plus tokens minted with the underlying token provided.
-     * @dev _amounts Amount of underlying token used to mint the single plus token.
+     * @dev Returns the amount of single plus tokens minted with the LP token provided.
+     * @dev _amounts Amount of LP token used to mint the single plus token.
      */
     function getMintAmount(uint256 _amount) external view returns(uint256) {
-        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        // Conversion rate is the amount of single plus token per LP token, in WAD.
         return _amount.mul(_conversionRate()).div(WAD);
     }
 
     /**
-     * @dev Mints the single plus token with the underlying token.
-     * @dev _amount Amount of the underlying token used to mint single plus token.
+     * @dev Mints the single plus token with the LP token.
+     * @dev _amount Amount of the LP token used to mint single plus token.
      */
     function mint(uint256 _amount) external override nonReentrant {
         require(_amount > 0, "zero amount");
@@ -76,9 +81,9 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         // Rebase first to make index up-to-date
         rebase();
 
-        // Transfers the underlying token in.
+        // Transfers the LP token in.
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
-        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        // Conversion rate is the amount of single plus token per LP token, in WAD.
         uint256 _newAmount = _amount.mul(_conversionRate()).div(WAD);
         // Index is in WAD
         uint256 _share = _amount.mul(_conversionRate()).div(index);
@@ -96,7 +101,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     /**
      * @dev Returns the amount of tokens received in redeeming the single plus token.
      * @param _amount Amounf of single plus to redeem.
-     * @return Amount of underlying token received as well as fee collected.
+     * @return Amount of LP token received as well as fee collected.
      */
     function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256) {
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
@@ -109,7 +114,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         // Conversion rate is in WAD
         uint256 _underlyingAmount = _withdrawAmount.mul(WAD).div(_conversionRate());
 
-        // Note: Fee is in plus token(18 decimals) but the received amount is in underlying token!
+        // Note: Fee is in plus token(18 decimals) but the received amount is in LP token!
         return (_underlyingAmount, _fee);
     }
 
@@ -156,7 +161,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Updates the mint paused state of the underlying token.
+     * @dev Updates the mint paused state of the LP token.
      * @param _paused Whether minting with that token is paused.
      */
     function setMintPaused(bool _paused) external onlyStrategist {
@@ -178,13 +183,13 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Retrive the underlying assets from the investment.
+     * @dev Retrive the LP token from the investment.
      */
     function divest() public virtual override {}
 
     /**
      * @dev Returns the amount that can be invested now. The invested token
-     * does not have to be the underlying token.
+     * does not have to be the LP token.
      * investable > 0 means it's time to call invest.
      */
     function investable() public view virtual override returns (uint256) {
@@ -192,7 +197,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Invest the underlying assets for additional yield.
+     * @dev Invest the LP token for additional yield.
      */
     function invest() public virtual override {}
 
@@ -214,13 +219,13 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _token Token to check salvageability.
      */
     function _salvageable(address _token) internal view virtual override returns (bool) {
-        // For single plus, the only token that cannot salvage is the underlying token!
+        // For single plus, the only token that cannot salvage is the LP token!
         return _token != token;
     }
 
     /**
-     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
-     * The default implmentation assumes that the single plus and underlying tokens are both peg.
+     * @dev Returns the amount of single plus token is worth for one LP token, expressed in WAD.
+     * The default implmentation assumes that the single plus and LP tokens are both peg.
      */
     function _conversionRate() internal view virtual returns (uint256) {
         // 36 since the decimals for plus token is always 18, and conversion rate is in WAD.
@@ -228,19 +233,19 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Returns the total value of the underlying token in terms of the peg value, scaled to 18 decimals
+     * @dev Returns the total value of the LP token in terms of the underlying tokens, scaled to 18 decimals
      * and expressed in WAD.
      */
     function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
-        // Conversion rate is the amount of single plus token per underlying token, in WAD.
+        // Conversion rate is the amount of single plus token per LP token, in WAD.
         return _balance.mul(_conversionRate());
     }
 
     /**
-     * @dev Withdraws underlying tokens.
+     * @dev Withdraws LP tokens.
      * @param _receiver Address to receive the token withdraw.
-     * @param _amount Amount of underlying token withdraw.
+     * @param _amount Amount of LP token withdraw.
      */
     function _withdraw(address _receiver, uint256  _amount) internal virtual {
         IERC20Upgradeable(token).safeTransfer(_receiver, _amount);
