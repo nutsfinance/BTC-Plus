@@ -435,6 +435,22 @@ def create_lock(_value: uint256, _unlock_time: uint256):
 
     self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
+@external
+@nonreentrant('lock')
+def create_expired_lock(_value: uint256):
+    """
+    @notice Create an expired lock. Used in testing.
+    """
+    _locked: LockedBalance = self.locked[msg.sender]
+    assert _value > 0  # dev: need non-zero value
+    assert block.timestamp >= _locked.end, "The lock didn't expire"
+    assert _locked.amount == 0, "Withdraw old tokens first"
+
+    unlock_time: uint256 = (block.timestamp / WEEK - 2) * WEEK
+    _locked.amount = convert(_value, int128)
+    _locked.end = unlock_time
+    self.locked[msg.sender] = _locked
+    assert ERC20(self.token).transferFrom(msg.sender, self, _value)
 
 @external
 @nonreentrant('lock')
