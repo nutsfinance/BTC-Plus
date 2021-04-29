@@ -16,7 +16,7 @@ import "../interfaces/IVotingEscrow.sol";
 
 /**
  * @dev Liquidity gauge that stakes token and earns reward.
- * 
+ *
  * Note: The liquidity gauge token might not be 1:1 with the staked token.
  * For plus tokens, the total staked amount increases as interest from plus token accrues.
  * Credit: https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/gauges/LiquidityGaugeV2.vy
@@ -95,25 +95,34 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         __ReentrancyGuard_init();
     }
 
+    function calculateNewLimit(address _account) view internal returns (uint256) {
+      IERC20Upgradeable _votingEscrow = IERC20Upgradeable(votingEscrow);
+      uint256 _votingBalance = _votingEscrow.balanceOf(_account);
+      uint256 _votingTotal = _votingEscrow.totalSupply();
+
+      uint256 _balance = balanceOf(_account);
+      uint256 _supply = totalSupply();
+      uint256 _limit = _balance.mul(TOKENLESS_PRODUCTION).div(100);
+      if (_votingTotal > 0) {
+          uint256 _boosting = _supply.mul(_votingBalance).mul(100 - TOKENLESS_PRODUCTION).div(_votingTotal).div(100);
+          _limit = _limit.add(_boosting);
+      }
+
+      _limit = MathUpgradeable.min(_balance, _limit);
+      return _limit;
+    }
+
     /**
      * @dev Important: Updates the working balance of the user to effectively apply
      * boosting on liquidity mining.
      * @param _account Address to update liquidity limit
      */
+    /// if_succeeds {:msg "limit updated"} workingBalances[_account] == calculateNewLimit(_account);
+    /// if_succeeds {:msg "workingSupply updated"} workingSupply == old(workingSupply).add(calculateNewLimit(_account)).sub(old(workingBalances[_account]));
     function _updateLiquidityLimit(address _account) internal {
-        IERC20Upgradeable _votingEscrow = IERC20Upgradeable(votingEscrow);
-        uint256 _votingBalance = _votingEscrow.balanceOf(_account);
-        uint256 _votingTotal = _votingEscrow.totalSupply();
-
-        uint256 _balance = balanceOf(_account);
+        uint256 _limit = calculateNewLimit(_account);
         uint256 _supply = totalSupply();
-        uint256 _limit = _balance.mul(TOKENLESS_PRODUCTION).div(100);
-        if (_votingTotal > 0) {
-            uint256 _boosting = _supply.mul(_votingBalance).mul(100 - TOKENLESS_PRODUCTION).div(_votingTotal).div(100);
-            _limit = _limit.add(_boosting);
-        }
-
-        _limit = MathUpgradeable.min(_balance, _limit);
+        uint256 _balance = balanceOf(_account);
         uint256 _oldWorkingBalance = workingBalances[_account];
         uint256 _oldWorkingSupply = workingSupply;
         workingBalances[_account] = _limit;
@@ -140,7 +149,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
             _rewardBalances[i] = IERC20Upgradeable(_rewardList[i]).balanceOf(address(this));
         }
         IUniPool(_rewardContract).getReward();
-        
+
         uint256 _balance = balanceOf(_account);
         // Checks balance increment for each reward token
         for (uint256 i = 0; i < _rewardList.length; i++) {
@@ -168,6 +177,11 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Performs checkpoint on AC rewards.
      * @param _account User address to checkpoint. Zero to do global checkpoint only.
      */
+    /// if_succeeds {:msg "integral updated"} integral == 0 || integral == old(integral).add(rate.mul(block.timestamp.sub(old(lastCheckpoint))).div(workingSupply));
+    /// if_succeeds {:msg "timestamp updated"} lastCheckpoint == block.timestamp;
+    /// if_succeeds {:msg "user integral updated"} _account == address(0x0) || integral == 0 || integralOf[_account] == old(integral).add(rate.mul(block.timestamp.sub(old(lastCheckpoint))).div(workingSupply));
+    /// if_succeeds {:msg "user timestamp updated"} _account == address(0x0) || integral == 0 || checkpointOf[_account] == block.timestamp;
+    /// if_succeeds {:msg "user rewards"} _account == address(0x0) || integral == 0 || rewards[_account] == old(rewards[_account]).add(workingBalances[_account].mul(old(integral).add(rate.mul(block.timestamp.sub(old(lastCheckpoint))).div(workingSupply)).sub(old(integralOf[_account]))).div(WAD));
     function _checkpoint(address _account) internal {
         uint256 _workingSupply = workingSupply;
         if (_workingSupply == 0) {
@@ -195,6 +209,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * Gauge controller will checkpoint the gauge. Therefore, we could assume that the rate is not changed
      * between two checkpoints!
      */
+    /// if_succeeds {:msg "rate updated"} rate == IGaugeController(controller).gaugeRates(address(this));
     function checkpoint() external override nonReentrant {
         _checkpoint(address(0x0));
         // Loads the new emission rate from gauge controller
@@ -238,7 +253,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
-     * @dev Claims reward for the user. 
+     * @dev Claims reward for the user.
      * @param _account Address of the user to claim.
      * @param _claimRewards Whether to claim other rewards as well.
      */
@@ -247,7 +262,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     }
 
     /**
-     * @dev Claims reward for the user. 
+     * @dev Claims reward for the user.
      * @param _account Address of the user to claim.
      * @param _receiver Address that receives the claimed reward
      * @param _claimRewards Whether to claim other rewards as well.
@@ -264,6 +279,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _receiver Address that receives the claimed reward
      * @param _claimRewards Whether to claim other rewards as well.
      */
+    /// if_succeeds {:msg "lastDirectClaim updated"} _account == msg.sender || lastDirectClaim[msg.sender] == block.timestamp;
+    /// if_succeeds {:msg "can claim"} (_account == msg.sender && block.timestamp >= old(lastDirectClaim[_account]).add(directClaimCooldown)) || IGaugeController(controller).claimers(msg.sender);
     function _claim(address _account, address _receiver, bool _claimRewards) internal {
         // Direct claim mean user claiming directly to the gauge. Cooldown applies to direct claim.
         // Indirect claim means user claimsing via claimers. There is no cooldown in indirect claim.
@@ -314,6 +331,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Kicks an account for abusing their boost. Only kick if the user
      * has another voting event, or their lock expires.
      */
+    /// if_succeeds {:msg "can kick"} kickable(_account) || IGaugeController(controller).claimers(msg.sender);
     function kick(address _account) external override nonReentrant {
         // We allow claimers to kick since kick can be seen as subset of claim.
         require(kickable(_account) || IGaugeController(controller).claimers(msg.sender), "kick not allowed");
@@ -343,6 +361,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Deposit the staked token into liquidity gauge.
      * @param _amount Amount of staked token to deposit.
      */
+    /// if_succeeds {:msg "should mint"} balanceOf(msg.sender) == old(balanceOf(msg.sender)) + (old(totalSupply()) == 0 || old(IERC20Upgradeable(token).balanceOf(address(this))) == 0 ? (_amount == uint256(int256(-1)) ? old(IERC20Upgradeable(token).balanceOf(msg.sender)) : _amount) : (_amount == uint256(int256(-1)) ? old(IERC20Upgradeable(token).balanceOf(msg.sender)) : _amount).mul(old(totalSupply())).div(old(IERC20Upgradeable(token).balanceOf(address(this)))));
     function deposit(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
         if (_amount == uint256(int256(-1))) {
@@ -361,7 +380,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         // 2) Someone sends token to the liquidity gauge before there is any deposit.
         // Therefore, when either _totalSupply or _balance is 0, we treat the gauge is empty.
         uint256 _mintAmount = _totalSupply == 0 || _balance == 0 ? _amount : _amount.mul(_totalSupply).div(_balance);
-        
+
         _mint(msg.sender, _mintAmount);
         _updateLiquidityLimit(msg.sender);
 
@@ -379,6 +398,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Withdraw the staked token from liquidity gauge.
      * @param _amount Amounf of staked token to withdraw
      */
+    /// if_succeeds {:msg "should burn"} balanceOf(msg.sender) == old(balanceOf(msg.sender)) - (_amount == uint256(int256(-1)) ? old(balanceOf(msg.sender)) : _amount.mul(old(totalSupply())).div(old(IERC20Upgradeable(token).balanceOf(address(this)))));
+    /// if_succeeds {:msg "charge fee"} let newAmount := (_amount == uint256(int256(-1)) ? old(userStaked(msg.sender)) : _amount) in IERC20Upgradeable(token).balanceOf(msg.sender) == old(IERC20Upgradeable(token).balanceOf(msg.sender)) + newAmount - newAmount.mul(withdrawFee).div(MAX_PERCENT);
     function withdraw(uint256 _amount) external nonReentrant {
         require(_amount > 0, "zero amount");
         uint256 _burnAmount = 0;
@@ -403,7 +424,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         if (_rewardContract != address(0x0)) {
             IUniPool(_rewardContract).withdraw(_amount);
         }
-        
+
         uint256 _fee;
         address _token = token;
         address _controller = controller;
@@ -440,7 +461,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      *    Governance methods
      *
      **********************************************/
-    
+
     /**
      * @dev All liqduiity gauge share the same governance of gauge controller.
      */
@@ -458,6 +479,9 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _rewardContract The new active reward contract.
      * @param _rewardTokens The reward tokens from the reward contract.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == IGaugeController(controller).governance();
+    /// if_succeeds {:msg "update rewardContract"} _rewardContract == address(0x0) || rewardContract == _rewardContract;
+    /// if_succeeds {:msg "update unsalvageable"} _rewardContract == address(0x0) || unsalvageable[_rewardContract];
     function setRewards(address _rewardContract, address[] memory _rewardTokens) external onlyGovernance {
         address _currentRewardContract = rewardContract;
         IERC20Upgradeable _token = IERC20Upgradeable(token);
@@ -493,6 +517,9 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     /**
      * @dev Updates the withdraw fee. Only governance can update withdraw fee.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == IGaugeController(controller).governance();
+    /// if_succeeds {:msg "update withdrawFee"} withdrawFee == _withdrawFee;
+    /// if_succeeds {:msg "check _withdrawFee"} _withdrawFee <= MAX_PERCENT;
     function setWithdrawFee(uint256 _withdrawFee) external onlyGovernance {
         require(_withdrawFee <= MAX_PERCENT, "too big");
         uint256 _oldWithdrawFee = withdrawFee;
@@ -504,6 +531,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     /**
      * @dev Updates the cooldown between two direct claims.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == IGaugeController(controller).governance();
+    /// if_succeeds {:msg "update withdrawFee"} directClaimCooldown == _cooldown;
     function setDirectClaimCooldown(uint256 _cooldown) external onlyGovernance {
         uint256 _oldCooldown = directClaimCooldown;
         directClaimCooldown = _cooldown;
@@ -515,6 +544,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Used to salvage any ETH deposited to gauge contract by mistake. Only governance can salvage ETH.
      * The salvaged ETH is transferred to treasury for futher operation.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == IGaugeController(controller).governance();
     function salvage() external onlyGovernance {
         uint256 _amount = address(this).balance;
         address payable _target = payable(IGaugeController(controller).treasury());
@@ -527,6 +557,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * The salvaged token is transferred to treasury for futhuer operation.
      * @param _token Address of the token to salvage.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == IGaugeController(controller).governance();
     function salvageToken(address _token) external onlyGovernance {
         require(!unsalvageable[_token], "cannot salvage");
 

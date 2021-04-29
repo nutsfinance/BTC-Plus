@@ -96,7 +96,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @param _reward AC token address.
      * @param _plusRewardPerDay Amount of AC rewarded per day for plus gauges if there is no plus boost.
      */
-    function initialize(address _reward, uint256 _plusRewardPerDay) public initializer {        
+    function initialize(address _reward, uint256 _plusRewardPerDay) public initializer {
         governance = msg.sender;
         treasury = msg.sender;
         reward = _reward;
@@ -121,7 +121,7 @@ contract GaugeController is Initializable, IGaugeController {
         if (xc >= 0x10) { xc >>= 4; msb += 4; }
         if (xc >= 0x4) { xc >>= 2; msb += 2; }
         if (xc >= 0x2) msb += 1;  // No need to shift xc anymore
-    
+
         uint256 lsb = 0;
         uint256 ux = num << uint256 (127 - msb);
         for (uint256 bit = 0x8000000000000000; bit > 0; bit >>= 1) {
@@ -130,7 +130,7 @@ contract GaugeController is Initializable, IGaugeController {
           ux >>= 127 + b;
           lsb += bit * b;
         }
-    
+
         return msb * 10**18 + (lsb * 10**18 >> 64);
     }
 
@@ -148,6 +148,9 @@ contract GaugeController is Initializable, IGaugeController {
      * Anyone can call this function so that if the liquidity gauge is exploited by users with short-term
      * large amount of minting, others can restore to the correct mining paramters.
      */
+    /// if_succeeds {:msg "lastTotalReward updated"} lastTotalReward == old(lastTotalReward).add(old(totalRate).mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
+    /// if_succeeds {:msg "lastCheckpoint updated"} lastCheckpoint == block.timestamp;
+    /// if_succeeds {:msg "plusBoost updated"} plusBoost >= WAD;
     function checkpoint() public {
         // Loads the gauge list for better performance
         address[] memory _gauges = gauges;
@@ -234,6 +237,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @param _receiver Address that receives the claimed reward
      * @param _amount Amount of AC to claim
      */
+    /// if_succeeds {:msg "only gauge"} gaugeData[msg.sender].isSupported;
     function claim(address _account, address _receiver, uint256 _amount) external override {
         require(gaugeData[msg.sender].isSupported, "not gauge");
 
@@ -271,6 +275,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Donate the gauge fee. Only liqudity gauge can call this function.
      * @param _token Address of the donated token.
      */
+    /// if_succeeds {:msg "only gauge"} gaugeData[msg.sender].isSupported;
     function donate(address _token) external override {
         require(gaugeData[msg.sender].isSupported, "not gauge");
 
@@ -294,7 +299,7 @@ contract GaugeController is Initializable, IGaugeController {
      *    Governance methods
      *
      **********************************************/
-    
+
     function _checkGovernance() internal view {
         require(msg.sender == governance, "not governance");
     }
@@ -307,6 +312,8 @@ contract GaugeController is Initializable, IGaugeController {
     /**
      * @dev Updates governance. Only governance can update governance.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == old(governance);
+    /// if_succeeds {:msg "updated governance"} governance == _governance;
     function setGovernance(address _governance) external onlyGovernance {
         address _oldGovernance = governance;
         governance = _governance;
@@ -316,6 +323,8 @@ contract GaugeController is Initializable, IGaugeController {
     /**
      * @dev Updates claimer. Only governance can update claimers.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
+    /// if_succeeds {:msg "claimer updated"} claimers[_account] == _allowed;
     function setClaimer(address _account, bool _allowed) external onlyGovernance {
         claimers[_account] = _allowed;
         emit ClaimerUpdated(_account, _allowed);
@@ -324,6 +333,8 @@ contract GaugeController is Initializable, IGaugeController {
     /**
      * @dev Updates the AC emission base rate for plus gauges. Only governance can update the base rate.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
+    /// if_succeeds {:msg "basePlusRate updated"} basePlusRate == _plusRewardPerDay.mul(WAD).div(DAY);
     function setPlusReward(uint256 _plusRewardPerDay) external onlyGovernance {
         uint256 _oldRate = basePlusRate;
         // Base rate is in WAD
@@ -337,6 +348,8 @@ contract GaugeController is Initializable, IGaugeController {
     /**
      * @dev Updates the treasury.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
+    /// if_succeeds {:msg "treasury updated"} _treasury == treasury;
     function setTreasury(address _treasury) external onlyGovernance {
         require(_treasury != address(0x0), "treasury not set");
         address _oldTreasury = treasury;
@@ -352,6 +365,9 @@ contract GaugeController is Initializable, IGaugeController {
      * @param _weight Weight of the liquidity gauge. Useful for plus gauges only.
      * @param _rewardPerDay AC reward for the gauge per day. Useful for non-plus gauges only.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
+    /// if_succeeds {:msg "gauge not null"} _gauge != address(0x0);
+    /// if_succeeds {:msg "gauge added"} gaugeData[_gauge].isSupported;
     function addGauge(address _gauge, bool _plus, uint256 _weight, uint256 _rewardPerDay) external onlyGovernance {
         require(_gauge != address(0x0), "gauge not set");
         require(!gaugeData[_gauge].isSupported, "gauge exist");
@@ -376,6 +392,8 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Removes a liquidity gauge from gauge controller. Only governance can remove a plus token.
      * @param _gauge The liquidity gauge to remove from gauge controller.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
+    /// if_succeeds {:msg "gauge removed"} !gaugeData[_gauge].isSupported;
     function removeGauge(address _gauge) external onlyGovernance {
         require(_gauge != address(0x0), "gauge not set");
         require(gaugeData[_gauge].isSupported, "gauge not exist");
@@ -407,6 +425,10 @@ contract GaugeController is Initializable, IGaugeController {
      * @param _weight New weight of the liquidity gauge.
      * @param _rewardPerDay AC reward for the gauge per day
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
+    /// if_succeeds {:msg "gauge exists"} gaugeData[_gauge].isSupported;
+    /// if_succeeds {:msg "gauge weight updated"} gaugeData[_gauge].weight == _weight;
+    /// if_succeeds {:msg "gauge rate updated"} gaugeData[_gauge].rate == _rewardPerDay.mul(WAD).div(DAY);
     function updateGauge(address _gauge, uint256 _weight, uint256 _rewardPerDay) external onlyGovernance {
         require(gaugeData[_gauge].isSupported, "gauge not exist");
 
@@ -427,6 +449,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Used to salvage any ETH deposited to gauge controller by mistake. Only governance can salvage ETH.
      * The salvaged ETH is transferred to treasury for futher operation.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
     function salvage() external onlyGovernance {
         uint256 _amount = address(this).balance;
         address payable _target = payable(treasury);
@@ -440,6 +463,7 @@ contract GaugeController is Initializable, IGaugeController {
      * Note: The gauge controller is not expected to hold any token, so any token is salvageable!
      * @param _token Address of the token to salvage.
      */
+    /// if_succeeds {:msg "only governance"} msg.sender == governance;
     function salvageToken(address _token) external onlyGovernance {
         IERC20Upgradeable _target = IERC20Upgradeable(_token);
         _target.safeTransfer(treasury, _target.balanceOf(address(this)));

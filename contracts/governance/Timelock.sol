@@ -44,6 +44,9 @@ contract Timelock {
 
     receive() external payable { }
 
+    /// if_succeeds {:msg "only self can setDalay"} msg.sender == address(this);
+    /// if_succeeds {:msg "delay_ >= MINIMUM_DELAY"} delay_ >= MINIMUM_DELAY;
+    /// if_succeeds {:msg "delay_ <= MAXIMUM_DELAY"} delay_ <= MAXIMUM_DELAY;
     function setDelay(uint256 delay_) public {
         require(msg.sender == address(this), "Timelock::setDelay: Call must come from Timelock.");
         require(delay_ >= MINIMUM_DELAY, "Timelock::setDelay: Delay must exceed minimum delay.");
@@ -53,6 +56,7 @@ contract Timelock {
         emit NewDelay(delay);
     }
 
+    /// if_succeeds {:msg "only pendingAdmin can acceptAdmin"} msg.sender == pendingAdmin;
     function acceptAdmin() public {
         require(msg.sender == pendingAdmin, "Timelock::acceptAdmin: Call must come from pendingAdmin.");
         admin = msg.sender;
@@ -61,6 +65,7 @@ contract Timelock {
         emit NewAdmin(admin);
     }
 
+    /// if_succeeds {:msg "only self can setPendingAdmin"} msg.sender == address(this);
     function setPendingAdmin(address pendingAdmin_) public {
         require(msg.sender == address(this), "Timelock::setPendingAdmin: Call must come from Timelock.");
         pendingAdmin = pendingAdmin_;
@@ -68,30 +73,38 @@ contract Timelock {
         emit NewPendingAdmin(pendingAdmin);
     }
 
+    /// if_succeeds {:msg "only admin can queueTransaction"} msg.sender == admin;
+    /// if_succeeds {:msg "only satisfy delay can queueTransaction"} eta >= getBlockTimestamp().add(delay);
+    /// if_succeeds {:msg "queuedTransactions set"} queuedTransactions[generateHash(target, value, signature, data, eta)];
     function queueTransaction(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) public returns (bytes32) {
         require(msg.sender == admin, "Timelock::queueTransaction: Call must come from admin.");
         require(eta >= getBlockTimestamp().add(delay), "Timelock::queueTransaction: Estimated execution block must satisfy delay.");
 
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = generateHash(target, value, signature, data, eta);
         queuedTransactions[txHash] = true;
 
         emit QueueTransaction(txHash, target, value, signature, data, eta);
         return txHash;
     }
 
+    /// if_succeeds {:msg "only admin can cancelTransaction"} msg.sender == admin;
     function cancelTransaction(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) public {
         require(msg.sender == admin, "Timelock::cancelTransaction: Call must come from admin.");
 
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = generateHash(target, value, signature, data, eta);
         queuedTransactions[txHash] = false;
 
         emit CancelTransaction(txHash, target, value, signature, data, eta);
     }
 
+    /// if_succeeds {:msg "only admin can executeTransaction"} msg.sender == admin;
+    /// if_succeeds {:msg "only queued can executeTransaction"} queuedTransactions[generateHash(target, value, signature, data, eta)];
+    /// if_succeeds {:msg "only passed eta can executeTransaction"} getBlockTimestamp() >= eta;
+    /// if_succeeds {:msg "only not stale can executeTransaction"} getBlockTimestamp() <= eta.add(GRACE_PERIOD);
     function executeTransaction(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) public payable returns (bytes memory) {
         require(msg.sender == admin, "Timelock::executeTransaction: Call must come from admin.");
 
-        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        bytes32 txHash = generateHash(target, value, signature, data, eta);
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
         require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
         require(getBlockTimestamp() <= eta.add(GRACE_PERIOD), "Timelock::executeTransaction: Transaction is stale.");
@@ -118,5 +131,9 @@ contract Timelock {
     function getBlockTimestamp() internal view returns (uint256) {
         // solium-disable-next-line security/no-block-members
         return block.timestamp;
+    }
+
+    function generateHash(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) internal view returns (bytes32) {
+      return keccak256(abi.encode(target, value, signature, data, eta));
     }
 }

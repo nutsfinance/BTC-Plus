@@ -1,6 +1,7 @@
 const { expectRevert, time } = require('@openzeppelin/test-helpers');
 const assert = require('assert');
 const LiquidityGauge = artifacts.require("LiquidityGauge");
+const IGauge = artifacts.require("IGauge");
 const GaugeController = artifacts.require("GaugeController");
 const MockToken = artifacts.require("MockToken");
 const SinglePlus = artifacts.require("SinglePlus");
@@ -11,7 +12,7 @@ const BN = web3.utils.BN;
 const assertAlmostEqual = function(expectedOrig, actualOrig) {
     const expected = new BN(expectedOrig);
     const actual = new BN(actualOrig);
-    
+
     if (expected.toString() === "0") {
         const _1e18 = new BN('10').pow(new BN('18'));
         assert.ok(actual.muln(100).div(_1e18) <= 1, `Expected ${expected}, actual ${actual}`);
@@ -36,7 +37,7 @@ contract("LiquidityGauge", async ([owner, claimer, user1, user2, user3]) => {
 
     beforeEach(async () => {
         reward = await MockToken.new("Mock Reward", "mReward", 18);
-        
+
         controller = await GaugeController.new();
         // 864 AC for all plus gauges per day
         await controller.initialize(reward.address, toWei('864'));
@@ -584,7 +585,8 @@ contract("LiquidityGauge", async ([owner, claimer, user1, user2, user3]) => {
         // Mint enough rewards token to gauge controller first
         await reward.mint(controller.address, toWei("200"));
         // user2 claims
-        await gauge2.claim(user2, user2, true, {from: user2});
+        let iGauge2 = await IGauge.at(gauge2.address);
+        await iGauge2.claim(user2, user2, true, {from: user2});
         assertAlmostEqual((await controller.totalReward()).toString(), toWei("8.8"));
         assertAlmostEqual((await controller.claimable()).toString(), toWei("4.8"));
         assertAlmostEqual((await controller.claimed(gauge2.address, user2)).toString(), toWei("4"));
@@ -597,7 +599,7 @@ contract("LiquidityGauge", async ([owner, claimer, user1, user2, user3]) => {
         assertAlmostEqual((await controller.totalReward()).toString(), toWei("13.2"));
         assertAlmostEqual((await controller.claimable()).toString(), toWei("9.2"));
         assertAlmostEqual((await controller.claimed(gauge2.address, user2)).toString(), toWei("4"));
-        
+
         assertAlmostEqual((await controller.totalClaimed()).toString(), toWei("4"));
         // user1 should get 0.01 * 600 = 6 AC
         assertAlmostEqual((await gauge1.claimable(user1)).toString(), toWei("6"));
