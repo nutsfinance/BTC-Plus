@@ -29,7 +29,7 @@ interface ICurveFi {
 
     function remove_liquidity(uint256 _amount, uint256[3] calldata amounts) external;
 
-    // obtc pool
+    // obtc pool/tbtc pool
     function add_liquidity(
         uint256[4] calldata amounts,
         uint256 min_mint_amount
