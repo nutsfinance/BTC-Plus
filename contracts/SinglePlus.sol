@@ -65,7 +65,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @dev Returns the amount of single plus tokens minted with the LP token provided.
      * @dev _amounts Amount of LP token used to mint the single plus token.
      */
-    function getMintAmount(uint256 _amount) external view returns(uint256) {
+    function getMintAmount(uint256 _amount) external view override returns(uint256) {
         // Conversion rate is the amount of single plus token per LP token, in WAD.
         return _amount.mul(_conversionRate()).div(WAD);
     }
@@ -103,7 +103,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _amount Amounf of single plus to redeem.
      * @return Amount of LP token received as well as fee collected.
      */
-    function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256) {
+    function getRedeemAmount(uint256 _amount) external view override returns (uint256, uint256) {
         // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
         // Liquidity ratio is in WAD and redeem fee is in 0.01%
         uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);

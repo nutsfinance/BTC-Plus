@@ -24,6 +24,7 @@
   "homepage": "https://github.com/nutsfinance/BTC-Plus#readme",
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.10",
+    "axios": "^0.21.1",
     "dotenv": "^8.2.0",
     "solidity-coverage": "^0.7.16",
     "truffle-hdwallet-provider": "^1.0.6",

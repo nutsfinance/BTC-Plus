@@ -42,10 +42,23 @@ interface ISinglePlus is IPlus {
     function harvest() external;
 
     /**
+     * @dev Returns the amount of single plus tokens minted with the LP token provided.
+     * @dev _amounts Amount of LP token used to mint the single plus token.
+     */
+    function getMintAmount(uint256 _amount) external view returns(uint256);
+
+    /**
      * @dev Mints the single plus token with the underlying token.
      * @dev _amount Amount of the underlying token used to mint single plus token.
      */
     function mint(uint256 _amount) external;
+
+    /**
+     * @dev Returns the amount of tokens received in redeeming the single plus token.
+     * @param _amount Amounf of single plus to redeem.
+     * @return Amount of LP token received as well as fee collected.
+     */
+    function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256);
 
     /**
      * @dev Redeems the single plus token.

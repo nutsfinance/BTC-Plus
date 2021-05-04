@@ -76,7 +76,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @dev _tokens The tokens used to mint the composite plus token.
      * @dev _amounts Amount of tokens used to mint the composite plus token.
      */
-    function getMintAmount(address[] calldata _tokens, uint256[] calldata _amounts) external view returns(uint256) {
+    function getMintAmount(address[] calldata _tokens, uint256[] calldata _amounts) external view override returns(uint256) {
         require(_tokens.length == _amounts.length, "invalid input");
         uint256 _amount = 0;
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -130,7 +130,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _amount Amounf of composite plus to redeem.
      * @return Addresses and amounts of tokens returned as well as fee collected.
      */
-    function getRedeemAmount(uint256 _amount) external view returns (address[] memory, uint256[] memory, uint256, uint256) {
+    function getRedeemAmount(uint256 _amount) external view override returns (address[] memory, uint256[] memory, uint256, uint256) {
         require(_amount > 0, "zero amount");
 
         // Special handling of -1 is required here in order to fully redeem all shares, since interest
@@ -304,6 +304,13 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      */
     function tokenSize() external view returns (uint256) {
         return tokens.length;
+    }
+
+    /**
+     * @dev Returns the list of plus tokens.
+     */
+    function tokenList() external view override returns (address[] memory) {
+        return tokens;
     }
 
     /**
