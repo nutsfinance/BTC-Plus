@@ -43,6 +43,7 @@ const assertAlmostEqual = function(expectedOrig, actualOrig) {
  * truffle test mainnet-fork-test/BadgerSBTCCrv+.test.js
  */
 contract("BadgerSBTCCrvPlus+", async ([owner, proxyAdmin, user, user2, treasury]) => {
+    let converter;
     let bSBTCCrv;
     let bSBTCCrvPlus;
     let startTime;
@@ -62,34 +63,34 @@ contract("BadgerSBTCCrvPlus+", async ([owner, proxyAdmin, user, user2, treasury]
 
         startTime = (await time.latest()).addn(10);
     });
-    // it("should mint bSBTCCrv", async () => {
-    //     const totalSupply1 = await bSBTCCrvPlus.totalSupply();
-    //     const balance1 = await bSBTCCrvPlus.balanceOf(USER);
-    //     console.log('bSBTCCrv+ total supply 1: ', totalSupply1.toString());
-    //     console.log('bSBTCCrv+ balance 1: ', balance1.toString());
-    //     console.log('bSBTCCrv balance 1: ', (await bSBTCCrv.balanceOf(USER)).toString());
+    it("should mint bSBTCCrv", async () => {
+        const totalSupply1 = await bSBTCCrvPlus.totalSupply();
+        const balance1 = await bSBTCCrvPlus.balanceOf(USER);
+        console.log('bSBTCCrv+ total supply 1: ', totalSupply1.toString());
+        console.log('bSBTCCrv+ balance 1: ', balance1.toString());
+        console.log('bSBTCCrv balance 1: ', (await bSBTCCrv.balanceOf(USER)).toString());
 
-    //     await bSBTCCrv.approve(bSBTCCrvPlus.address, toWei("0.001"), {from: USER});
-    //     await bSBTCCrvPlus.mint(toWei("0.001"), {from: USER});
+        await bSBTCCrv.approve(bSBTCCrvPlus.address, toWei("0.001"), {from: USER});
+        await bSBTCCrvPlus.mint(toWei("0.001"), {from: USER});
 
-    //     const totalSupply2 = await bSBTCCrvPlus.totalSupply();
-    //     const balance2 = await bSBTCCrvPlus.balanceOf(USER);
-    //     console.log('bSBTCCrv+ total supply 2: ', totalSupply2.toString());
-    //     console.log('bSBTCCrv+ balance 2: ', balance2.toString());
+        const totalSupply2 = await bSBTCCrvPlus.totalSupply();
+        const balance2 = await bSBTCCrvPlus.balanceOf(USER);
+        console.log('bSBTCCrv+ total supply 2: ', totalSupply2.toString());
+        console.log('bSBTCCrv+ balance 2: ', balance2.toString());
 
-    //     await timeIncreaseTo(startTime.addn(5000));
+        await timeIncreaseTo(startTime.addn(5000));
 
-    //     const totalSupply3 = await bSBTCCrvPlus.totalSupply();
-    //     const balance3 = await bSBTCCrvPlus.balanceOf(USER);
-    //     console.log('bSBTCCrv+ total supply 3: ', totalSupply3.toString());
-    //     console.log('bSBTCCrv+ balance 3: ', balance3.toString());
+        const totalSupply3 = await bSBTCCrvPlus.totalSupply();
+        const balance3 = await bSBTCCrvPlus.balanceOf(USER);
+        console.log('bSBTCCrv+ total supply 3: ', totalSupply3.toString());
+        console.log('bSBTCCrv+ balance 3: ', balance3.toString());
 
-    //     await bSBTCCrvPlus.redeem(MAX, {from: USER});
-    //     const totalSupply4 = await bSBTCCrvPlus.totalSupply();
-    //     const balance4 = await bSBTCCrvPlus.balanceOf(USER);
-    //     console.log('bSBTCCrv+ total supply 4: ', totalSupply4.toString());
-    //     console.log('bSBTCCrv+ balance 4: ', balance4.toString());
-    // });
+        await bSBTCCrvPlus.redeem(MAX, {from: USER});
+        const totalSupply4 = await bSBTCCrvPlus.totalSupply();
+        const balance4 = await bSBTCCrvPlus.balanceOf(USER);
+        console.log('bSBTCCrv+ total supply 4: ', totalSupply4.toString());
+        console.log('bSBTCCrv+ balance 4: ', balance4.toString());
+    });
     it("should harvest", async () => {
         const response = await axios.get('https://api.badger.finance/v2/reward/tree/' + BADGER_SBTCCRV_PLUS);
         console.log(response.data)
