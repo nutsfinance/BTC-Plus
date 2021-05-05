@@ -1,14 +1,14 @@
-const BadgerBTCZap = artifacts.require("BadgerBTCZap");
+const CurveBTCZap = artifacts.require("CurveBTCZap");
 const ZapProxy = artifacts.require("ZapProxy");
 
 module.exports = async function (callback) {
     try {
         const accounts = await web3.eth.getAccounts();
 
-        console.log('Deploying BadgerBTCZap...');
-        const zapimpl = await BadgerBTCZap.new();
+        console.log('Deploying CurveBTCZap...');
+        const zapimpl = await CurveBTCZap.new();
         const zapProxy = await ZapProxy.new(zapimpl.address, accounts[1], Buffer.from(''));
-        const zap = await BadgerBTCZap.at(zapProxy.address);
+        const zap = await CurveBTCZap.at(zapProxy.address);
         await zap.initialize();
 
         console.log(`Proxy admin: ${accounts[1]}`);

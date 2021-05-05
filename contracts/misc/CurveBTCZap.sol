@@ -12,9 +12,9 @@ import "../interfaces/ISinglePlus.sol";
 import "../interfaces/ICompositePlus.sol";
 
 /**
- * @dev Zap for Badger BTC.
+ * @dev Zap for Curve BTC.
  */
-contract BadgerBTCZap is Initializable {
+contract CurveBTCZap is Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -29,12 +29,12 @@ contract BadgerBTCZap is Initializable {
     address public constant BADGER_TBTCCRV_PLUS = address(0x25d8293E1d6209d6fa21983f5E46ee6CD36d7196);
     address public constant BADGER_HRENCRV = address(0xAf5A1DECfa95BAF63E0084a35c62592B774A2A87);
     address public constant BADGER_HRENCRV_PLUS = address(0xd929f4d3ACBD19107BC416685e7f6559dC07F3F5);
-    address public constant BADGER_BTC_PLUS = address(0x7cD7a5B7Ebe9F852bD1E87117b36504D22d9385B);
+    address public constant CURVE_BTC_PLUS = address(0xDe79d36aB6D2489dd36729A657a25f299Cb2Fbca);
 
     address public governance;
     
     /**
-     * @dev Initializes Badger BTC Zap.
+     * @dev Initializes Curve BTC Zap.
      */
     function initialize() public initializer {
         governance = msg.sender;
@@ -44,16 +44,16 @@ contract BadgerBTCZap is Initializable {
         IERC20Upgradeable(BADGER_TBTCCRV).safeApprove(BADGER_TBTCCRV_PLUS, uint256(int256(-1)));
         IERC20Upgradeable(BADGER_HRENCRV).safeApprove(BADGER_HRENCRV_PLUS, uint256(int256(-1)));
 
-        IERC20Upgradeable(BADGER_RENCRV_PLUS).safeApprove(BADGER_BTC_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_SBTCCRV_PLUS).safeApprove(BADGER_BTC_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_TBTCCRV_PLUS).safeApprove(BADGER_BTC_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_HRENCRV_PLUS).safeApprove(BADGER_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_RENCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_SBTCCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_TBTCCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_HRENCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
     }
 
     /**
      * @dev Returns the amount of BagerBTC+ minted.
-     * @param _singles Single pluses used to mint BadgerBTC
-     * @param _lpAmounts Amount of LP token (not single plus) used to mint BadgerBTC+
+     * @param _singles Single pluses used to mint CurveBTC
+     * @param _lpAmounts Amount of LP token (not single plus) used to mint CurveBTC+
      */
     function getMintAmount(address[] memory _singles, uint256[] memory _lpAmounts) public view returns (uint256) {
         require(_singles.length == _lpAmounts.length, "input mismatch");
@@ -64,13 +64,13 @@ contract BadgerBTCZap is Initializable {
             _amounts[i] = ISinglePlus(_singles[i]).getMintAmount(_lpAmounts[i]);
         }
 
-        return ICompositePlus(BADGER_BTC_PLUS).getMintAmount(_singles, _amounts);
+        return ICompositePlus(CURVE_BTC_PLUS).getMintAmount(_singles, _amounts);
     }
 
     /**
-     * @dev Mints BadgerBTC+.
-     * @param _singles Single pluses used to mint BadgerBTC
-     * @param _lpAmounts Amount of LP token (not single plus) used to mint BadgerBTC+
+     * @dev Mints CurveBTC+.
+     * @param _singles Single pluses used to mint CurveBTC
+     * @param _lpAmounts Amount of LP token (not single plus) used to mint CurveBTC+
      */
     function mint(address[] memory _singles, uint256[] memory _lpAmounts) public {
         require(_singles.length == _lpAmounts.length, "input mismatch");
@@ -89,19 +89,19 @@ contract BadgerBTCZap is Initializable {
             _amounts[i] = IERC20Upgradeable(_singles[i]).balanceOf(address(this));
         }
 
-        ICompositePlus(BADGER_BTC_PLUS).mint(_singles, _amounts);
-        uint256 _badgerBTCPlus = IERC20Upgradeable(BADGER_BTC_PLUS).balanceOf(address(this));
-        IERC20Upgradeable(BADGER_BTC_PLUS).safeTransfer(msg.sender, _badgerBTCPlus);
+        ICompositePlus(CURVE_BTC_PLUS).mint(_singles, _amounts);
+        uint256 _badgerBTCPlus = IERC20Upgradeable(CURVE_BTC_PLUS).balanceOf(address(this));
+        IERC20Upgradeable(CURVE_BTC_PLUS).safeTransfer(msg.sender, _badgerBTCPlus);
 
         emit Minted(msg.sender, _lps, _lpAmounts, _badgerBTCPlus);
     }
 
     /**
-     * @dev Returns the amount of tokens received in redeeming BadgerBTC+.
-     * @param _amount Amount of BadgerBTC+ to redeem.
+     * @dev Returns the amount of tokens received in redeeming CurveBTC+.
+     * @param _amount Amount of CurveBTC+ to redeem.
      */
     function getRedeemAmount(uint256 _amount) public view returns (address[] memory, uint256[] memory, uint256) {
-        (address[] memory _singles, uint256[] memory _amounts,,) = ICompositePlus(BADGER_BTC_PLUS).getRedeemAmount(_amount);
+        (address[] memory _singles, uint256[] memory _amounts,,) = ICompositePlus(CURVE_BTC_PLUS).getRedeemAmount(_amount);
 
         address[] memory _lps = new address[](_singles.length);
         uint256[] memory _lpAmounts = new uint256[](_singles.length);
@@ -111,7 +111,7 @@ contract BadgerBTCZap is Initializable {
             (_lpAmounts[i],) = ISinglePlus(_singles[i]).getRedeemAmount(_amounts[i]);
         }
 
-        // Compute the amount of BadgerBTC+ that could be mited with the returned LPs.
+        // Compute the amount of CurveBTC+ that could be mited with the returned LPs.
         // The difference can be seen as fees.
         uint256 _mintAmount = getMintAmount(_singles, _lpAmounts);
 
@@ -119,16 +119,16 @@ contract BadgerBTCZap is Initializable {
     }
 
     /**
-     * @dev Redeems BadgerBTC+.
-     * @param _amount Amount of BadgerBTC+ to redeem.
+     * @dev Redeems CurveBTC+.
+     * @param _amount Amount of CurveBTC+ to redeem.
      */
     function redeem(uint256 _amount) public {
-        // Transfers BadgerBTC+ in
-        IERC20Upgradeable(BADGER_BTC_PLUS).safeTransferFrom(msg.sender, address(this), _amount);
-        // Redeems BadgerBTC+ to single+
-        ICompositePlus(BADGER_BTC_PLUS).redeem(_amount);
+        // Transfers CurveBTC+ in
+        IERC20Upgradeable(CURVE_BTC_PLUS).safeTransferFrom(msg.sender, address(this), _amount);
+        // Redeems CurveBTC+ to single+
+        ICompositePlus(CURVE_BTC_PLUS).redeem(_amount);
 
-        address[] memory _singles = ICompositePlus(BADGER_BTC_PLUS).tokenList();
+        address[] memory _singles = ICompositePlus(CURVE_BTC_PLUS).tokenList();
         address[] memory _lps = new address[](_singles.length);
         uint256[] memory _lpAmounts = new uint256[](_singles.length);
 
