@@ -96,6 +96,8 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
 
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, _totalShares);
         emit Minted(msg.sender, _amount, _share, _newAmount);
+
+        emit Transfer(address(0x0), msg.sender, _newAmount);
     }
 
     /**
@@ -158,6 +160,8 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
 
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
         emit Redeemed(msg.sender, _underlyingAmount, _share, _amount, _fee);
+
+        emit Transfer(msg.sender, address(0x0), _amount);
     }
 
     /**

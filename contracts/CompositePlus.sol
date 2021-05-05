@@ -123,6 +123,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, _totalShares);
         emit Minted(msg.sender, _tokens, _amounts, _share, _amount);
+
+        emit Transfer(address(0x0), msg.sender, _amount);
     }
 
     /**
@@ -208,6 +210,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
         emit Redeemed(msg.sender, _redeemTokens, _redeemAmounts, _share, _amount, _fee);
+
+        emit Transfer(msg.sender, address(0x0), _amount);
     }
 
     /**
