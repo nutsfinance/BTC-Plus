@@ -4,6 +4,8 @@ const assert = require('assert');
 const BadgerBTCZap = artifacts.require("BadgerBTCZap");
 const SinglePlus = artifacts.require("SinglePlus");
 const ERC20Upgradeable = artifacts.require("ERC20Upgradeable");
+const ERC20Proxy = artifacts.require("ERC20Proxy");
+const BadgerBTCPlus = artifacts.require("BadgerBTCPlus");
 
 const BADGER_RENCRV = '0x6dEf55d2e18486B9dDfaA075bc4e4EE0B28c1545';
 const BADGER_RENCRV_PLUS = '0x87BAA3E048528d21302Fb15acd09a4e5cB5098cB';
@@ -17,6 +19,7 @@ const BADGER_BTC_PLUS = '0x7cD7a5B7Ebe9F852bD1E87117b36504D22d9385B';
 
 const SINGLES = [BADGER_RENCRV_PLUS, BADGER_SBTCCRV_PLUS, BADGER_TBTCCRV_PLUS, BADGER_HRENCRV_PLUS];
 
+const PROXY_ADMIN = "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814";
 const DEPLOYER = "0x2932516D9564CB799DDA2c16559caD5b8357a0D6";
 
 const BN = web3.utils.BN;
@@ -38,7 +41,7 @@ const assertAlmostEqual = function(actualOrig, expectedOrig) {
 
 /**
  * Start Mainnet fork node on BSC:
- * ganache-cli --fork https://mainnet.infura.io/v3/0df468116d40490fb2929a8d6664b1d2 -u "0x2932516D9564CB799DDA2c16559caD5b8357a0D6"
+ * ganache-cli --fork https://mainnet.infura.io/v3/0df468116d40490fb2929a8d6664b1d2 -u "0x2932516D9564CB799DDA2c16559caD5b8357a0D6" -u "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814"
  * 
  * Run test:
  * truffle test mainnet-fork-test/BadgerBTCZap.test.js
@@ -57,6 +60,10 @@ contract("BadgerBTCZap", async ([owner, proxyAdmin, user, user2, treasury]) => {
         btbtcCrv = await ERC20Upgradeable.at(BADGER_TBTCCRV);
         bhrenCrv = await ERC20Upgradeable.at(BADGER_HRENCRV);
         badgerBTCPlus = await ERC20Upgradeable.at(BADGER_BTC_PLUS);
+
+        // const badgerBTCPlusImpl = await BadgerBTCPlus.new();
+        // const badgerBTCPlusProxy = await ERC20Proxy.at(BADGER_BTC_PLUS);
+        // await badgerBTCPlusProxy.upgradeTo(badgerBTCPlusImpl.address, {from: PROXY_ADMIN});
 
         zap = await BadgerBTCZap.new();
         await zap.initialize();
