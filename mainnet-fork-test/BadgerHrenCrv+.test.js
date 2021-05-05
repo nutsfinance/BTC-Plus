@@ -1,12 +1,16 @@
 const { time } = require('@openzeppelin/test-helpers');
 const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 const assert = require('assert');
+const axios = require('axios');
 const BadgerHrenCrvPlus = artifacts.require("BadgerHrenCrvPlus");
 const ERC20Proxy = artifacts.require("ERC20Proxy");
 const ERC20Upgradeable = artifacts.require("ERC20Upgradeable");
 const Converter = artifacts.require("Converter");
+const IBadgerTree = artifacts.require("IBadgerTree");
 
 const BADGER_HRENCRV = "0xAf5A1DECfa95BAF63E0084a35c62592B774A2A87";
+const BADGER_HRENCRV_PLUS = "0xd929f4d3ACBD19107BC416685e7f6559dC07F3F5";
+const DEPLOYER = "0x2932516D9564CB799DDA2c16559caD5b8357a0D6";
 const USER = "0xD680aB5a98731c7A3de4f3D4CF68c04c4a3C1caE";
 
 const BN = web3.utils.BN;
@@ -34,7 +38,7 @@ const assertAlmostEqual = function(expectedOrig, actualOrig) {
 
 /**
  * Start Mainnet fork node:
- * ganache-cli --fork https://mainnet.infura.io/v3/0df468116d40490fb2929a8d6664b1d2 -u "0xD680aB5a98731c7A3de4f3D4CF68c04c4a3C1caE"
+ * ganache-cli --fork https://mainnet.infura.io/v3/0df468116d40490fb2929a8d6664b1d2 -u "0xD680aB5a98731c7A3de4f3D4CF68c04c4a3C1caE" -u "0x2932516D9564CB799DDA2c16559caD5b8357a0D6"
  * 
  * Run test:
  * truffle test mainnet-fork-test/BadgerHrenCrv+.test.js
@@ -47,15 +51,16 @@ contract("BadgerHrenCrvPlus+", async ([owner, proxyAdmin, user, user2, treasury]
 
     beforeEach(async () => {
         bhrenCrv = await ERC20Upgradeable.at(BADGER_HRENCRV);
+        bhrenCrvPlus = await BadgerHrenCrvPlus.at(BADGER_HRENCRV_PLUS);
 
-        converter = await Converter.new();
-        await converter.initialize();
-        const bhrenCrvPlusImpl = await BadgerHrenCrvPlus.new();
-        console.log(`bhrenCrv+ implementation: ${bhrenCrvPlusImpl.address}`);
-        const bhrenCrvPlusProxy = await ERC20Proxy.new(bhrenCrvPlusImpl.address, proxyAdmin, Buffer.from(''));
-        bhrenCrvPlus = await BadgerHrenCrvPlus.at(bhrenCrvPlusProxy.address);
-        bhrenCrvPlus.initialize(converter.address);
-        console.log(`bhrenCrv+: ${bhrenCrvPlus.address}`);
+        // converter = await Converter.new();
+        // await converter.initialize();
+        // const bhrenCrvPlusImpl = await BadgerHrenCrvPlus.new();
+        // console.log(`bhrenCrv+ implementation: ${bhrenCrvPlusImpl.address}`);
+        // const bhrenCrvPlusProxy = await ERC20Proxy.new(bhrenCrvPlusImpl.address, proxyAdmin, Buffer.from(''));
+        // bhrenCrvPlus = await BadgerHrenCrvPlus.at(bhrenCrvPlusProxy.address);
+        // bhrenCrvPlus.initialize(converter.address);
+        // console.log(`bhrenCrv+: ${bhrenCrvPlus.address}`);
 
         startTime = (await time.latest()).addn(10);
     });
@@ -86,5 +91,21 @@ contract("BadgerHrenCrvPlus+", async ([owner, proxyAdmin, user, user2, treasury]
         const balance4 = await bhrenCrvPlus.balanceOf(USER);
         console.log('bhrenCrv+ total supply 4: ', totalSupply4.toString());
         console.log('bhrenCrv+ balance 4: ', balance4.toString());
+    });
+    it("should harvest", async () => {
+        const response = await axios.get('https://api.badger.finance/v2/reward/tree/' + BADGER_HRENCRV_PLUS);
+        console.log(response.data)
+        const badgerTree = await IBadgerTree.at('0x660802Fc641b154aBA66a62137e71f331B6d787A');
+        const claimableFor = await badgerTree.getClaimableFor(BADGER_HRENCRV_PLUS, response.data.tokens, response.data.cumulativeAmounts);
+        console.log(claimableFor[0]);
+        console.log(claimableFor[1][0].toString());
+
+        const totalSupply1 = await bhrenCrvPlus.totalSupply();
+        await bhrenCrvPlus.harvest(response.data.tokens, response.data.cumulativeAmounts, response.data.index,
+            response.data.cycle, response.data.proof, claimableFor[1], {from: DEPLOYER});
+        const totalSupply2 = await bhrenCrvPlus.totalSupply();
+
+        console.log('Total supply before: ' + totalSupply1.toString());
+        console.log('Total supply after: ' + totalSupply2.toString());
     });
 });
