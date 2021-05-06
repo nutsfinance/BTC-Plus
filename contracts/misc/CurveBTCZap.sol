@@ -100,7 +100,7 @@ contract CurveBTCZap is Initializable {
      * @dev Returns the amount of tokens received in redeeming CurveBTC+.
      * @param _amount Amount of CurveBTC+ to redeem.
      */
-    function getRedeemAmount(uint256 _amount) public view returns (address[] memory, uint256[] memory, uint256) {
+    function getRedeemAmount(uint256 _amount) public view returns (address[] memory, uint256[] memory) {
         (address[] memory _singles, uint256[] memory _amounts,,) = ICompositePlus(CURVE_BTC_PLUS).getRedeemAmount(_amount);
 
         address[] memory _lps = new address[](_singles.length);
@@ -111,11 +111,7 @@ contract CurveBTCZap is Initializable {
             (_lpAmounts[i],) = ISinglePlus(_singles[i]).getRedeemAmount(_amounts[i]);
         }
 
-        // Compute the amount of CurveBTC+ that could be mited with the returned LPs.
-        // The difference can be seen as fees.
-        uint256 _mintAmount = getMintAmount(_singles, _lpAmounts);
-
-        return (_lps, _lpAmounts, _amount.sub(_mintAmount));
+        return (_lps, _lpAmounts);
     }
 
     /**

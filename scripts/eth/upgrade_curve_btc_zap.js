@@ -1,7 +1,7 @@
 const CurveBTCZap = artifacts.require("CurveBTCZap");
 const ERC20Proxy = artifacts.require("ERC20Proxy");
 
-const CURVE_BTC_ZAP = '0x4779798fd87B62AB8EC3cc704547A957c496Acb8';
+const CURVE_BTC_ZAP = '0x6722d631072beDaB698b7bFe8095D34FF7955a78';
 
 module.exports = async function (callback) {
     try {
