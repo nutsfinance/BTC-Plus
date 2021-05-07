@@ -8,21 +8,29 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import "../../interfaces/yfi/IYearnV2Vault.sol";
 import "../../SinglePlus.sol";
 
 /**
- * @dev Single Plus for Aave v2 WBTC.
+ * @dev Single Plus for Yearn HBTCCrv vault.
  */
-contract AaveWBTCPlus is SinglePlus {
+contract YearnHBTCCrvPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    address public constant AAVE_WBTC = address(0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656);
+    address public constant YEARN_HBTCCRV = address(0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E);
 
     /**
-     * @dev Initializes aWBTC+.
+     * @dev Initializes yHBTCCrv+.
      */
     function initialize() public initializer {
-        SinglePlus.initialize(AAVE_WBTC, "", "");
+        SinglePlus.initialize(YEARN_HBTCCRV, "", "");
+    }
+
+    /**
+     * @dev Returns the amount of single plus token is worth for one underlying token, expressed in WAD.
+     */
+    function _conversionRate() internal view virtual override returns (uint256) {
+        return IYearnV2Vault(YEARN_HBTCCRV).pricePerShare();
     }
 }
