@@ -31,6 +31,7 @@ contract BadgerHrenCrvPlus is SinglePlus {
     address public constant FARM = address(0xa0246c9032bC3A600820415aE600c6388619A14D);
     address public constant RENCRV = address(0x49849C98ae39Fff122806C06791Fa73784FB3675);
     address public constant UNISWAP = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // Uniswap RouterV2
+    address public constant SUSHISWAP = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);    // Sushiswap RouterV2
     address public constant REN_SWAP = address(0x93054188d876f558f4a66B2EF1d97d16eDf0895B); // REN swap
 
     /**
@@ -58,21 +59,20 @@ contract BadgerHrenCrvPlus is SinglePlus {
         // 1. Harvest from Badger Tree
         IBadgerTree(BADGER_TREE).claim(_tokens, _cumulativeAmounts, _index, _cycle, _merkleProof, _amountsToClaim);
 
-        // 2. Badger --> WETH --> WBTC
+        // 2. Sushi: Badger --> WBTC
         uint256 _badger = IERC20Upgradeable(BADGER).balanceOf(address(this));
         if (_badger > 0) {
-            IERC20Upgradeable(BADGER).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(BADGER).safeApprove(UNISWAP, _badger);
+            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, 0);
+            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, _badger);
 
-            address[] memory _path = new address[](3);
+            address[] memory _path = new address[](2);
             _path[0] = BADGER;
-            _path[1] = WETH;
-            _path[2] = WBTC;
+            _path[1] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
-        // 3: Digg --> WBTC
+        // 3: Uniswap: Digg --> WBTC
         uint256 _digg = IERC20Upgradeable(DIGG).balanceOf(address(this));
         if (_digg > 0) {
             IERC20Upgradeable(DIGG).safeApprove(UNISWAP, 0);
@@ -85,7 +85,7 @@ contract BadgerHrenCrvPlus is SinglePlus {
             IUniswapRouter(UNISWAP).swapExactTokensForTokens(_digg, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
-        // 4. Farm --> WETH --> WBTC
+        // 4. Uniswap: Farm --> WETH --> WBTC
         uint256 _farm = IERC20Upgradeable(FARM).balanceOf(address(this));
         if (_farm > 0) {
             IERC20Upgradeable(FARM).safeApprove(UNISWAP, 0);

@@ -30,6 +30,7 @@ contract BadgerTBTCCrvPlus is SinglePlus {
     address public constant DIGG = address(0x798D1bE841a82a273720CE31c822C61a67a601C3);
     address public constant TBTCCRV = address(0x64eda51d3Ad40D56b9dFc5554E06F94e1Dd786Fd);
     address public constant UNISWAP = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // Uniswap RouterV2
+    address public constant SUSHISWAP = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);    // Sushiswap RouterV2
     address public constant TBTC_SWAP = address(0xC25099792E9349C7DD09759744ea681C7de2cb66); // tBTC swap
     address public constant TBTC_DEPOSIT = address(0xaa82ca713D94bBA7A89CEAB55314F9EfFEdDc78c);   // tBTC deposit
 
@@ -58,21 +59,20 @@ contract BadgerTBTCCrvPlus is SinglePlus {
         // 1. Harvest from Badger Tree
         IBadgerTree(BADGER_TREE).claim(_tokens, _cumulativeAmounts, _index, _cycle, _merkleProof, _amountsToClaim);
 
-        // 2. Badger --> WETH --> WBTC
+        // 2. Sushi: Badger --> WBTC
         uint256 _badger = IERC20Upgradeable(BADGER).balanceOf(address(this));
         if (_badger > 0) {
-            IERC20Upgradeable(BADGER).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(BADGER).safeApprove(UNISWAP, _badger);
+            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, 0);
+            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, _badger);
 
-            address[] memory _path = new address[](3);
+            address[] memory _path = new address[](2);
             _path[0] = BADGER;
-            _path[1] = WETH;
-            _path[2] = WBTC;
+            _path[1] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
-        // 3: Digg --> WBTC
+        // 3. Uniswap: Digg --> WBTC
         uint256 _digg = IERC20Upgradeable(DIGG).balanceOf(address(this));
         if (_digg > 0) {
             IERC20Upgradeable(DIGG).safeApprove(UNISWAP, 0);

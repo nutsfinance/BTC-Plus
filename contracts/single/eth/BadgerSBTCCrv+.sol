@@ -30,6 +30,7 @@ contract BadgerSBTCCrvPlus is SinglePlus {
     address public constant DIGG = address(0x798D1bE841a82a273720CE31c822C61a67a601C3);
     address public constant SBTCCRV = address(0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3);
     address public constant UNISWAP = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // Uniswap RouterV2
+    address public constant SUSHISWAP = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);    // Sushiswap RouterV2
     address public constant SBTC_SWAP = address(0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714); // sBTC swap
 
     /**
@@ -57,21 +58,20 @@ contract BadgerSBTCCrvPlus is SinglePlus {
         // 1. Harvest from Badger Tree
         IBadgerTree(BADGER_TREE).claim(_tokens, _cumulativeAmounts, _index, _cycle, _merkleProof, _amountsToClaim);
 
-        // 2. Badger --> WETH --> WBTC
+        // 2. Sushi: Badger --> WBTC
         uint256 _badger = IERC20Upgradeable(BADGER).balanceOf(address(this));
         if (_badger > 0) {
-            IERC20Upgradeable(BADGER).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(BADGER).safeApprove(UNISWAP, _badger);
+            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, 0);
+            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, _badger);
 
-            address[] memory _path = new address[](3);
+            address[] memory _path = new address[](2);
             _path[0] = BADGER;
-            _path[1] = WETH;
-            _path[2] = WBTC;
+            _path[1] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
-        // 3: Digg --> WBTC
+        // 3: Uniswap: Digg --> WBTC
         uint256 _digg = IERC20Upgradeable(DIGG).balanceOf(address(this));
         if (_digg > 0) {
             IERC20Upgradeable(DIGG).safeApprove(UNISWAP, 0);
