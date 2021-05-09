@@ -38,15 +38,30 @@ interface ICompositePlus is IPlus {
     function mint(address[] calldata _tokens, uint256[] calldata _amounts) external;
 
     /**
-     * @dev Returns the amount of tokens received in redeeming the composite plus token.
+     * @dev Returns the amount of tokens received in redeeming the composite plus token proportionally.
      * @param _amount Amounf of composite plus to redeem.
      * @return Addresses and amounts of tokens returned as well as fee collected.
      */
-    function getRedeemAmount(uint256 _amount) external view returns (address[] memory, uint256[] memory, uint256, uint256);
+    function getRedeemAmount(uint256 _amount) external view returns (address[] memory, uint256[] memory, uint256);
 
     /**
-     * @dev Redeems the composite plus token. In the current implementation only proportional redeem is supported.
+     * @dev Redeems the composite plus token proportionally.
      * @param _amount Amount of composite plus token to redeem. -1 means redeeming all shares.
      */
     function redeem(uint256 _amount) external;
+
+    /**
+     * @dev Returns the amount of tokens received in redeeming the composite plus token to a single token.
+     * @param _token Address of the token to redeem to.
+     * @param _amount Amounf of composite plus to redeem.
+     * @return Amount of token received and fee collected.
+     */
+    function getRedeemSingleAmount(address _token, uint256 _amount) external view returns (uint256, uint256);
+
+    /**
+     * @dev Redeems the composite plus token to a single token.
+     * @param _token Address of the token to redeem to.
+     * @param _amount Amount of composite plus token to redeem. -1 means redeeming all shares.
+     */
+    function redeemSingle(address _token, uint256 _amount) external;
 }

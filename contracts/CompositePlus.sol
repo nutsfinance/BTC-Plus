@@ -45,7 +45,6 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
     // Minimum liquidity ratio sets the upper bound of impermanent loss caused by rebalance.
     uint256 public minLiquidityRatio;
 
-
     /**
      * @dev Initlaizes the composite plus token.
      */
@@ -128,29 +127,15 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Returns the amount of tokens received in redeeming the composite plus token.
+     * @dev Returns the amount of tokens received in redeeming the composite plus token proportionally.
      * @param _amount Amounf of composite plus to redeem.
      * @return Addresses and amounts of tokens returned as well as fee collected.
      */
-    function getRedeemAmount(uint256 _amount) external view override returns (address[] memory, uint256[] memory, uint256, uint256) {
-        require(_amount > 0, "zero amount");
-
-        // Special handling of -1 is required here in order to fully redeem all shares, since interest
-        // will be accrued between the redeem transaction is signed and mined.
-        uint256 _share;
-        if (_amount == uint256(int256(-1))) {
-            _share = userShare[msg.sender];
-            _amount = _share.mul(index).div(WAD);
-        } else {
-            _share  = _amount.mul(WAD).div(index);
-        }
-
-        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        // Liquidity ratio is in WAD and redeem fee is in 0.01%
-        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
-        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
-        uint256 _fee = _amount.sub(_withdrawAmount);
+    function getRedeemAmount(uint256 _amount) external view override returns (address[] memory, uint256[] memory, uint256) {
+        // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
+        // Redeem fee is in 0.01%
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
 
         address[] memory _redeemTokens = tokens;
         uint256[] memory _redeemAmounts = new uint256[](_redeemTokens.length);
@@ -162,11 +147,11 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_totalSupply);
         }
 
-        return (_redeemTokens, _redeemAmounts, _share, _fee);
+        return (_redeemTokens, _redeemAmounts, _fee);
     }
 
     /**
-     * @dev Redeems the composite plus token. In the current implementation only proportional redeem is supported.
+     * @dev Redeems the composite plus token proportionally.
      * @param _amount Amount of composite plus token to redeem. -1 means redeeming all shares.
      */
     function redeem(uint256 _amount) external override nonReentrant {
@@ -185,15 +170,29 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             _share  = _amount.mul(WAD).div(index);
         }
 
-        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
-        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
-        uint256 _fee = _amount.sub(_withdrawAmount);
+        // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
+        // Redeem fee is in 0.01%
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+        uint256 _totalSupply = totalSupply();
 
+        // Update the treasury balance
+        if (_fee > 0) {
+            uint256 _feeShare = _fee.mul(WAD).div(index);
+            // Transfers fee shares to treasury
+            userShare[treasury] = userShare[treasury].add(_feeShare);
+            totalShares = totalShares.add(_feeShare);
+        }
+
+        // Updates the caller balance
+        uint256 _oldShare = userShare[msg.sender];
+        uint256 _newShare = _oldShare.sub(_share);
+        totalShares = totalShares.sub(_share);
+        userShare[msg.sender] = _newShare;
+
+        // Withdraws tokens proportionally
         address[] memory _redeemTokens = tokens;
         uint256[] memory _redeemAmounts = new uint256[](_redeemTokens.length);
-        uint256 _totalSupply = totalSupply();
         for (uint256 i = 0; i < _redeemTokens.length; i++) {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
             if (_balance == 0)   continue;
@@ -202,16 +201,89 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             IERC20Upgradeable(_redeemTokens[i]).safeTransfer(msg.sender, _redeemAmounts[i]);
         }
 
-        // Updates the balance
+        emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
+        emit Redeemed(msg.sender, _redeemTokens, _redeemAmounts, _share, _amount, _fee);
+
+        // Caller transfers _fee to treasury
+        emit Transfer(msg.sender, treasury, _fee);
+        // Caller burns _amount - _fee
+        emit Transfer(msg.sender, address(0x0), _amount.sub(_fee));
+    }
+
+    /**
+     * @dev Returns the amount of tokens received in redeeming the composite plus token to a single token.
+     * @param _token Address of the token to redeem to.
+     * @param _amount Amounf of composite plus to redeem.
+     * @return Amount of token received and fee collected.
+     */
+    function getRedeemSingleAmount(address _token, uint256 _amount) external view override returns (uint256, uint256) {
+        require(tokenSupported[_token], "not supported");
+        require(IERC20Upgradeable(_token).balanceOf(address(this)) >= _amount, "insufficient token");
+
+        // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
+        // Redeem fee is in 0.01%
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+
+        return (_withdrawAmount, _fee);
+    }
+
+    /**
+     * @dev Redeems the composite plus token to a single token.
+     * @param _token Address of the token to redeem to.
+     * @param _amount Amount of composite plus token to redeem. -1 means redeeming all shares.
+     */
+    function redeemSingle(address _token, uint256 _amount) external override nonReentrant {
+        require(_amount > 0, "zero amount");
+        require(tokenSupported[_token], "not supported");
+
+        // Rebase first to make index up-to-date
+        rebase();
+
+        // Special handling of -1 is required here in order to fully redeem all shares, since interest
+        // will be accrued between the redeem transaction is signed and mined.
+        uint256 _share;
+        if (_amount == uint256(int256(-1))) {
+            _share = userShare[msg.sender];
+            _amount = _share.mul(index).div(WAD);
+        } else {
+            _share  = _amount.mul(WAD).div(index);
+        }
+        require(IERC20Upgradeable(_token).balanceOf(address(this)) >= _amount, "insufficient token");
+
+        // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
+        // Redeem fee is in 0.01%
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+
+        // Update the treasury balance
+        if (_fee > 0) {
+            uint256 _feeShare = _fee.mul(WAD).div(index);
+            // Transfers fee shares to treasury
+            userShare[treasury] = userShare[treasury].add(_feeShare);
+            totalShares = totalShares.add(_feeShare);
+        }
+
+        // Updates the caller balance
         uint256 _oldShare = userShare[msg.sender];
         uint256 _newShare = _oldShare.sub(_share);
         totalShares = totalShares.sub(_share);
         userShare[msg.sender] = _newShare;
 
+        // Withdraws the token
+        IERC20Upgradeable(_token).safeTransfer(msg.sender, _withdrawAmount);
+
+        address[] memory _redeemTokens = new address[](1);
+        _redeemTokens[0] = _token;
+        uint256[] memory _redeemAmounts = new uint256[](1);
+        _redeemAmounts[0] = _withdrawAmount;
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
         emit Redeemed(msg.sender, _redeemTokens, _redeemAmounts, _share, _amount, _fee);
 
-        emit Transfer(msg.sender, address(0x0), _amount);
+        // Caller transfers _fee to treasury
+        emit Transfer(msg.sender, treasury, _fee);
+        // Caller burns _amount - _fee
+        emit Transfer(msg.sender, address(0x0), _amount.sub(_fee));
     }
 
     /**

@@ -12,9 +12,9 @@ const assertAlmostEqual = function(expectedOrig, actualOrig) {
     
     if (expected.toString() === "0") {
         const _1e18 = new BN('10').pow(new BN('18'));
-        assert.ok(actual.muln(100).div(_1e18) <= 1, `Expected ${expected}, actual ${actual}`);
+        assert.ok(actual.muln(10000).div(_1e18) <= 1, `Expected ${expected}, actual ${actual}`);
     } else {
-        const diff = expected.sub(actual).abs().muln(100).div(expected);
+        const diff = expected.sub(actual).abs().muln(10000).div(expected);
         assert.ok(diff.toNumber() <= 1, `Expected ${expected}, actual ${actual}`);
     }
 }
@@ -359,8 +359,7 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         assert.deepStrictEqual(result[0], [plus1.address, plus2.address]);
         assertAlmostEqual(result[1][0].toString(), toWei("0.8"));
         assertAlmostEqual(result[1][1].toString(), toWei("1.6"));
-        assertAlmostEqual(result[2].toString(), toWei("2"));
-        assert.strictEqual(result[3].toString(), "0");
+        assert.strictEqual(result[2].toString(), "0");
     });
 
     it("should redeem all BTC+", async () => {
@@ -453,25 +452,40 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // Set redeem fee to 1%
         await composite.setRedeemFee(100);
 
+        assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
+        assertAlmostEqual((await composite.balanceOf(user2)).toString(), toWei("6"));
+        assertAlmostEqual((await composite.userShare(user2)).toString(), toWei("5"));
+        assertAlmostEqual((await composite.balanceOf(treasury)).toString(), toWei("0"));
+        assertAlmostEqual((await composite.userShare(treasury)).toString(), toWei("0"));
+        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("66"));
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("55"));
+        assertAlmostEqual((await composite.totalUnderlying()).toString(), toWei("66"));
+        assert.strictEqual((await composite.liquidityRatio()).toString(), toWei("1"));
+
         // Redeems 2.4 BTC+ from user2
         await composite.redeem(toWei("2.4"), {from: user2});
         assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
         assertAlmostEqual((await composite.balanceOf(user2)).toString(), toWei("3.6"));
-        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("63.6"));
         assertAlmostEqual((await composite.userShare(user2)).toString(), toWei("3"));
-        assertAlmostEqual((await composite.totalShares()).toString(), toWei("53"));
+        assertAlmostEqual((await composite.balanceOf(treasury)).toString(), toWei("0.024"));
+        assertAlmostEqual((await composite.userShare(treasury)).toString(), toWei("0.02"));
+        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("63.624"));
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("53.02"));
+        assertAlmostEqual((await composite.totalUnderlying()).toString(), toWei("63.624"));
+        assert.strictEqual((await composite.liquidityRatio()).toString(), toWei("1"));
 
         // User2 should get 0.792 plus1 and 1.584 plus2
+        // 2.4 - 0.024 = 2.376
+        // 2.376 / 3 = 0.792
         assertAlmostEqual((await plus1.balanceOf(user2)).toString(), toWei("0.792"));
+        // 2.372 * 2 / 3 = 1.584
         assertAlmostEqual((await plus2.balanceOf(user2)).toString(), toWei("1.584"));
 
         // Should collect the fees after another round of rebase!
         await composite.rebase();
-        // Collect 2.4 * 1% = 0.024 BTC+ from redeem fee.
-        // 63.6 + 0.024 = 63.624
-        assertAlmostEqual((await composite.totalShares()).toString(), toWei("53"));
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("53.02"));
         assertAlmostEqual((await composite.totalSupply()).toString(), toWei("63.624"));
-        assertAlmostEqual((await composite.index()).toString(), toWei("1.20045"));
+        assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
     });
 
     it("should return correct redeem amounts with fee", async () => {
@@ -520,9 +534,8 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         // User should get 0.792 plus1 and 1.584 plus2
         assertAlmostEqual(result[1][0].toString(), toWei("0.792"));
         assertAlmostEqual(result[1][1].toString(), toWei("1.584"));
-        assertAlmostEqual(result[2].toString(), toWei("2"));
         // Collect 2.4 * 1% = 0.024 BTC+ from redeem fee.
-        assert.strictEqual(result[3].toString(), toWei("0.024"));
+        assert.strictEqual(result[2].toString(), toWei("0.024"));
     });
 
     it("should redeem all BTC+ with fee", async () => {
@@ -569,9 +582,14 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         await composite.redeem(MAX, {from: user2});
         assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
         assertAlmostEqual((await composite.balanceOf(user2)).toString(), toWei("0"));
-        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("60"));
         assert.strictEqual((await composite.userShare(user2)).toString(), toWei("0"));
-        assertAlmostEqual((await composite.totalShares()).toString(), toWei("50"));
+        // 6 * 2.5% = 0.15
+        assertAlmostEqual((await composite.balanceOf(treasury)).toString(), toWei("0.15"));
+        assertAlmostEqual((await composite.userShare(treasury)).toString(), toWei("0.125"));
+        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("60.15"));
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("50.125"));
+        assertAlmostEqual((await composite.totalUnderlying()).toString(), toWei("60.15"));
+        assert.strictEqual((await composite.liquidityRatio()).toString(), toWei("1"));
 
         // User2 should get 1.95 plus1 and 3.9 plus2
         assertAlmostEqual((await plus1.balanceOf(user2)).toString(), toWei("1.95"));
@@ -581,9 +599,127 @@ contract("CompositePlus", async ([owner, treasury, strategist, user1, user2, use
         await composite.rebase();
         // Collect 6 * 2.5% = 0.15 BTC+ from redeem fee.
         // 60 + 0.15 = 60.15
-        assertAlmostEqual((await composite.totalShares()).toString(), toWei("50"));
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("50.125"));
         assertAlmostEqual((await composite.totalSupply()).toString(), toWei("60.15"));
-        assertAlmostEqual((await composite.index()).toString(), toWei("1.203"));
+        assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
+        assertAlmostEqual((await composite.totalUnderlying()).toString(), toWei("60.15"));
+        assert.strictEqual((await composite.liquidityRatio()).toString(), toWei("1"));
+    });
+
+    it("should return correct redeem single amounts with fee", async () => {
+        // Mint 20 token1 to user1
+        await token1.mint(user1, "20000000");
+        // Mint 20 plus1 to user1
+        await token1.approve(plus1.address, "20000000", {from: user1});
+        await plus1.mint("20000000", {from: user1});
+        // Mint 30 token2 to user1
+        await token2.mint(user1, toWei("30"));
+        // Mint 30 plus2 to user1
+        await token2.approve(plus2.address, toWei("30"), {from: user1});
+        await plus2.mint(toWei("30"), {from: user1});
+
+        // Mint 50 composite
+        await plus1.approve(composite.address, toWei("20"), {from: user1});
+        await plus2.approve(composite.address, toWei("30"), {from: user1});
+        await composite.mint([plus1.address, plus2.address], [toWei("20"), toWei("30")], {from: user1});
+
+        // Deposit token1 and token2 into strategies
+        await plus1.invest();
+        await plus2.invest();
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
+        await plus1.rebase();
+        await plus2.rebase();
+        await composite.rebase();
+
+        // Mint 6 token2 to user2
+        await token2.mint(user2, toWei("6"));
+        // Mint 6 plus2 to user2
+        await token2.approve(plus2.address, toWei("6"), {from: user2});
+        await plus2.mint(toWei("6"), {from: user2});
+        // Mint 6 BTC+ to user2
+        await plus2.approve(composite.address, toWei("6"), {from: user2});
+        await composite.mint([plus2.address, plus1.address], [toWei("6"), 0], {from: user2});
+
+        // Set redeem fee to 1%
+        await composite.setRedeemFee(100);
+
+        // Redeems 2.4 BTC+ from user2
+        const result = await composite.getRedeemSingleAmount(plus1.address, toWei("2.4"));
+        // 2.4 - 0.024 = 2.376
+        assert.strictEqual(result[0].toString(), toWei("2.376"));
+        // Collect 2.4 * 1% = 0.024 BTC+ from redeem fee.
+        assert.strictEqual(result[1].toString(), toWei("0.024"));
+    });
+
+    it("should redeem all BTC+ to single token with fee", async () => {
+        // Mint 20 token1 to user1
+        await token1.mint(user1, "20000000");
+        // Mint 20 plus1 to user1
+        await token1.approve(plus1.address, "20000000", {from: user1});
+        await plus1.mint("20000000", {from: user1});
+        // Mint 30 token2 to user1
+        await token2.mint(user1, toWei("30"));
+        // Mint 30 plus2 to user1
+        await token2.approve(plus2.address, toWei("30"), {from: user1});
+        await plus2.mint(toWei("30"), {from: user1});
+
+        // Mint 50 composite
+        await plus1.approve(composite.address, toWei("20"), {from: user1});
+        await plus2.approve(composite.address, toWei("30"), {from: user1});
+        await composite.mint([plus1.address, plus2.address], [toWei("20"), toWei("30")], {from: user1});
+
+        // Deposit token1 and token2 into strategies
+        await plus1.invest();
+        await plus2.invest();
+        // Harvest 2 token1 in plus1
+        await token1.mint(plus1.address, "2000000");
+        // Harvest 8 token2 in plus2
+        await token2.mint(plus2.address, toWei("8"));
+        await plus1.rebase();
+        await plus2.rebase();
+        await composite.rebase();
+
+        // Mint 6 token2 to user2
+        await token2.mint(user2, toWei("6"));
+        // Mint 6 plus2 to user2
+        await token2.approve(plus2.address, toWei("6"), {from: user2});
+        await plus2.mint(toWei("6"), {from: user2});
+        // Mint 6 BTC+ to user2
+        await plus2.approve(composite.address, toWei("6"), {from: user2});
+        await composite.mint([plus2.address, plus1.address], [toWei("6"), 0], {from: user2});
+
+        // Set redeem fee to 2.5%
+        await composite.setRedeemFee(250);
+
+        // Redeems all BTC+ from user2
+        await composite.redeemSingle(plus1.address, MAX, {from: user2});
+        assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
+        assertAlmostEqual((await composite.balanceOf(user2)).toString(), toWei("0"));
+        assert.strictEqual((await composite.userShare(user2)).toString(), toWei("0"));
+        // 6 * 2.5% = 0.15
+        assertAlmostEqual((await composite.balanceOf(treasury)).toString(), toWei("0.15"));
+        assertAlmostEqual((await composite.userShare(treasury)).toString(), toWei("0.125"));
+        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("60.15"));
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("50.125"));
+        assertAlmostEqual((await composite.totalUnderlying()).toString(), toWei("60.15"));
+        assert.strictEqual((await composite.liquidityRatio()).toString(), toWei("1"));
+
+        // User2 should get 5.85 plus1
+        assertAlmostEqual((await plus1.balanceOf(user2)).toString(), toWei("5.85"));
+        assertAlmostEqual((await plus2.balanceOf(user2)).toString(), toWei("0"));
+
+        // Should collect the fees after another round of rebase!
+        await composite.rebase();
+        // Collect 6 * 2.5% = 0.15 BTC+ from redeem fee.
+        // 60 + 0.15 = 60.15
+        assertAlmostEqual((await composite.totalShares()).toString(), toWei("50.125"));
+        assertAlmostEqual((await composite.totalSupply()).toString(), toWei("60.15"));
+        assertAlmostEqual((await composite.index()).toString(), toWei("1.2"));
+        assertAlmostEqual((await composite.totalUnderlying()).toString(), toWei("60.15"));
+        assert.strictEqual((await composite.liquidityRatio()).toString(), toWei("1"));
     });
 
     it("should transfer BTC+", async () => {
