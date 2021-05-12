@@ -14,6 +14,7 @@ const DODO_AC_BUSD = "0x8Aa8f56A255b970971414A993DB754387A09E1EB";
 const AUTOBTC_V2_PLUS = "0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3";
 const BTCB_PLUS = "0xe884E6695C4cB3c8DEFFdB213B50f5C2a1a9E0A2";
 const PANCAKE_AC_BNB = "0x9e9877f2e46a7B74af77429afD7Ce08512179946";
+const PANCAKE_BTCB_PLUS_BTCB = '0x3e51Ed4038E0dFbF79A19EBc30b91477Bc357A1A';
 
 module.exports = async function (callback) {
     try {
@@ -82,12 +83,19 @@ module.exports = async function (callback) {
         // await gaugeController.addGauge(gauge.address, true, web3.utils.toWei("1.5"), "0");
         // console.log(`BTCB+ Gauge: ${gauge.address}`);
 
-        console.log('Deploying liquidity gauge for Pancake-AC-BNB...');
+        // console.log('Deploying liquidity gauge for Pancake-AC-BNB...');
+        // gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
+        // gauge = await LiquidityGauge.at(gaugeProxy.address);
+        // await gauge.initialize(PANCAKE_AC_BNB, GAUGE_CONTROLLER, VOTING_ESCROW);
+        // await gaugeController.addGauge(gauge.address, false, "0", "0");
+        // console.log(`Pancake-AC-BNB Gauge: ${gauge.address}`);
+
+        console.log('Deploying liquidity gauge for Pancake-BTCB+-BTCB...');
         gaugeProxy = await LiquidityGaugeProxy.new(gaugeImpl.address, accounts[1], Buffer.from(''));
         gauge = await LiquidityGauge.at(gaugeProxy.address);
-        await gauge.initialize(PANCAKE_AC_BNB, GAUGE_CONTROLLER, VOTING_ESCROW);
+        await gauge.initialize(PANCAKE_BTCB_PLUS_BTCB, GAUGE_CONTROLLER, VOTING_ESCROW);
         await gaugeController.addGauge(gauge.address, false, "0", "0");
-        console.log(`Pancake-AC-BNB Gauge: ${gauge.address}`);
+        console.log(`Pancake-BTCB+-BTCB Gauge: ${gauge.address}`);
 
         callback();
     } catch (e) {
