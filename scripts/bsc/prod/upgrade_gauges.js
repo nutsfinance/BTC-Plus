@@ -9,6 +9,7 @@ const gauges = [
     "0x7EB9fe8107E587Bc7288C65E64D49A6A2d9493d4",
     '0x00f80eA8Ef9a7C974Fa4Cc3F049bE59ba758d906',
     "0xa1DB7a3D26F151c5b93445b2da46f7bed5bcD5Fa",
+    "0x8E6d090e70388977bcd588aDCCAc54d1FAe81Fa6",
 ];
 
 module.exports = async function (callback) {
