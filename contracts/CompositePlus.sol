@@ -313,7 +313,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _rebalancer Address of the rebalancer contract to invoke.
      * @param _data Data to invoke on rebalancer contract.
      */
-    function rebalance(address[] memory _tokens, uint256[] memory _amounts, address _rebalancer, bytes calldata _data) external onlyStrategist {
+    function rebalance(address[] calldata _tokens, uint256[] calldata _amounts, address _rebalancer, bytes calldata _data) external override onlyStrategist {
         require(rebalancers[_rebalancer], "invalid rebalancer");
         require(_tokens.length == _amounts.length, "invalid input");
 

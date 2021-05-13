@@ -30,4 +30,13 @@ interface ICompositePlus is IPlus {
      * @param _amount Amount of composite plus token to redeem. -1 means redeeming all shares.
      */
     function redeem(uint256 _amount) external;
+
+    /**
+     * @dev Rebalances the basket, e.g. for a better yield. Only strategist can perform rebalance.
+     * @param _tokens Address of the tokens to withdraw from the basket.
+     * @param _amounts Amounts of the tokens to withdraw from the basket.
+     * @param _rebalancer Address of the rebalancer contract to invoke.
+     * @param _data Data to invoke on rebalancer contract.
+     */
+    function rebalance(address[] calldata _tokens, uint256[] calldata _amounts, address _rebalancer, bytes calldata _data) external;
 }
