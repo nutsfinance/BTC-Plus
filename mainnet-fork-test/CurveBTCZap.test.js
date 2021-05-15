@@ -61,39 +61,52 @@ contract("CurveBTCZap", async ([owner, proxyAdmin, user, user2, treasury]) => {
         bhrenCrv = await ERC20Upgradeable.at(BADGER_HRENCRV);
         curveBTCPlus = await ERC20Upgradeable.at(CURVE_BTC_PLUS);
 
-        // const curveBTCPlusImpl = await CurveBTCPlus.new();
-        // const curveBTCPlusProxy = await ERC20Proxy.at(CURVE_BTC_PLUS);
-        // await curveBTCPlusProxy.upgradeTo(curveBTCPlusImpl.address, {from: PROXY_ADMIN});
+        const curveBTCPlusImpl = await CurveBTCPlus.new();
+        const curveBTCPlusProxy = await ERC20Proxy.at(CURVE_BTC_PLUS);
+        await curveBTCPlusProxy.upgradeTo(curveBTCPlusImpl.address, {from: PROXY_ADMIN});
 
         zap = await CurveBTCZap.new();
         await zap.initialize();
     });
-    it("should mint and redeem CurveBTC+", async () => {
-        const mintAmount = await zap.getMintAmount(SINGLES, [toWei("0.001"), toWei("0.001"), toWei("0.001"), toWei("0.001")]);
-        console.log(mintAmount.toString());
-        await brenCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
-        await bsbtcCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
-        await btbtcCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
-        await bhrenCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
+    // it("should mint and redeem CurveBTC+", async () => {
+    //     const mintAmount = await zap.getMintAmount(SINGLES, [toWei("0.001"), toWei("0.001"), toWei("0.001"), toWei("0.001")]);
+    //     console.log(mintAmount.toString());
+    //     await brenCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
+    //     await bsbtcCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
+    //     await btbtcCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
+    //     await bhrenCrv.approve(zap.address, toWei("0.001"), {from: DEPLOYER});
 
-        // console.log((await brenCrv.balanceOf(DEPLOYER)).toString());
-        // console.log((await bsbtcCrv.balanceOf(DEPLOYER)).toString());
-        // console.log((await btbtcCrv.balanceOf(DEPLOYER)).toString());
-        // console.log((await bhrenCrv.balanceOf(DEPLOYER)).toString());
+    //     // console.log((await brenCrv.balanceOf(DEPLOYER)).toString());
+    //     // console.log((await bsbtcCrv.balanceOf(DEPLOYER)).toString());
+    //     // console.log((await btbtcCrv.balanceOf(DEPLOYER)).toString());
+    //     // console.log((await bhrenCrv.balanceOf(DEPLOYER)).toString());
 
-        const balance1 = await curveBTCPlus.balanceOf(DEPLOYER);
-        await zap.mint(SINGLES, [toWei("0.001"), toWei("0.001"), toWei("0.001"), toWei("0.001")], {from: DEPLOYER});
-        const balance2 = await curveBTCPlus.balanceOf(DEPLOYER);
+    //     const balance1 = await curveBTCPlus.balanceOf(DEPLOYER);
+    //     await zap.mint(SINGLES, [toWei("0.001"), toWei("0.001"), toWei("0.001"), toWei("0.001")], {from: DEPLOYER});
+    //     const balance2 = await curveBTCPlus.balanceOf(DEPLOYER);
 
-        console.log('CurveBTC+ balance before: ' + balance1.toString());
-        console.log('CurveBTC+ balance after: ' + balance2.toString());
+    //     console.log('CurveBTC+ balance before: ' + balance1.toString());
+    //     console.log('CurveBTC+ balance after: ' + balance2.toString());
 
-        const redeemAmount = await zap.getRedeemAmount(toWei("0.002"));
-        console.log(redeemAmount[0]);
-        console.log(redeemAmount[1].map(amount => amount.toString()));
-        console.log(redeemAmount[2].toString());
+    //     const redeemAmount = await zap.getRedeemAmount(toWei("0.002"));
+    //     console.log(redeemAmount[0]);
+    //     console.log(redeemAmount[1].map(amount => amount.toString()));
 
-        await curveBTCPlus.approve(zap.address, toWei("0.002"), {from: DEPLOYER});
-        await zap.redeem(toWei("0.002"), {from: DEPLOYER});
+    //     await curveBTCPlus.approve(zap.address, toWei("0.002"), {from: DEPLOYER});
+    //     await zap.redeem(toWei("0.002"), {from: DEPLOYER});
+    // });
+    it("should get max redeem amount", async () => {
+        for (const single of SINGLES) {
+            const maxRedeem = await zap.getMaxRedeemable(single);
+            console.log(maxRedeem[0].toString() + ", " + maxRedeem[1].toString());
+        }
+    });
+    it("should redeem CurveBTC+ to single", async () => {
+        for (const single of SINGLES) {
+            const redeemAmount = await zap.getRedeemSingleAmount(single, toWei("0.00001"));
+            console.log(redeemAmount[0].toString() + ", " + redeemAmount[1].toString());
+            await curveBTCPlus.approve(zap.address, toWei("0.00001"), {from: DEPLOYER});
+            await zap.redeemSingle(single, toWei("0.00001"), {from: DEPLOYER});
+        }
     });
 });

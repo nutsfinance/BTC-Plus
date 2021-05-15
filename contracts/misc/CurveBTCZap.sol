@@ -142,6 +142,56 @@ contract CurveBTCZap is Initializable {
     }
 
     /**
+     * @dev Returns the maximum of LP that could be redeem to from CurveBTC+.
+     * @param _single Address of the single plus to redeem to LP.
+     */
+    function getMaxRedeemable(address _single) public view returns (uint256, uint256) {
+        uint256 _singleAmount = IERC20Upgradeable(_single).balanceOf(CURVE_BTC_PLUS);
+        return getRedeemSingleAmount(_single, _singleAmount);
+    }
+
+    /**
+     * @dev Returns the amount of LP tokens received in redeeming CurveBTC+ to one single+.
+     * @param _single Address of the single+ to redeem to.
+     * @param _amount Amount of CurveBTC+ to redeem.
+     */
+    function getRedeemSingleAmount(address _single, uint256 _amount) public view returns (uint256, uint256) {
+        (uint256 _singleAmount, uint256 _fee) = ICompositePlus(CURVE_BTC_PLUS).getRedeemSingleAmount(_single, _amount);
+        (uint256 _lpAmount,) = ISinglePlus(_single).getRedeemAmount(_singleAmount);
+
+        return (_lpAmount, _fee);
+    }
+
+    /**
+     * @dev Redeems CurveBTC+ to a single LP.
+     * @param _single Address of the single+ to redeem to LP.
+     * @param _amount Amount of CurveBTC+ to redeem.
+     */
+    function redeemSingle(address _single, uint256 _amount) public {
+        // Transfers CurveBTC+ in
+        IERC20Upgradeable(CURVE_BTC_PLUS).safeTransferFrom(msg.sender, address(this), _amount);
+        
+        // Redeems CurveBTC+ to single+
+        ICompositePlus(CURVE_BTC_PLUS).redeemSingle(_single, _amount);
+        
+        // Redeems single+ to LP
+        uint256 _singleAmount = IERC20Upgradeable(_single).balanceOf(address(this));
+        ISinglePlus(_single).redeem(_singleAmount);
+        
+        // Transfers LP to caller
+        address _lp = ISinglePlus(_single).token();
+        uint256 _lpAmount = IERC20Upgradeable(_lp).balanceOf(address(this));
+        IERC20Upgradeable(_lp).safeTransfer(msg.sender, _lpAmount);
+
+        address[] memory _lps = new address[](1);
+        _lps[0] = _lp;
+        uint256[] memory _lpAmounts = new uint256[](1);
+        _lpAmounts[0] = _lpAmount;
+
+        emit Redeemed(msg.sender, _lps, _lpAmounts, _amount);
+    }
+
+    /**
      * @dev Used to salvage any ETH deposited to BTC+ contract by mistake. Only governance can salvage ETH.
      * The salvaged ETH is transferred to governance for futher operation.
      */
