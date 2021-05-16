@@ -32,7 +32,7 @@ contract VenusBTCPlus is SinglePlus {
     address public constant VENUS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
     address public constant VENUS_BTC = address(0x882C173bC7Ff3b7786CA16dfeD3DFFfb9Ee7847B);
     address public constant VENUS_COMPTROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
-    address public constant PANCAKE_SWAP_ROUTER = address(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
+    address public constant PANCAKE_SWAP_ROUTER = address(0x10ED43C718714eb63d5aA57B78B54704E256024E);
 
     // VAI ratios based on Venus's VAI mint rate
     uint256 public lowerRatio;  // Lower bound of VAI mint rate = lower ratio * VenusComptroller.vaiMintRate()

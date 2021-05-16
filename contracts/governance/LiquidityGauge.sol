@@ -172,6 +172,9 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         uint256 _workingSupply = workingSupply;
         if (_workingSupply == 0) {
             lastCheckpoint = block.timestamp;
+            if (_account != address(0x0)) {
+                checkpointOf[_account] = block.timestamp;        
+            }
             return;
         }
 
