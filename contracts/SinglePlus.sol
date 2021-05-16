@@ -65,7 +65,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @dev Returns the amount of single plus tokens minted with the LP token provided.
      * @dev _amounts Amount of LP token used to mint the single plus token.
      */
-    function getMintAmount(uint256 _amount) external view returns(uint256) {
+    function getMintAmount(uint256 _amount) external view override returns(uint256) {
         // Conversion rate is the amount of single plus token per LP token, in WAD.
         return _amount.mul(_conversionRate()).div(WAD);
     }
@@ -96,6 +96,8 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
 
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, _totalShares);
         emit Minted(msg.sender, _amount, _share, _newAmount);
+
+        emit Transfer(address(0x0), msg.sender, _newAmount);
     }
 
     /**
@@ -103,19 +105,15 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      * @param _amount Amounf of single plus to redeem.
      * @return Amount of LP token received as well as fee collected.
      */
-    function getRedeemAmount(uint256 _amount) external view returns (uint256, uint256) {
-        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        // Liquidity ratio is in WAD and redeem fee is in 0.01%
-        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
-        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
-        uint256 _fee = _amount.sub(_withdrawAmount);
-
-        // Conversion rate is in WAD
-        uint256 _underlyingAmount = _withdrawAmount.mul(WAD).div(_conversionRate());
+    function getRedeemAmount(uint256 _amount) external view override returns (uint256, uint256) {
+        // LP amount = Redeem amount * (1 - redeem fee) * liquidity ratio
+        // Redeem fee is in 0.01%
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        // Both liquidity ratio and conversion rate is in WAD, so it cancels out
+        uint256 _lpAmount = _amount.sub(_fee).mul(liquidityRatio()).div(_conversionRate());
 
         // Note: Fee is in plus token(18 decimals) but the received amount is in LP token!
-        return (_underlyingAmount, _fee);
+        return (_lpAmount, _fee);
     }
 
     /**
@@ -138,26 +136,36 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
             _share  = _amount.mul(WAD).div(index);
         }
 
-        // Withdraw ratio = min(liquidity ratio, 1 - redeem fee)
-        // Liquidity ratio is in WAD and redeem fee is in 0.01%
-        uint256 _withdrawAmount1 = _amount.mul(liquidityRatio()).div(WAD);
-        uint256 _withdrawAmount2 = _amount.mul(MAX_PERCENT - redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = MathUpgradeable.min(_withdrawAmount1, _withdrawAmount2);
-        uint256 _fee = _amount.sub(_withdrawAmount);
+        // LP amount = Redeem amount * (1 - redeem fee) * liquidity ratio
+        // Redeem fee is in 0.01%
+        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        // Both liquidity ratio and conversion rate is in WAD, so it cancels out
+        uint256 _lpAmount = _amount.sub(_fee).mul(liquidityRatio()).div(_conversionRate());
 
-        // Conversion rate is in WAD
-        uint256 _underlyingAmount = _withdrawAmount.mul(WAD).div(_conversionRate());
+        // Update the treasury balance
+        if (_fee > 0) {
+            uint256 _feeShare = _fee.mul(WAD).div(index);
+            // Transfers fee shares to treasury
+            userShare[treasury] = userShare[treasury].add(_feeShare);
+            totalShares = totalShares.add(_feeShare);
+        }
 
-        _withdraw(msg.sender, _underlyingAmount);
-
-        // Updates the balance
+        // Updates the caller balance
         uint256 _oldShare = userShare[msg.sender];
         uint256 _newShare = _oldShare.sub(_share);
         totalShares = totalShares.sub(_share);
         userShare[msg.sender] = _newShare;
 
+        // Transfer LP tokens to users
+        _withdraw(msg.sender, _lpAmount);
+
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, totalShares);
-        emit Redeemed(msg.sender, _underlyingAmount, _share, _amount, _fee);
+        emit Redeemed(msg.sender, _lpAmount, _share, _amount, _fee);
+
+        // Caller transfers _fee to treasury
+        emit Transfer(msg.sender, treasury, _fee);
+        // Caller burns _amount - _fee
+        emit Transfer(msg.sender, address(0x0), _amount.sub(_fee));
     }
 
     /**

@@ -205,6 +205,9 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
 
         emit UserShareUpdated(msg.sender, _oldShare, _newShare, _newTotalShares);
         emit Donated(msg.sender, _amount, _share);
+
+        // Donation is similar to redeem except that the asset is left in the pool.
+        emit Transfer(msg.sender, address(0x0), _amount);
     }
 
     /**
@@ -227,6 +230,8 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
 
         emit UserShareUpdated(_sender, _oldSenderShare, _newSenderShare, _totalShares);
         emit UserShareUpdated(_recipient, _oldRecipientShare, _newRecipientShare, _totalShares);
+
+        emit Transfer(_sender, _recipient, _amount);
     }
 
     /**

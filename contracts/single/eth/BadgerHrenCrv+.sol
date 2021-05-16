@@ -16,35 +16,36 @@ import "../../interfaces/badger/IBadgerTree.sol";
 import "../../interfaces/uniswap/IUniswapRouter.sol";
 
 /**
- * @dev Single plus for Badger renCrv.
+ * @dev Single plus for Badger hrenCrv.
  */
-contract BadgerRenCrvPlus is SinglePlus {
+contract BadgerHrenCrvPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    address public constant BADGER_RENCRV = address(0x6dEf55d2e18486B9dDfaA075bc4e4EE0B28c1545);
+    address public constant BADGER_HRENCRV = address(0xAf5A1DECfa95BAF63E0084a35c62592B774A2A87);
     address public constant BADGER_TREE = address(0x660802Fc641b154aBA66a62137e71f331B6d787A);
     address public constant WBTC = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address public constant BADGER = address(0x3472A5A71965499acd81997a54BBA8D852C6E53d);
     address public constant DIGG = address(0x798D1bE841a82a273720CE31c822C61a67a601C3);
+    address public constant FARM = address(0xa0246c9032bC3A600820415aE600c6388619A14D);
     address public constant RENCRV = address(0x49849C98ae39Fff122806C06791Fa73784FB3675);
     address public constant UNISWAP = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // Uniswap RouterV2
     address public constant SUSHISWAP = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);    // Sushiswap RouterV2
     address public constant REN_SWAP = address(0x93054188d876f558f4a66B2EF1d97d16eDf0895B); // REN swap
 
     /**
-     * We use a converter to convert renCrv --> brenCrv because brenCrv has a whitelist.
-     * Therefore, we use a converter to facilitate testing brenCrv+.
-     * Once brenCrv+ is whitelisted, we will upgrade the contract to replace the converter.
+     * We use a converter to convert renCrv --> bhrenCrv because bhrenCrv has a whitelist.
+     * Therefore, we use a converter to facilitate testing bhrenCrv+.
+     * Once bhrenCrv+ is whitelisted, we will upgrade the contract to replace the converter.
      */
     address public converter;
 
     /**
-     * @dev Initializes brenCrv+.
+     * @dev Initializes bhrenCrv+.
      */
     function initialize(address _converter) public initializer {
-        SinglePlus.initialize(BADGER_RENCRV, "", "");
+        SinglePlus.initialize(BADGER_HRENCRV, "", "");
 
         converter = _converter;
     }
@@ -84,7 +85,21 @@ contract BadgerRenCrvPlus is SinglePlus {
             IUniswapRouter(UNISWAP).swapExactTokensForTokens(_digg, uint256(0), _path, address(this), block.timestamp.add(1800));
         }
 
-        // 4: WBTC --> renCrv
+        // 4. Uniswap: Farm --> WETH --> WBTC
+        uint256 _farm = IERC20Upgradeable(FARM).balanceOf(address(this));
+        if (_farm > 0) {
+            IERC20Upgradeable(FARM).safeApprove(UNISWAP, 0);
+            IERC20Upgradeable(FARM).safeApprove(UNISWAP, _farm);
+
+            address[] memory _path = new address[](3);
+            _path[0] = FARM;
+            _path[1] = WETH;
+            _path[2] = WBTC;
+
+            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_farm, uint256(0), _path, address(this), block.timestamp.add(1800));
+        }
+
+        // 5: WBTC --> renCrv
         uint256 _wbtc = IERC20Upgradeable(WBTC).balanceOf(address(this));
         if (_wbtc == 0) return;
 
@@ -100,22 +115,22 @@ contract BadgerRenCrvPlus is SinglePlus {
         IERC20Upgradeable(WBTC).safeApprove(REN_SWAP, _wbtc);
         ICurveFi(REN_SWAP).add_liquidity([0, _wbtc], 0);
 
-        // 5: renCrv --> brenCrv
+        // 5: renCrv --> bhrenCrv
         address _converter = converter;
-        uint256 _renCrv = IERC20Upgradeable(RENCRV).balanceOf(address(this));
+        uint256 _hrenCrv = IERC20Upgradeable(RENCRV).balanceOf(address(this));
         IERC20Upgradeable(RENCRV).safeApprove(_converter, 0);
-        IERC20Upgradeable(RENCRV).safeApprove(_converter, _renCrv);
+        IERC20Upgradeable(RENCRV).safeApprove(_converter, _hrenCrv);
 
-        uint256 _before = IERC20Upgradeable(BADGER_RENCRV).balanceOf(address(this));
-        uint256 _target = _renCrv.mul(WAD).div(IBadgerSett(BADGER_RENCRV).getPricePerFullShare());
-        IConverter(_converter).convert(RENCRV, BADGER_RENCRV, _renCrv, _target);
-        uint256 _after = IERC20Upgradeable(BADGER_RENCRV).balanceOf(address(this));
+        uint256 _before = IERC20Upgradeable(BADGER_HRENCRV).balanceOf(address(this));
+        uint256 _target = _hrenCrv.mul(WAD).div(IBadgerSett(BADGER_HRENCRV).getPricePerFullShare());
+        IConverter(_converter).convert(RENCRV, BADGER_HRENCRV, _hrenCrv, _target);
+        uint256 _after = IERC20Upgradeable(BADGER_HRENCRV).balanceOf(address(this));
         require(_after >= _before.add(_target), "convert fail");
 
         // Also it's a good time to rebase!
         rebase();
 
-        emit Harvested(BADGER_RENCRV, _wbtc, _fee);
+        emit Harvested(BADGER_HRENCRV, _wbtc, _fee);
     }
 
     /**
@@ -123,6 +138,6 @@ contract BadgerRenCrvPlus is SinglePlus {
      */
     function _conversionRate() internal view virtual override returns (uint256) {
         // Both Badger's share price and Curve's virtual price are in WAD
-        return IBadgerSett(BADGER_RENCRV).getPricePerFullShare().mul(ICurveFi(REN_SWAP).get_virtual_price()).div(WAD);
+        return IBadgerSett(BADGER_HRENCRV).getPricePerFullShare().mul(ICurveFi(REN_SWAP).get_virtual_price()).div(WAD);
     }
 }
