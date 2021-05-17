@@ -12,8 +12,6 @@ const AUTO_BTC = "0x6B7Ea9F1EF1E6c662761201998Dc876b88Ed7414";
 const VBTC_PLUS = "0xcf8D1D3Fce7C2138F85889068e50F0e7a18b5321";
 const FBTCB_PLUS = "0x73FddFb941c11d16C827169Bb94aCC227841C396";
 const ACSBTCB_PLUS = "0xD7806143A4206aa9A816b964e4c994F533b830b0";
-const AUTOBTC_PLUS = "0x02827D495B2bBe37e1C021eB91BCdCc92cD3b604";
-const AUTOBTC_V2_PLUS = "0x7780b26aB2586Ad0e0192CafAAE93BfA09a106F3";
 const DEPLOYER = "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161";
 const PROXY_ADMIN = "0x03C7CF9A445a6FB7bD9340659f2b5f4c7C746814";
 
@@ -46,8 +44,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let vbtcPlus;
     let fbtcbPlus;
     let acsbtcbPlus;
-    let autobtcPlus;
-    let autobtcV2Plus;
     let zap;
 
     let testAmount = "0.001";
@@ -115,36 +111,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`acsBTCB+, 0.0001, ${diff}, ${diffRatio}%`);
     });
 
-    it("should mint and redeem 0.0001 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("0.0001"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.0001;
-        console.log(`autoBTC+, 0.0001, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 0.0001 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("0.0001"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.0001;
-        console.log(`autoBTCv2+, 0.0001, ${diff}, ${diffRatio}%`);
-    });
-
     it("should mint and redeem 0.001 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -188,36 +154,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
         const diffRatio = diff * 100 / 0.001;
         console.log(`acsBTCB+, 0.001, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 0.001 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("0.001"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.001;
-        console.log(`autoBTC+, 0.001, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 0.001 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("0.001"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.001;
-        console.log(`autoBTCv2+, 0.001, ${diff}, ${diffRatio}%`);
     });
 
     it("should mint and redeem 0.01 vBTC+", async () => {
@@ -265,36 +201,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`acsBTCB+, 0.01, ${diff}, ${diffRatio}%`);
     });
 
-    it("should mint and redeem 0.01 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("0.01"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.01;
-        console.log(`autoBTC+, 0.01, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 0.01 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("0.01"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.01;
-        console.log(`autoBTCv2+, 0.01, ${diff}, ${diffRatio}%`);
-    });
-
     it("should mint and redeem 0.1 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -338,36 +244,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
         const diffRatio = diff * 100 / 0.1;
         console.log(`acsBTCB+, 0.1, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 0.1 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("0.1"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.1;
-        console.log(`autoBTC+, 0.1, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 0.1 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("0.1"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 0.1;
-        console.log(`autoBTCv2+, 0.1, ${diff}, ${diffRatio}%`);
     });
 
     it("should mint and redeem 1 vBTC+", async () => {
@@ -415,36 +291,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`acsBTCB+, 1, ${diff}, ${diffRatio}%`);
     });
 
-    it("should mint and redeem 1 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("1"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100;
-        console.log(`autoBTC+, 1, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 1 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("1"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100;
-        console.log(`autoBTCv2+, 1, ${diff}, ${diffRatio}%`);
-    });
-
     it("should mint and redeem 10 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -490,37 +336,6 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         console.log(`acsBTCB+, 10, ${diff}, ${diffRatio}%`);
     });
 
-    it("should mint and redeem 10 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("10"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 10;
-        console.log(`autoBTC+, 10, ${diff}, ${diffRatio}%`);
-    });
-
-
-    it("should mint and redeem 10 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("10"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 10;
-        console.log(`autoBTCv2+, 10, ${diff}, ${diffRatio}%`);
-    });
-
     it("should mint and redeem 100 vBTC+", async () => {
         const btcb1 = await btcb.balanceOf(DEPLOYER);
 
@@ -564,35 +379,5 @@ contract("BTCZapBsc", async ([owner, proxyAdmin, user, user2, treasury]) => {
         const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
         const diffRatio = diff * 100 / 100;
         console.log(`acsBTCB+, 100, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 100 autoBTC+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCPlus(toWei("100"), {from: DEPLOYER});
-
-        const balance2 = await autobtcPlus.balanceOf(DEPLOYER);
-        await autobtcPlus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCPlus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 100;
-        console.log(`autoBTC+, 100, ${diff}, ${diffRatio}%`);
-    });
-
-    it("should mint and redeem 100 autoBTCv2+", async () => {
-        const btcb1 = await btcb.balanceOf(DEPLOYER);
-
-        await zap.mintAutoBTCV2Plus(toWei("100"), {from: DEPLOYER});
-
-        const balance2 = await autobtcV2Plus.balanceOf(DEPLOYER);
-        await autobtcV2Plus.approve(zap.address, balance2, {from: DEPLOYER});
-        await zap.redeemAutoBTCV2Plus(balance2, {from: DEPLOYER});
-
-        const btcb3 = await btcb.balanceOf(DEPLOYER);
-        const diff = web3.utils.fromWei(btcb1.sub(btcb3)).toString();
-        const diffRatio = diff * 100 / 100;
-        console.log(`autoBTCv2+, 100, ${diff}, ${diffRatio}%`);
     });
 });
