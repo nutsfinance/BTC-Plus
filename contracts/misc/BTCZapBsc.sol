@@ -13,6 +13,7 @@ import "../interfaces/ICompositePlus.sol";
 import "../interfaces/venus/IVToken.sol";
 import "../interfaces/fortube/IForTubeBank.sol";
 import "../interfaces/yfi/IVault.sol";
+import "../interfaces/belt/IMultiStrategyToken.sol";
 
 /**
  * @dev Zap for BTC plus on BSC.
@@ -33,6 +34,8 @@ contract BTCZapBsc is Initializable {
     address public constant FORTUBE_BTCB_PLUS = address(0x73FddFb941c11d16C827169Bb94aCC227841C396);
     address public constant ACS_BTCB = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
     address public constant ACS_BTCB_PLUS = address(0xD7806143A4206aa9A816b964e4c994F533b830b0);
+    address public constant BELT_BTC = address(0x51bd63F240fB13870550423D208452cA87c44444);
+    address public constant BELT_BTC_PLUS = address(0x50c5E29277b0Bc4c9b0377295d94F8798a5026a8);
     address public constant BTCB_PLUS = address(0xe884E6695C4cB3c8DEFFdB213B50f5C2a1a9E0A2);
     uint256 public constant WAD = 10 ** 18;
 
@@ -43,6 +46,13 @@ contract BTCZapBsc is Initializable {
      */
     function initialize() public initializer {
         governance = msg.sender;
+        approveAll();
+    }
+
+    /**
+     * @dev Updates allowance.
+     */
+    function approveAll() public {
         IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(int256(-1)));
         IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(int256(-1)));
 
@@ -51,6 +61,9 @@ contract BTCZapBsc is Initializable {
 
         IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, uint256(int256(-1)));
         IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_BTCB_PLUS, uint256(int256(-1)));
+
+        IERC20Upgradeable(BTCB).safeApprove(BELT_BTC, uint256(int256(-1)));
+        IERC20Upgradeable(BELT_BTC).safeApprove(BELT_BTC_PLUS, uint256(int256(-1)));
 
         IERC20Upgradeable(VENUS_BTC_PLUS).safeApprove(BTCB_PLUS, uint256(int256(-1)));
         IERC20Upgradeable(ACS_BTCB_PLUS).safeApprove(BTCB_PLUS, uint256(int256(-1)));
@@ -168,6 +181,44 @@ contract BTCZapBsc is Initializable {
         IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
 
         emit Redeemed(msg.sender, ACS_BTCB_PLUS, _btcb, _amount);
+    }
+
+    /**
+     * @dev Mints beltBTC+ with BTCB.
+     * @param _amount Amount of BTCB used to mint beltBTC+
+     */
+    function mintBeltBTCPlus(uint256 _amount) public {
+        require(_amount > 0, "zero amount");
+        
+        IERC20Upgradeable(BTCB).safeTransferFrom(msg.sender, address(this), _amount);
+        IMultiStrategyToken(BELT_BTC).deposit(_amount, 0);
+
+        uint256 _beltBtc = IERC20Upgradeable(BELT_BTC).balanceOf(address(this));
+        ISinglePlus(BELT_BTC_PLUS).mint(_beltBtc);
+
+        uint256 _beltBtcPlus = IERC20Upgradeable(BELT_BTC_PLUS).balanceOf(address(this));
+        IERC20Upgradeable(BELT_BTC_PLUS).safeTransfer(msg.sender, _beltBtcPlus);
+
+        emit Minted(msg.sender, BELT_BTC_PLUS, _amount, _beltBtcPlus);
+    }
+
+    /**
+     * @dev Redeems beltBTC+ to BTCB.
+     * @param _amount Amount of beltBTC+ to redeem.
+     */
+    function redeemBeltBTCPlus(uint256 _amount) public {
+        require(_amount > 0, "zero amount");
+
+        IERC20Upgradeable(BELT_BTC_PLUS).safeTransferFrom(msg.sender, address(this), _amount);
+        ISinglePlus(BELT_BTC_PLUS).redeem(_amount);
+
+        uint256 _beltBtc = IERC20Upgradeable(BELT_BTC).balanceOf(address(this));
+        IMultiStrategyToken(BELT_BTC).withdraw(_beltBtc, 0);
+
+        uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
+        IERC20Upgradeable(BTCB).safeTransfer(msg.sender, _btcb);
+
+        emit Redeemed(msg.sender, BELT_BTC_PLUS, _btcb, _amount);
     }
 
     /**
