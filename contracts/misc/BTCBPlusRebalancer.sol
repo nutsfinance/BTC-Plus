@@ -29,6 +29,7 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
     address public constant VENUS_BTC_PLUS = address(0xcf8D1D3Fce7C2138F85889068e50F0e7a18b5321);
     address public constant ACS_BTCB = address(0x0395fCC8E1a1E30A1427D4079aF6E23c805E3eeF);
     address public constant ACS_BTCB_PLUS = address(0xD7806143A4206aa9A816b964e4c994F533b830b0);
+    address public constant SIMPLE_BTCB_PLUS = address(0xb3d90840B5bDBc78b456B246ABD80dCA404ACD4b);
     address public constant BTCB_PLUS = address(0xe884E6695C4cB3c8DEFFdB213B50f5C2a1a9E0A2);
 
     function initialize() public initializer {
@@ -52,6 +53,12 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
         } else if (_from == ACS_BTCB_PLUS && _to == VENUS_BTC_PLUS) {
             _redeemAcsBTCBPlus();
             _mintVBTCPlus();
+        } else if (_from == VENUS_BTC_PLUS && _to == SIMPLE_BTCB_PLUS) {
+            _redeemVBTCPlus();
+            _mintSimpleBTCBPlus();
+        } else if (_from == ACS_BTCB_PLUS && _to == SIMPLE_BTCB_PLUS) {
+            _redeemAcsBTCBPlus();
+            _mintSimpleBTCBPlus();
         } else {
             revert("unsupported operation");
         }
@@ -94,6 +101,40 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
         uint256[] memory _amounts = new uint256[](1);
         _amounts[0] = _amount;
         bytes memory _data = abi.encode(VENUS_BTC_PLUS);
+
+        ICompositePlus(BTCB_PLUS).rebalance(_tokens, _amounts, address(this), _data);
+    }
+
+    /**
+     * @dev Convert vBTC+ to simpleBTCB+.
+     * @param _amount Amount of vBTC+ to convert.
+     */
+    function vBTCPlusToSimpleBTCBPlus(uint256 _amount) public onlyOwner {
+        // Rebase vBTC+ to get more accurate number
+        ISinglePlus(VENUS_BTC_PLUS).rebase();
+
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = VENUS_BTC_PLUS;
+        uint256[] memory _amounts = new uint256[](1);
+        _amounts[0] = _amount;
+        bytes memory _data = abi.encode(SIMPLE_BTCB_PLUS);
+
+        ICompositePlus(BTCB_PLUS).rebalance(_tokens, _amounts, address(this), _data);
+    }
+
+    /**
+     * @dev Converts acsBTCB+ to simpleBTCB+.
+     * @param _amount Amount of acsBTCB+ to convert.
+     */
+    function acsBTCBPlusToSimpleBTCBPlus(uint256 _amount) public onlyOwner {
+        // Rebase acsBTCB+ to get more accurate number
+        ISinglePlus(ACS_BTCB_PLUS).rebase();
+        
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = ACS_BTCB_PLUS;
+        uint256[] memory _amounts = new uint256[](1);
+        _amounts[0] = _amount;
+        bytes memory _data = abi.encode(SIMPLE_BTCB_PLUS);
 
         ICompositePlus(BTCB_PLUS).rebalance(_tokens, _amounts, address(this), _data);
     }
@@ -144,5 +185,22 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
 
         uint256 _acsBtcb = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
         IVault(ACS_BTCB).withdraw(_acsBtcb);
+    }
+
+    /**
+     * @dev Mints simpleBTCB+ with BTCB.
+     */
+    function _mintSimpleBTCBPlus() private {
+        uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
+        IERC20Upgradeable(BTCB).safeApprove(SIMPLE_BTCB_PLUS, _btcb);
+        ISinglePlus(SIMPLE_BTCB_PLUS).mint(_btcb);
+    }
+
+    /**
+     * @dev Redeems simpleBTCB+ to BTCB.
+     */
+    function _redeemSimpleBTCBPlus() private {
+        uint256 _simpleBtcbPlus = IERC20Upgradeable(SIMPLE_BTCB_PLUS).balanceOf(address(this));
+        ISinglePlus(SIMPLE_BTCB_PLUS).redeem(_simpleBtcbPlus);
     }
 }
