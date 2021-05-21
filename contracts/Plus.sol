@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -21,6 +22,7 @@ import "./interfaces/IPlus.sol";
 abstract contract Plus is ERC20Upgradeable, IPlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
+    using AddressUpgradeable for address;
 
     /**
      * @dev Emitted each time the share of a user is updated.
@@ -221,7 +223,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         // For example, a common use of rebase hook is the sync() method on Uniswap v2 pair. If someone tries to
         // add or remove plus token liquidity to the pair, the transfer method might trigger the rebase hook which
         // causes an error from Uniswap v2 pair's reentrancy protetion.
-        if (msg.sender == tx.origin) {
+        if (!msg.sender.isContract()) {
             // Rebase first to make index up-to-date
             rebase();
         }
