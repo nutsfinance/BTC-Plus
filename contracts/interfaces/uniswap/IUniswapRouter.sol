@@ -12,14 +12,4 @@ interface IUniswapRouter {
         address,
         uint256
     ) external;
-
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external;
 }
