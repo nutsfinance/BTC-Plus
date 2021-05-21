@@ -215,8 +215,16 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual override {
         require(_sender != _recipient, "recipient cannot be sender");
-        // Rebase first to make index up-to-date
-        rebase();
+        
+        // We do a rebase ONLY when the caller is not a contract, since the rebase hook might cause an error
+        // if rebase() is invoked here.
+        // For example, a common use of rebase hook is the sync() method on Uniswap v2 pair. If someone tries to
+        // add or remove plus token liquidity to the pair, the transfer method might trigger the rebase hook which
+        // causes an error from Uniswap v2 pair's reentrancy protetion.
+        if (msg.sender == tx.origin) {
+            // Rebase first to make index up-to-date
+            rebase();
+        }
         uint256 _shareToTransfer = _amount.mul(WAD).div(index);
 
         uint256 _oldSenderShare = userShare[_sender];
