@@ -53,19 +53,34 @@ contract BTCZapBsc is Initializable {
      * @dev Updates allowance.
      */
     function approveAll() public {
+        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, 0);
         IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, uint256(int256(-1)));
+
+        IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, 0);
         IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, uint256(int256(-1)));
 
+        IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, 0);
         IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, uint256(int256(-1)));
+
+        IERC20Upgradeable(FORTUBE_BTCB).safeApprove(FORTUBE_BTCB_PLUS, 0);
         IERC20Upgradeable(FORTUBE_BTCB).safeApprove(FORTUBE_BTCB_PLUS, uint256(int256(-1)));
 
+        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, 0);
         IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, uint256(int256(-1)));
+
+        IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_BTCB_PLUS, 0);
         IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_BTCB_PLUS, uint256(int256(-1)));
 
+        IERC20Upgradeable(BTCB).safeApprove(BELT_BTC, 0);
         IERC20Upgradeable(BTCB).safeApprove(BELT_BTC, uint256(int256(-1)));
+
+        IERC20Upgradeable(BELT_BTC).safeApprove(BELT_BTC_PLUS, 0);
         IERC20Upgradeable(BELT_BTC).safeApprove(BELT_BTC_PLUS, uint256(int256(-1)));
 
+        IERC20Upgradeable(VENUS_BTC_PLUS).safeApprove(BTCB_PLUS, 0);
         IERC20Upgradeable(VENUS_BTC_PLUS).safeApprove(BTCB_PLUS, uint256(int256(-1)));
+
+        IERC20Upgradeable(ACS_BTCB_PLUS).safeApprove(BTCB_PLUS, 0);
         IERC20Upgradeable(ACS_BTCB_PLUS).safeApprove(BTCB_PLUS, uint256(int256(-1)));
     }
 
