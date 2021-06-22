@@ -8,6 +8,20 @@ import "../interfaces/curve/ICurveFi.sol";
  */
 contract MockCurveSwap is ICurveFi {
 
+    function admin() external view override returns (address) {
+        return address(0x0);
+    }
+
+    function balances(uint256 i) external view override returns (uint256) {
+        i;
+        return 0;
+    }
+
+    function admin_balances(uint256 i) external view override returns (uint256) {
+        i;
+        return 0;
+    }
+
     function get_virtual_price() external pure override returns (uint256) {
         return 11 * 10**17;
     }
