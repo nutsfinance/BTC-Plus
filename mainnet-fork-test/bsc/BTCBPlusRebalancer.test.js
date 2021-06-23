@@ -36,7 +36,7 @@ const assertAlmostEqual = function(actualOrig, expectedOrig) {
  * ganache-cli --fork https://bsc-dataseed.binance.org/ -u "0x2932516D9564CB799DDA2c16559caD5b8357a0D6"
  * 
  * Run test:
- * truffle test mainnet-fork-test/BTCBPlusRebalancer.test.js
+ * truffle test mainnet-fork-test/bsc/BTCBPlusRebalancer.test.js
  */
 contract("BTCBPlusRebalancer", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let btcb;

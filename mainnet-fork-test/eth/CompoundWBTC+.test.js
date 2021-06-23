@@ -36,7 +36,7 @@ const assertAlmostEqual = function(expectedOrig, actualOrig) {
  * ganache-cli --fork https://mainnet.infura.io/v3/0df468116d40490fb2929a8d6664b1d2 -u "0x99FD1378ca799ED6772Fe7bCDC9B30B389518962"
  * 
  * Run test:
- * truffle test mainnet-fork-test/CompoundWBTC+.test.js
+ * truffle test mainnet-fork-test/eth/CompoundWBTC+.test.js
  */
 contract("CompoundWBTC+", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let cWBTC;

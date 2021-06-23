@@ -41,7 +41,7 @@ const assertAlmostEqual = function(expectedOrig, actualOrig) {
  * ganache-cli --fork https://mainnet.infura.io/v3/0df468116d40490fb2929a8d6664b1d2 -u "0xAdc68fB9809206c88e4F871C14b904b25aE5e301" -u "0x2932516D9564CB799DDA2c16559caD5b8357a0D6"
  * 
  * Run test:
- * truffle test mainnet-fork-test/BadgerTBTCCrv+.test.js
+ * truffle test mainnet-fork-test/eth/BadgerTBTCCrv+.test.js
  */
 contract("BadgerTBTCCrvPlus+", async ([owner, proxyAdmin, user, user2, treasury]) => {
     let converter;
