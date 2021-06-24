@@ -2,7 +2,6 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -20,7 +19,6 @@ import "./interfaces/IPlus.sol";
  */
 abstract contract Plus is ERC20Upgradeable, IPlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     /**
      * @dev Emitted each time the share of a user is updated.
@@ -124,21 +122,21 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      * For composite plus, it's equal to the total amount of single plus tokens in its basket.
      */
     function totalUnderlying() external view override returns (uint256) {
-        return _totalUnderlyingInWad().div(WAD);
+        return _totalUnderlyingInWad() / WAD;
     }
 
     /**
      * @dev Returns the total supply of plus token. See {IERC20Updateable-totalSupply}.
      */
     function totalSupply() public view virtual override returns (uint256) {
-        return totalShares.mul(index).div(WAD);
+        return totalShares * index / WAD;
     }
 
     /**
      * @dev Returns the balance of plus token for the account. See {IERC20Updateable-balanceOf}.
      */
     function balanceOf(address account) public view virtual override returns (uint256) {
-        return userShare[account].mul(index).div(WAD);
+        return userShare[account] * index / WAD;
     }
 
     /**
@@ -146,7 +144,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
      */
     function liquidityRatio() public view returns (uint256) {
         uint256 _totalSupply = totalSupply();
-        return _totalSupply == 0 ? WAD : _totalUnderlyingInWad().div(_totalSupply);
+        return _totalSupply == 0 ? WAD : _totalUnderlyingInWad() / _totalSupply;
     }
 
     /**
@@ -159,7 +157,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         // underlying is in WAD, and index is also in WAD
         uint256 _underlying = _totalUnderlyingInWad();
         uint256 _oldIndex = index;
-        uint256 _newIndex = _underlying.div(_totalShares);
+        uint256 _newIndex = _underlying / _totalShares;
 
         // _newIndex - oldIndex is the amount of interest generated for each share
         // _oldIndex might be larger than _newIndex in a short period of time. In this period, the liquidity ratio is smaller than 1.
@@ -176,7 +174,7 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
             }
             
             // In this event we are returning underlyiing() which can be used to compute the actual interest generated.
-            emit Rebased(_oldIndex, _newIndex, _underlying.div(WAD));
+            emit Rebased(_oldIndex, _newIndex, _underlying / WAD);
         }
     }
 
@@ -192,14 +190,14 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
         uint256 _share;
         if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
-            _amount = _share.mul(index).div(WAD);
+            _amount = _share * index / WAD;
         } else {
-            _share  = _amount.mul(WAD).div(index);
+            _share  = _amount * WAD / index;
         }
 
         uint256 _oldShare = userShare[msg.sender];
-        uint256 _newShare = _oldShare.sub(_share, "insufficient share");
-        uint256 _newTotalShares = totalShares.sub(_share);
+        uint256 _newShare = _oldShare - _share;
+        uint256 _newTotalShares = totalShares - _share;
         userShare[msg.sender] = _newShare;
         totalShares = _newTotalShares;
 
@@ -225,12 +223,12 @@ abstract contract Plus is ERC20Upgradeable, IPlus {
             // Rebase first to make index up-to-date
             rebase();
         }
-        uint256 _shareToTransfer = _amount.mul(WAD).div(index);
+        uint256 _shareToTransfer = _amount * WAD / index;
 
         uint256 _oldSenderShare = userShare[_sender];
-        uint256 _newSenderShare = _oldSenderShare.sub(_shareToTransfer, "insufficient share");
+        uint256 _newSenderShare = _oldSenderShare - _shareToTransfer;
         uint256 _oldRecipientShare = userShare[_recipient];
-        uint256 _newRecipientShare = _oldRecipientShare.add(_shareToTransfer);
+        uint256 _newRecipientShare = _oldRecipientShare + _shareToTransfer;
         uint256 _totalShares = totalShares;
 
         userShare[_sender] = _newSenderShare;

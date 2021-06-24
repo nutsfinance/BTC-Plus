@@ -2,7 +2,6 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -25,7 +24,6 @@ import "./Plus.sol";
  */
 contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     event Minted(address indexed user, uint256 amount, uint256 mintShare, uint256 mintAmount);
     event Redeemed(address indexed user, uint256 amount, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
@@ -67,7 +65,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
      */
     function getMintAmount(uint256 _amount) external view override returns(uint256) {
         // Conversion rate is the amount of single plus token per LP token, in WAD.
-        return _amount.mul(_conversionRate()).div(WAD);
+        return _amount * _conversionRate() / WAD;
     }
 
     /**
@@ -84,13 +82,13 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         // Transfers the LP token in.
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
         // Conversion rate is the amount of single plus token per LP token, in WAD.
-        uint256 _newAmount = _amount.mul(_conversionRate()).div(WAD);
+        uint256 _newAmount = _amount * _conversionRate() / WAD;
         // Index is in WAD
-        uint256 _share = _amount.mul(_conversionRate()).div(index);
+        uint256 _share = _amount * _conversionRate() / index;
 
         uint256 _oldShare = userShare[msg.sender];
-        uint256 _newShare = _oldShare.add(_share);
-        uint256 _totalShares = totalShares.add(_share);
+        uint256 _newShare = _oldShare + _share;
+        uint256 _totalShares = totalShares + _share;
         totalShares = _totalShares;
         userShare[msg.sender] = _newShare;
 
@@ -108,9 +106,9 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     function getRedeemAmount(uint256 _amount) external view override returns (uint256, uint256) {
         // LP amount = Redeem amount * (1 - redeem fee) * liquidity ratio
         // Redeem fee is in 0.01%
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _fee = _amount * redeemFee / MAX_PERCENT;
         // Both liquidity ratio and conversion rate is in WAD, so it cancels out
-        uint256 _lpAmount = _amount.sub(_fee).mul(liquidityRatio()).div(_conversionRate());
+        uint256 _lpAmount = (_amount - _fee) * liquidityRatio() / _conversionRate();
 
         // Note: Fee is in plus token(18 decimals) but the received amount is in LP token!
         return (_lpAmount, _fee);
@@ -131,29 +129,29 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _share;
         if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
-            _amount = _share.mul(index).div(WAD);
+            _amount = _share * index / WAD;
         } else {
-            _share  = _amount.mul(WAD).div(index);
+            _share  = _amount * WAD / index;
         }
 
         // LP amount = Redeem amount * (1 - redeem fee) * liquidity ratio
         // Redeem fee is in 0.01%
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
+        uint256 _fee = _amount * redeemFee / MAX_PERCENT;
         // Both liquidity ratio and conversion rate is in WAD, so it cancels out
-        uint256 _lpAmount = _amount.sub(_fee).mul(liquidityRatio()).div(_conversionRate());
+        uint256 _lpAmount = (_amount - _fee) * liquidityRatio() / _conversionRate();
 
         // Update the treasury balance
         if (_fee > 0) {
-            uint256 _feeShare = _fee.mul(WAD).div(index);
+            uint256 _feeShare = _fee * WAD / index;
             // Transfers fee shares to treasury
-            userShare[treasury] = userShare[treasury].add(_feeShare);
-            totalShares = totalShares.add(_feeShare);
+            userShare[treasury] = userShare[treasury] + _feeShare;
+            totalShares = totalShares + _feeShare;
         }
 
         // Updates the caller balance
         uint256 _oldShare = userShare[msg.sender];
-        uint256 _newShare = _oldShare.sub(_share);
-        totalShares = totalShares.sub(_share);
+        uint256 _newShare = _oldShare - _share;
+        totalShares = totalShares - _share;
         userShare[msg.sender] = _newShare;
 
         // Transfer LP tokens to users
@@ -165,7 +163,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
         // Caller transfers _fee to treasury
         emit Transfer(msg.sender, treasury, _fee);
         // Caller burns _amount - _fee
-        emit Transfer(msg.sender, address(0x0), _amount.sub(_fee));
+        emit Transfer(msg.sender, address(0x0), _amount - _fee);
     }
 
     /**
@@ -247,7 +245,7 @@ contract SinglePlus is ISinglePlus, Plus, ReentrancyGuardUpgradeable {
     function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
         // Conversion rate is the amount of single plus token per LP token, in WAD.
-        return _balance.mul(_conversionRate());
+        return _balance * _conversionRate();
     }
 
     /**

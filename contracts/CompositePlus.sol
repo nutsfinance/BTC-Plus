@@ -2,7 +2,6 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -20,7 +19,6 @@ import "./Plus.sol";
  */
 contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     event Minted(address indexed user, address[] tokens, uint256[] amounts, uint256 mintShare, uint256 mintAmount);
     event Redeemed(address indexed user, address[] tokens, uint256[] amounts, uint256 redeemShare, uint256 redeemAmount, uint256 fee);
@@ -63,11 +61,11 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
             // minted is the amount of all plus tokens in the basket added.
             // Note: All plus tokens, single or composite, have 18 decimals.
-            _amount = _amount.add(IERC20Upgradeable(tokens[i]).balanceOf(address(this)));
+            _amount += IERC20Upgradeable(tokens[i]).balanceOf(address(this));
         }
 
         // Plus tokens are in 18 decimals, need to return in WAD.
-        return _amount.mul(WAD);
+        return _amount * WAD;
     }
 
     /**
@@ -86,7 +84,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             // Since all underlying tokens in the baskets are plus tokens with the same value peg, the amount
             // minted is the amount of all tokens to mint added.
             // Note: All plus tokens, single or composite, have 18 decimals.
-            _amount = _amount.add(_amounts[i]);
+            _amount += _amounts[i];
         }
 
         return _amount;
@@ -108,15 +106,15 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             require(!mintPaused[_tokens[i]], "token paused");
             if (_amounts[i] == 0) continue;
 
-            _amount = _amount.add(_amounts[i]);
+            _amount = _amount + _amounts[i];
             // Transfers the token into pool.
             IERC20Upgradeable(_tokens[i]).safeTransferFrom(msg.sender, address(this), _amounts[i]);
         }
 
-        uint256 _share = _amount.mul(WAD).div(index);
+        uint256 _share = _amount * WAD / index;
         uint256 _oldShare = userShare[msg.sender];
-        uint256 _newShare = _oldShare.add(_share);
-        uint256 _totalShares = totalShares.add(_share);
+        uint256 _newShare = _oldShare + _share;
+        uint256 _totalShares = totalShares + _share;
         totalShares = _totalShares;
         userShare[msg.sender] = _newShare;
 
@@ -134,8 +132,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
     function getRedeemAmount(uint256 _amount) external view override returns (address[] memory, uint256[] memory, uint256) {
         // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
         // Redeem fee is in 0.01%
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+        uint256 _fee = _amount * redeemFee / MAX_PERCENT;
+        uint256 _withdrawAmount = (_amount - _fee) * liquidityRatio() / WAD;
 
         address[] memory _redeemTokens = tokens;
         uint256[] memory _redeemAmounts = new uint256[](_redeemTokens.length);
@@ -144,7 +142,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
             if (_balance == 0)   continue;
 
-            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_totalSupply);
+            _redeemAmounts[i] = _balance * _withdrawAmount / _totalSupply;
         }
 
         return (_redeemTokens, _redeemAmounts, _fee);
@@ -165,29 +163,29 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _share;
         if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
-            _amount = _share.mul(index).div(WAD);
+            _amount = _share * index / WAD;
         } else {
-            _share  = _amount.mul(WAD).div(index);
+            _share  = _amount * WAD / index;
         }
 
         // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
         // Redeem fee is in 0.01%
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+        uint256 _fee = _amount * redeemFee / MAX_PERCENT;
+        uint256 _withdrawAmount = (_amount - _fee) * liquidityRatio() / WAD;
         uint256 _totalSupply = totalSupply();
 
         // Update the treasury balance
         if (_fee > 0) {
-            uint256 _feeShare = _fee.mul(WAD).div(index);
+            uint256 _feeShare = _fee * WAD / index;
             // Transfers fee shares to treasury
-            userShare[treasury] = userShare[treasury].add(_feeShare);
-            totalShares = totalShares.add(_feeShare);
+            userShare[treasury] = userShare[treasury] + _feeShare;
+            totalShares = totalShares + _feeShare;
         }
 
         // Updates the caller balance
         uint256 _oldShare = userShare[msg.sender];
-        uint256 _newShare = _oldShare.sub(_share);
-        totalShares = totalShares.sub(_share);
+        uint256 _newShare = _oldShare - _share;
+        totalShares = totalShares - _share;
         userShare[msg.sender] = _newShare;
 
         // Withdraws tokens proportionally
@@ -197,7 +195,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
             uint256 _balance = IERC20Upgradeable(_redeemTokens[i]).balanceOf(address(this));
             if (_balance == 0)   continue;
 
-            _redeemAmounts[i] = _balance.mul(_withdrawAmount).div(_totalSupply);
+            _redeemAmounts[i] = _balance * _withdrawAmount / _totalSupply;
             IERC20Upgradeable(_redeemTokens[i]).safeTransfer(msg.sender, _redeemAmounts[i]);
         }
 
@@ -207,7 +205,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Caller transfers _fee to treasury
         emit Transfer(msg.sender, treasury, _fee);
         // Caller burns _amount - _fee
-        emit Transfer(msg.sender, address(0x0), _amount.sub(_fee));
+        emit Transfer(msg.sender, address(0x0), _amount - _fee);
     }
 
     /**
@@ -222,8 +220,8 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
 
         // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
         // Redeem fee is in 0.01%
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+        uint256 _fee = _amount * redeemFee / MAX_PERCENT;
+        uint256 _withdrawAmount = (_amount - _fee) * liquidityRatio() / WAD;
 
         return (_withdrawAmount, _fee);
     }
@@ -245,29 +243,29 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _share;
         if (_amount == uint256(int256(-1))) {
             _share = userShare[msg.sender];
-            _amount = _share.mul(index).div(WAD);
+            _amount = _share * index / WAD;
         } else {
-            _share  = _amount.mul(WAD).div(index);
+            _share  = _amount * WAD / index;
         }
         require(IERC20Upgradeable(_token).balanceOf(address(this)) >= _amount, "insufficient token");
 
         // Withdraw amount = Redeem amount * (1 - redeem fee) * liquidity ratio
         // Redeem fee is in 0.01%
-        uint256 _fee = _amount.mul(redeemFee).div(MAX_PERCENT);
-        uint256 _withdrawAmount = _amount.sub(_fee).mul(liquidityRatio()).div(WAD);
+        uint256 _fee = _amount * redeemFee / MAX_PERCENT;
+        uint256 _withdrawAmount = (_amount - _fee) * liquidityRatio() / WAD;
 
         // Update the treasury balance
         if (_fee > 0) {
-            uint256 _feeShare = _fee.mul(WAD).div(index);
+            uint256 _feeShare = _fee * WAD / index;
             // Transfers fee shares to treasury
-            userShare[treasury] = userShare[treasury].add(_feeShare);
-            totalShares = totalShares.add(_feeShare);
+            userShare[treasury] = userShare[treasury] + _feeShare;
+            totalShares = totalShares + _feeShare;
         }
 
         // Updates the caller balance
         uint256 _oldShare = userShare[msg.sender];
-        uint256 _newShare = _oldShare.sub(_share);
-        totalShares = totalShares.sub(_share);
+        uint256 _newShare = _oldShare - _share;
+        totalShares = totalShares - _share;
         userShare[msg.sender] = _newShare;
 
         // Withdraws the token
@@ -283,7 +281,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         // Caller transfers _fee to treasury
         emit Transfer(msg.sender, treasury, _fee);
         // Caller burns _amount - _fee
-        emit Transfer(msg.sender, address(0x0), _amount.sub(_fee));
+        emit Transfer(msg.sender, address(0x0), _amount - _fee);
     }
 
     /**
@@ -417,7 +415,7 @@ contract CompositePlus is ICompositePlus, Plus, ReentrancyGuardUpgradeable {
         uint256 _underlyingAfter = _totalUnderlyingInWad();
         uint256 _supply = totalSupply();
         // _underlyingAfter / _supply > minLiquidityRatio
-        require(_underlyingAfter > _supply.mul(minLiquidityRatio), "too much loss");
+        require(_underlyingAfter > _supply * minLiquidityRatio, "too much loss");
 
         emit Rebalanced(_underlyingBefore, _underlyingAfter, _supply);
     }
