@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "../interfaces/IGauge.sol";
@@ -11,7 +10,6 @@ import "../interfaces/IVotingEscrow.sol";
  * @dev A utility contract that helps to claims from multiple liquidity gauges.
  */
 contract Claimer {
-    using SafeMathUpgradeable for uint256;
 
     IVotingEscrow public votingEscrow;
     IERC20Upgradeable public reward;
@@ -39,7 +37,7 @@ contract Claimer {
     function claimable(address _account, address[] memory _gauges) external view returns (uint256) {
         uint256 _total = 0;
         for (uint256 i = 0; i < _gauges.length; i++) {
-            _total = _total.add(IGauge(_gauges[i]).claimable(_account));
+            _total += IGauge(_gauges[i]).claimable(_account);
         }
 
         return _total;
