@@ -39,15 +39,15 @@ contract CurveBTCZap is Initializable {
     function initialize() public initializer {
         governance = msg.sender;
 
-        IERC20Upgradeable(BADGER_RENCRV).safeApprove(BADGER_RENCRV_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_SBTCCRV).safeApprove(BADGER_SBTCCRV_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_TBTCCRV).safeApprove(BADGER_TBTCCRV_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_HRENCRV).safeApprove(BADGER_HRENCRV_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_RENCRV).approve(BADGER_RENCRV_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_SBTCCRV).approve(BADGER_SBTCCRV_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_TBTCCRV).approve(BADGER_TBTCCRV_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_HRENCRV).approve(BADGER_HRENCRV_PLUS, uint256(int256(-1)));
 
-        IERC20Upgradeable(BADGER_RENCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_SBTCCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_TBTCCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
-        IERC20Upgradeable(BADGER_HRENCRV_PLUS).safeApprove(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_RENCRV_PLUS).approve(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_SBTCCRV_PLUS).approve(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_TBTCCRV_PLUS).approve(CURVE_BTC_PLUS, uint256(int256(-1)));
+        IERC20Upgradeable(BADGER_HRENCRV_PLUS).approve(CURVE_BTC_PLUS, uint256(int256(-1)));
     }
 
     /**

@@ -468,12 +468,12 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
             _checkpointRewards(address(0x0));
             IUniPool(_currentRewardContract).exit();
 
-            _token.safeApprove(_currentRewardContract, 0);
+            _token.approve(_currentRewardContract, 0);
         }
 
         if (_rewardContract != address(0x0)) {
             require(_rewardTokens.length > 0, "reward tokens not set");
-            _token.safeApprove(_rewardContract, uint256(int256(-1)));
+            _token.approve(_rewardContract, uint256(int256(-1)));
             IUniPool(_rewardContract).stake(_token.balanceOf(address(this)));
 
             rewardContract = _rewardContract;

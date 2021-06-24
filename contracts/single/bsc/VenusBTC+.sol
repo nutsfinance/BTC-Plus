@@ -90,8 +90,7 @@ contract VenusBTCPlus is SinglePlus {
         // Repays all VAI
         _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
         if ((_vai > 0)) {
-            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
-            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _vai);
+            IERC20Upgradeable(VAI).approve(VAI_CONTROLLER, _vai);
             IVAIController(VAI_CONTROLLER).repayVAI(_vai);
         }
     }
@@ -131,8 +130,7 @@ contract VenusBTCPlus is SinglePlus {
             IVAIController(VAI_CONTROLLER).mintVAI(_targetDebt.sub(_debt));
             uint256 _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
 
-            IERC20Upgradeable(VAI).safeApprove(VAI_VAULT, 0);
-            IERC20Upgradeable(VAI).safeApprove(VAI_VAULT, _vai);
+            IERC20Upgradeable(VAI).approve(VAI_VAULT, _vai);
 
             // Stakes VAI into VAI vault
             IVAIVault(VAI_VAULT).deposit(_vai);
@@ -140,8 +138,7 @@ contract VenusBTCPlus is SinglePlus {
             // We need to repay some VAI!
             uint256 _shortfall = _debt.sub(_targetDebt);
             IVAIVault(VAI_VAULT).withdraw(_shortfall);
-            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
-            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _shortfall);
+            IERC20Upgradeable(VAI).approve(VAI_CONTROLLER, _shortfall);
             IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
         }
     }
@@ -179,8 +176,7 @@ contract VenusBTCPlus is SinglePlus {
         uint256 _venus = IERC20Upgradeable(VENUS).balanceOf(address(this));
         // PancakeSawp: XVS --> WBNB --> BTCB
         if (_venus > 0) {
-            IERC20Upgradeable(VENUS).safeApprove(PANCAKE_SWAP_ROUTER, 0);
-            IERC20Upgradeable(VENUS).safeApprove(PANCAKE_SWAP_ROUTER, _venus);
+            IERC20Upgradeable(VENUS).approve(PANCAKE_SWAP_ROUTER, _venus);
 
             address[] memory _path = new address[](3);
             _path[0] = VENUS;
@@ -201,8 +197,7 @@ contract VenusBTCPlus is SinglePlus {
             _btcb = _btcb.sub(_fee);
         }
 
-        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, 0);
-        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, _btcb);
+        IERC20Upgradeable(BTCB).approve(VENUS_BTC, _btcb);
         IVToken(VENUS_BTC).mint(_btcb);
 
         // Reinvest to get compound yield.
@@ -243,8 +238,7 @@ contract VenusBTCPlus is SinglePlus {
         (,,uint256 _shortfall) = IVenusComptroller(VENUS_COMPTROLLER).getHypotheticalAccountLiquidity(address(this), VENUS_BTC, _amount, 0);
         if (_shortfall > 0) {
             IVAIVault(VAI_VAULT).withdraw(_shortfall);
-            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, 0);
-            IERC20Upgradeable(VAI).safeApprove(VAI_CONTROLLER, _shortfall);
+            IERC20Upgradeable(VAI).approve(VAI_CONTROLLER, _shortfall);
             IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
         }
 

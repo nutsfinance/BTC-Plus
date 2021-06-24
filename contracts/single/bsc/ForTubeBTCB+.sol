@@ -59,8 +59,7 @@ contract ForTubeBTCBPlus is SinglePlus {
         uint256 _for = IERC20Upgradeable(FOR).balanceOf(address(this));
         // PancakeSawp: FOR --> WBNB --> BTCB
         if (_for > 0) {
-            IERC20Upgradeable(FOR).safeApprove(PANCAKE_SWAP_ROUTER, 0);
-            IERC20Upgradeable(FOR).safeApprove(PANCAKE_SWAP_ROUTER, _for);
+            IERC20Upgradeable(FOR).approve(PANCAKE_SWAP_ROUTER, _for);
 
             address[] memory _path = new address[](3);
             _path[0] = FOR;
@@ -72,8 +71,7 @@ contract ForTubeBTCBPlus is SinglePlus {
         // ForTube: BTCB --> fBTCB
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
         if (_btcb > 0) {
-            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, 0);
-            IERC20Upgradeable(BTCB).safeApprove(FORTUBE_CONTROLLER, _btcb);
+            IERC20Upgradeable(BTCB).approve(FORTUBE_CONTROLLER, _btcb);
             IForTubeBank(FORTUBE_BANK).deposit(BTCB, _btcb);
         }
         uint256 _fbtc = IERC20Upgradeable(FORTUBE_BTCB).balanceOf(address(this));

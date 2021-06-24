@@ -53,8 +53,7 @@ contract VesperWBTCPlus is SinglePlus {
         uint256 _vsp = IERC20Upgradeable(VESPER).balanceOf(address(this));
         // Uniswap: VESPER --> WETH --> WBTC
         if (_vsp > 0) {
-            IERC20Upgradeable(VESPER).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(VESPER).safeApprove(UNISWAP, _vsp);
+            IERC20Upgradeable(VESPER).approve(UNISWAP, _vsp);
 
             address[] memory _path = new address[](3);
             _path[0] = VESPER;
@@ -75,8 +74,7 @@ contract VesperWBTCPlus is SinglePlus {
             _wbtc = _wbtc.sub(_fee);
         }
 
-        IERC20Upgradeable(WBTC).safeApprove(VESPER_WBTC, 0);
-        IERC20Upgradeable(WBTC).safeApprove(VESPER_WBTC, _wbtc);
+        IERC20Upgradeable(WBTC).approve(VESPER_WBTC, _wbtc);
         IVPool(VESPER_WBTC).deposit(_wbtc);
 
         // Also it's a good time to rebase!

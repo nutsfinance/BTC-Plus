@@ -144,11 +144,11 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
      */
     function _mintVBTCPlus() private {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        IERC20Upgradeable(BTCB).safeApprove(VENUS_BTC, _btcb);
+        IERC20Upgradeable(BTCB).approve(VENUS_BTC, _btcb);
         IVToken(VENUS_BTC).mint(_btcb);
 
         uint256 _vbtc = IERC20Upgradeable(VENUS_BTC).balanceOf(address(this));
-        IERC20Upgradeable(VENUS_BTC).safeApprove(VENUS_BTC_PLUS, _vbtc);
+        IERC20Upgradeable(VENUS_BTC).approve(VENUS_BTC_PLUS, _vbtc);
         ISinglePlus(VENUS_BTC_PLUS).mint(_vbtc);
     }
 
@@ -168,11 +168,11 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
      */
     function _mintAcsBTCBPlus() private {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, _btcb);
+        IERC20Upgradeable(BTCB).approve(ACS_BTCB, _btcb);
         IVault(ACS_BTCB).deposit(_btcb);
 
         uint256 _acsBtcb = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
-        IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_BTCB_PLUS, _acsBtcb);
+        IERC20Upgradeable(ACS_BTCB).approve(ACS_BTCB_PLUS, _acsBtcb);
         ISinglePlus(ACS_BTCB_PLUS).mint(_acsBtcb);
     }
 
@@ -192,7 +192,7 @@ contract BTCBPlusRebalancer is IRebalancer, OwnableUpgradeable {
      */
     function _mintSimpleBTCBPlus() private {
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
-        IERC20Upgradeable(BTCB).safeApprove(SIMPLE_BTCB_PLUS, _btcb);
+        IERC20Upgradeable(BTCB).approve(SIMPLE_BTCB_PLUS, _btcb);
         ISinglePlus(SIMPLE_BTCB_PLUS).mint(_btcb);
     }
 

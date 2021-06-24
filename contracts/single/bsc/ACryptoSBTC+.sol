@@ -60,8 +60,7 @@ contract ACryptoSBTCBPlus is SinglePlus {
     function invest() public virtual override onlyStrategist {
         uint256 _balance = IERC20Upgradeable(ACS_BTCB).balanceOf(address(this));
         if (_balance > 0) {
-            IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_FARM, 0);
-            IERC20Upgradeable(ACS_BTCB).safeApprove(ACS_FARM, _balance);
+            IERC20Upgradeable(ACS_BTCB).approve(ACS_FARM, _balance);
             IFarm(ACS_FARM).deposit(ACS_BTCB, _balance);
         }
     }
@@ -92,8 +91,7 @@ contract ACryptoSBTCBPlus is SinglePlus {
         uint256 _acs = IERC20Upgradeable(ACS).balanceOf(address(this));
         // PancakeSawp: ACS --> WBNB --> BTCB
         if (_acs > 0) {
-            IERC20Upgradeable(ACS).safeApprove(PANCAKE_SWAP_ROUTER, 0);
-            IERC20Upgradeable(ACS).safeApprove(PANCAKE_SWAP_ROUTER, _acs);
+            IERC20Upgradeable(ACS).approve(PANCAKE_SWAP_ROUTER, _acs);
 
             address[] memory _path = new address[](3);
             _path[0] = ACS;
@@ -114,8 +112,7 @@ contract ACryptoSBTCBPlus is SinglePlus {
             _btcb = _btcb.sub(_fee);
         }
 
-        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, 0);
-        IERC20Upgradeable(BTCB).safeApprove(ACS_BTCB, _btcb);
+        IERC20Upgradeable(BTCB).approve(ACS_BTCB, _btcb);
         IVault(ACS_BTCB).deposit(_btcb);
 
         // Reinvest to get compound yield

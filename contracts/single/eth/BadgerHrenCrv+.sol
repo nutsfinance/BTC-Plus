@@ -62,8 +62,7 @@ contract BadgerHrenCrvPlus is SinglePlus {
         // 2. Sushi: Badger --> WBTC
         uint256 _badger = IERC20Upgradeable(BADGER).balanceOf(address(this));
         if (_badger > 0) {
-            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, 0);
-            IERC20Upgradeable(BADGER).safeApprove(SUSHISWAP, _badger);
+            IERC20Upgradeable(BADGER).approve(SUSHISWAP, _badger);
 
             address[] memory _path = new address[](2);
             _path[0] = BADGER;
@@ -75,8 +74,7 @@ contract BadgerHrenCrvPlus is SinglePlus {
         // 3: Uniswap: Digg --> WBTC
         uint256 _digg = IERC20Upgradeable(DIGG).balanceOf(address(this));
         if (_digg > 0) {
-            IERC20Upgradeable(DIGG).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(DIGG).safeApprove(UNISWAP, _digg);
+            IERC20Upgradeable(DIGG).approve(UNISWAP, _digg);
 
             address[] memory _path = new address[](2);
             _path[0] = DIGG;
@@ -88,8 +86,7 @@ contract BadgerHrenCrvPlus is SinglePlus {
         // 4. Uniswap: Farm --> WETH --> WBTC
         uint256 _farm = IERC20Upgradeable(FARM).balanceOf(address(this));
         if (_farm > 0) {
-            IERC20Upgradeable(FARM).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(FARM).safeApprove(UNISWAP, _farm);
+            IERC20Upgradeable(FARM).approve(UNISWAP, _farm);
 
             address[] memory _path = new address[](3);
             _path[0] = FARM;
@@ -111,15 +108,13 @@ contract BadgerHrenCrvPlus is SinglePlus {
             _wbtc = _wbtc.sub(_fee);
         }
 
-        IERC20Upgradeable(WBTC).safeApprove(REN_SWAP, 0);
-        IERC20Upgradeable(WBTC).safeApprove(REN_SWAP, _wbtc);
+        IERC20Upgradeable(WBTC).approve(REN_SWAP, _wbtc);
         ICurveFi(REN_SWAP).add_liquidity([0, _wbtc], 0);
 
         // 5: renCrv --> bhrenCrv
         address _converter = converter;
         uint256 _hrenCrv = IERC20Upgradeable(RENCRV).balanceOf(address(this));
-        IERC20Upgradeable(RENCRV).safeApprove(_converter, 0);
-        IERC20Upgradeable(RENCRV).safeApprove(_converter, _hrenCrv);
+        IERC20Upgradeable(RENCRV).approve(_converter, _hrenCrv);
 
         uint256 _before = IERC20Upgradeable(BADGER_HRENCRV).balanceOf(address(this));
         uint256 _target = _hrenCrv.mul(WAD).div(IBadgerSett(BADGER_HRENCRV).getPricePerFullShare());

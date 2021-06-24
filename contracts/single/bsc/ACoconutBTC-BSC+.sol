@@ -28,7 +28,7 @@ contract ACoconutBTCBscPlus is SinglePlus {
     function initialize() public initializer {
         SinglePlus.initialize(ACOCONUT_BTC_BSC, "", "");
 
-        IERC20Upgradeable(ACOCONUT_BTC_BSC).safeApprove(ACOCONUT_MAKER, uint256(int256(-1)));
+        IERC20Upgradeable(ACOCONUT_BTC_BSC).approve(ACOCONUT_MAKER, uint256(int256(-1)));
     }
 
     /**

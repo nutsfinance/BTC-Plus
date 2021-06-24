@@ -60,8 +60,7 @@ contract BeltBTCPlus is SinglePlus {
     function invest() public virtual override onlyStrategist {
         uint256 _balance = IERC20Upgradeable(BELT_BTC).balanceOf(address(this));
         if (_balance > 0) {
-            IERC20Upgradeable(BELT_BTC).safeApprove(MASTER_BELT, 0);
-            IERC20Upgradeable(BELT_BTC).safeApprove(MASTER_BELT, _balance);
+            IERC20Upgradeable(BELT_BTC).approve(MASTER_BELT, _balance);
             IMasterBelt(MASTER_BELT).deposit(PID, _balance);
         }
     }
@@ -89,8 +88,7 @@ contract BeltBTCPlus is SinglePlus {
         uint256 _belt = IERC20Upgradeable(BELT).balanceOf(address(this));
         // PancakeSawp: BELT --> WBNB --> BTCB
         if (_belt > 0) {
-            IERC20Upgradeable(BELT).safeApprove(PANCAKE_SWAP_ROUTER, 0);
-            IERC20Upgradeable(BELT).safeApprove(PANCAKE_SWAP_ROUTER, _belt);
+            IERC20Upgradeable(BELT).approve(PANCAKE_SWAP_ROUTER, _belt);
 
             address[] memory _path = new address[](3);
             _path[0] = BELT;
@@ -111,8 +109,7 @@ contract BeltBTCPlus is SinglePlus {
             _btcb = _btcb.sub(_fee);
         }
 
-        IERC20Upgradeable(BTCB).safeApprove(BELT_BTC, 0);
-        IERC20Upgradeable(BTCB).safeApprove(BELT_BTC, _btcb);
+        IERC20Upgradeable(BTCB).approve(BELT_BTC, _btcb);
         IMultiStrategyToken(BELT_BTC).deposit(_btcb, 0);
 
         // Reinvest to get compound yield

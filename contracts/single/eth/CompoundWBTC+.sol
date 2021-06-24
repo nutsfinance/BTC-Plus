@@ -50,8 +50,7 @@ contract CompoundWBTCPlus is SinglePlus {
         uint256 _comp = IERC20Upgradeable(COMP).balanceOf(address(this));
         // Uniswap: COMP --> WETH --> BTCB
         if (_comp > 0) {
-            IERC20Upgradeable(COMP).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(COMP).safeApprove(UNISWAP, _comp);
+            IERC20Upgradeable(COMP).approve(UNISWAP, _comp);
 
             address[] memory _path = new address[](3);
             _path[0] = COMP;
@@ -72,8 +71,7 @@ contract CompoundWBTCPlus is SinglePlus {
             _wbtc = _wbtc.sub(_fee);
         }
 
-        IERC20Upgradeable(WBTC).safeApprove(COMPOUND_WBTC, 0);
-        IERC20Upgradeable(WBTC).safeApprove(COMPOUND_WBTC, _wbtc);
+        IERC20Upgradeable(WBTC).approve(COMPOUND_WBTC, _wbtc);
         require(ICToken(COMPOUND_WBTC).mint(_wbtc) == 0, "mint failed");
 
         // Also it's a good time to rebase!

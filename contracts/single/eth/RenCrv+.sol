@@ -64,8 +64,7 @@ contract RenCrvPlus is SinglePlus {
         IERC20Upgradeable _token = IERC20Upgradeable(RENCRV);
         uint256 _balance = _token.balanceOf(address(this));
         if (_balance > 0) {
-            _token.safeApprove(RENCRV_GAUGE, 0);
-            _token.safeApprove(RENCRV_GAUGE, _balance);
+            _token.approve(RENCRV_GAUGE, _balance);
             ICurveGauge(RENCRV_GAUGE).deposit(_balance);
         }
     }
@@ -89,8 +88,7 @@ contract RenCrvPlus is SinglePlus {
 
         // Uniswap: CRV --> WETH --> WBTC
         if (_crv > 0) {
-            IERC20Upgradeable(CRV).safeApprove(UNISWAP, 0);
-            IERC20Upgradeable(CRV).safeApprove(UNISWAP, _crv);
+            IERC20Upgradeable(CRV).approve(UNISWAP, _crv);
 
             address[] memory _path = new address[](3);
             _path[0] = CRV;
@@ -111,8 +109,7 @@ contract RenCrvPlus is SinglePlus {
             _wbtc = _wbtc.sub(_fee);
         }
 
-        IERC20Upgradeable(WBTC).safeApprove(REN_SWAP, 0);
-        IERC20Upgradeable(WBTC).safeApprove(REN_SWAP, _wbtc);
+        IERC20Upgradeable(WBTC).approve(REN_SWAP, _wbtc);
         ICurveFi(REN_SWAP).add_liquidity([0, _wbtc], 0);
 
         // Reinvest to get compound yield
