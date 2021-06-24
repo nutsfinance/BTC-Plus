@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -20,7 +19,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract BadgerRenCrvPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     address public constant BADGER_RENCRV = address(0x6dEf55d2e18486B9dDfaA075bc4e4EE0B28c1545);
     address public constant BADGER_TREE = address(0x660802Fc641b154aBA66a62137e71f331B6d787A);
@@ -67,7 +65,7 @@ contract BadgerRenCrvPlus is SinglePlus {
             _path[0] = BADGER;
             _path[1] = WBTC;
 
-            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(SUSHISWAP).swapExactTokensForTokens(_badger, uint256(0), _path, address(this), block.timestamp);
         }
 
         // 3: Uniswap: Digg --> WBTC
@@ -79,7 +77,7 @@ contract BadgerRenCrvPlus is SinglePlus {
             _path[0] = DIGG;
             _path[1] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_digg, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_digg, uint256(0), _path, address(this), block.timestamp);
         }
 
         // 4: WBTC --> renCrv
@@ -89,9 +87,9 @@ contract BadgerRenCrvPlus is SinglePlus {
         // If there is performance fee, charged in WBTC
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _wbtc.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _wbtc * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(WBTC).safeTransfer(treasury, _fee);
-            _wbtc = _wbtc.sub(_fee);
+            _wbtc -= _fee;
         }
 
         IERC20Upgradeable(WBTC).approve(REN_SWAP, _wbtc);
@@ -103,10 +101,10 @@ contract BadgerRenCrvPlus is SinglePlus {
         IERC20Upgradeable(RENCRV).approve(_converter, _renCrv);
 
         uint256 _before = IERC20Upgradeable(BADGER_RENCRV).balanceOf(address(this));
-        uint256 _target = _renCrv.mul(WAD).div(IBadgerSett(BADGER_RENCRV).getPricePerFullShare());
+        uint256 _target = _renCrv * WAD / IBadgerSett(BADGER_RENCRV).getPricePerFullShare();
         IConverter(_converter).convert(RENCRV, BADGER_RENCRV, _renCrv, _target);
         uint256 _after = IERC20Upgradeable(BADGER_RENCRV).balanceOf(address(this));
-        require(_after >= _before.add(_target), "convert fail");
+        require(_after >= _before + _target, "convert fail");
 
         // Also it's a good time to rebase!
         rebase();
@@ -119,6 +117,6 @@ contract BadgerRenCrvPlus is SinglePlus {
      */
     function _conversionRate() internal view virtual override returns (uint256) {
         // Both Badger's share price and Curve's virtual price are in WAD
-        return IBadgerSett(BADGER_RENCRV).getPricePerFullShare().mul(ICurveFi(REN_SWAP).get_virtual_price()).div(WAD);
+        return IBadgerSett(BADGER_RENCRV).getPricePerFullShare() * ICurveFi(REN_SWAP).get_virtual_price() / WAD;
     }
 }

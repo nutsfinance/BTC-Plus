@@ -2,7 +2,6 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -18,7 +17,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract RenCrvPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     address public constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);  // CRV token
     address public constant MINTER = address(0xd061D61a4d941c39E5453435B6345Dc261C2fcE0); // Token minter
@@ -95,7 +93,7 @@ contract RenCrvPlus is SinglePlus {
             _path[1] = WETH;
             _path[2] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_crv, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_crv, uint256(0), _path, address(this), block.timestamp);
         }
         // Curve: WBTC --> renCRV
         uint256 _wbtc = IERC20Upgradeable(WBTC).balanceOf(address(this));
@@ -104,9 +102,9 @@ contract RenCrvPlus is SinglePlus {
         // If there is performance fee, charged in WBTC
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _wbtc.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _wbtc * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(WBTC).safeTransfer(treasury, _fee);
-            _wbtc = _wbtc.sub(_fee);
+            _wbtc -= _fee;
         }
 
         IERC20Upgradeable(WBTC).approve(REN_SWAP, _wbtc);
@@ -146,10 +144,10 @@ contract RenCrvPlus is SinglePlus {
      */
     function _totalUnderlyingInWad() internal view virtual override returns (uint256) {
         uint256 _balance = IERC20Upgradeable(RENCRV).balanceOf(address(this));
-        _balance = _balance.add(ICurveGauge(RENCRV_GAUGE).balanceOf(address(this)));
+        _balance += ICurveGauge(RENCRV_GAUGE).balanceOf(address(this));
 
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _balance.mul(_conversionRate());
+        return _balance * _conversionRate();
     }
 
     /**
@@ -161,7 +159,7 @@ contract RenCrvPlus is SinglePlus {
         IERC20Upgradeable _token = IERC20Upgradeable(RENCRV);
         uint256 _balance = _token.balanceOf(address(this));
         if (_balance < _amount) {
-            ICurveGauge(RENCRV_GAUGE).withdraw(_amount.sub(_balance));
+            ICurveGauge(RENCRV_GAUGE).withdraw(_amount - _balance);
             // In case of rounding errors
             _amount = MathUpgradeable.min(_amount, _token.balanceOf(address(this)));
         }

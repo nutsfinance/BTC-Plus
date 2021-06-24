@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -18,7 +17,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract VesperWBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     address public constant VESPER_WBTC = address(0x4B2e76EbBc9f2923d83F5FBDe695D8733db1a17B);
     address public constant VESPER_WBTC_REWARDS = address(0x479A8666Ad530af3054209Db74F3C74eCd295f8D);
@@ -60,7 +58,7 @@ contract VesperWBTCPlus is SinglePlus {
             _path[1] = WETH;
             _path[2] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_vsp, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_vsp, uint256(0), _path, address(this), block.timestamp);
         }
         // Vesper: WBTC --> vWBTC
         uint256 _wbtc = IERC20Upgradeable(WBTC).balanceOf(address(this));
@@ -69,9 +67,9 @@ contract VesperWBTCPlus is SinglePlus {
         // If there is performance fee, charged in WBTC
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _wbtc.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _wbtc * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(WBTC).safeTransfer(treasury, _fee);
-            _wbtc = _wbtc.sub(_fee);
+            _wbtc -= _fee;
         }
 
         IERC20Upgradeable(WBTC).approve(VESPER_WBTC, _wbtc);
@@ -101,6 +99,6 @@ contract VesperWBTCPlus is SinglePlus {
         // WBTC has 8 decimals, vWBTC has 18 decimals
         // The share price is in WAD
         // Therefore, the conversion rate must scaled 10**10!
-        return IVPool(VESPER_WBTC).getPricePerShare().mul(uint256(10) ** 10);
+        return IVPool(VESPER_WBTC).getPricePerShare() * (10 ** 10);
     }
 }

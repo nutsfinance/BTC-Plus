@@ -2,7 +2,6 @@
 pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -17,7 +16,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract CompoundWBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     address public constant COMPOUND_WBTC = address(0xccF4429DB6322D5C611ee964527D42E5d685DD6a);
     address public constant COMPOUND_COMPTROLLER = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
@@ -57,7 +55,7 @@ contract CompoundWBTCPlus is SinglePlus {
             _path[1] = WETH;
             _path[2] = WBTC;
 
-            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_comp, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(UNISWAP).swapExactTokensForTokens(_comp, uint256(0), _path, address(this), block.timestamp);
         }
         // Compound: WBTC --> cWBTC
         uint256 _wbtc = IERC20Upgradeable(WBTC).balanceOf(address(this));
@@ -66,9 +64,9 @@ contract CompoundWBTCPlus is SinglePlus {
         // If there is performance fee, charged in WBTC
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _wbtc.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _wbtc * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(WBTC).safeTransfer(treasury, _fee);
-            _wbtc = _wbtc.sub(_fee);
+            _wbtc -= _fee;
         }
 
         IERC20Upgradeable(WBTC).approve(COMPOUND_WBTC, _wbtc);
@@ -98,6 +96,6 @@ contract CompoundWBTCPlus is SinglePlus {
         // The exchange rate is in WAD
         // WBTC has 8 decimals
         // so it's cWBTC exchange rate * 10**(18 - 8)
-        return ICToken(COMPOUND_WBTC).exchangeRateStored().mul(uint256(10) ** 10);
+        return ICToken(COMPOUND_WBTC).exchangeRateStored() * (10 ** 10);
     }
 }
