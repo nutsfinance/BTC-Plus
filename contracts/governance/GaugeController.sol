@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -26,7 +25,6 @@ import "../interfaces/IGaugeController.sol";
  */
 contract GaugeController is Initializable, IGaugeController {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     event GovernanceUpdated(address indexed oldGovernance, address indexed newGovernance);
     event ClaimerUpdated(address indexed claimer, bool allowed);
@@ -101,7 +99,7 @@ contract GaugeController is Initializable, IGaugeController {
         treasury = msg.sender;
         reward = _reward;
         // Base rate is in WAD
-        basePlusRate = _plusRewardPerDay.mul(WAD).div(DAY);
+        basePlusRate = _plusRewardPerDay * WAD / DAY;
         plusBoost = WAD;
         lastCheckpoint = block.timestamp;
     }
@@ -139,7 +137,7 @@ contract GaugeController is Initializable, IGaugeController {
      * Credit: https://medium.com/coinmonks/math-in-solidity-part-5-exponent-and-logarithm-9aef8515136e
      */
     function _log10(uint256 num) internal pure returns (uint256) {
-        return _log2(num).mul(LOG_10_2).div(WAD);
+        return _log2(num) * LOG_10_2 / WAD;
     }
 
     /**
@@ -171,11 +169,11 @@ contract GaugeController is Initializable, IGaugeController {
             // Rebase once to get an accurate result
             IPlus(_staked).rebase();
             _gaugePlus[i] = IGauge(_gauges[i]).totalStaked();
-            _totalPlus = _totalPlus.add(_gaugePlus[i]);
+            _totalPlus = _totalPlus + _gaugePlus[i];
 
             // Weighted plus is used to compute rate allocation
-            _gaugeWeightedPlus[i] = _gaugePlus[i].mul(gaugeData[_gauges[i]].weight);
-            _totalWeightedPlus = _totalWeightedPlus.add(_gaugeWeightedPlus[i]);
+            _gaugeWeightedPlus[i] = _gaugePlus[i] * gaugeData[_gauges[i]].weight;
+            _totalWeightedPlus = _totalWeightedPlus + _gaugeWeightedPlus[i];
         }
 
         // Computes the AC emission per plus. The AC emission rate is determined by total weighted plus staked.
@@ -191,7 +189,7 @@ contract GaugeController is Initializable, IGaugeController {
 
             // Both plus boot and total weighted plus are in WAD so it cancels out
             // Therefore, _ratePerPlus is still in WAD
-            _ratePerPlus = basePlusRate.mul(_plusBoost).div(_totalWeightedPlus);
+            _ratePerPlus = basePlusRate * _plusBoost / _totalWeightedPlus;
         }
 
         // Allocates AC emission rates for each liquidity gauge
@@ -203,18 +201,18 @@ contract GaugeController is Initializable, IGaugeController {
                 // gauge weighted plus is in WAD
                 // _ratePerPlus is also in WAD
                 // so block.timestamp gauge rate is in WAD
-                _gaugeRates[i] = _gaugeWeightedPlus[i].mul(_ratePerPlus).div(WAD);
+                _gaugeRates[i] = _gaugeWeightedPlus[i] * _ratePerPlus / WAD;
             } else {
                 // AC emission rate for non-plus gauge is fixed and set by the governance.
                 // However, if no token is staked, the gauge rate is zero.
                 _gaugeRates[i] = IERC20Upgradeable(_gauges[i]).totalSupply() == 0 ? 0 : gaugeData[_gauges[i]].rate;
             }
             gaugeRates[_gauges[i]] = _gaugeRates[i];
-            _totalRate = _totalRate.add(_gaugeRates[i]);
+            _totalRate += _gaugeRates[i];
         }
 
         // Checkpoints gauge controller
-        lastTotalReward = lastTotalReward.add(_oldTotalRate.mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
+        lastTotalReward += _oldTotalRate * (block.timestamp - lastCheckpoint) / WAD;
         lastCheckpoint = block.timestamp;
         totalRate = _totalRate;
         plusBoost = _plusBoost;
@@ -237,8 +235,8 @@ contract GaugeController is Initializable, IGaugeController {
     function claim(address _account, address _receiver, uint256 _amount) external override {
         require(gaugeData[msg.sender].isSupported, "not gauge");
 
-        totalClaimed = totalClaimed.add(_amount);
-        claimed[msg.sender][_account] = claimed[msg.sender][_account].add(_amount);
+        totalClaimed += _amount;
+        claimed[msg.sender][_account] = claimed[msg.sender][_account] + _amount;
         lastClaim[msg.sender] = block.timestamp;
         IERC20Upgradeable(reward).safeTransfer(_receiver, _amount);
 
@@ -249,7 +247,7 @@ contract GaugeController is Initializable, IGaugeController {
      * @dev Return the total amount of rewards generated so far.
      */
     function totalReward() public view returns (uint256) {
-        return lastTotalReward.add(totalRate.mul(block.timestamp.sub(lastCheckpoint)).div(WAD));
+        return lastTotalReward + totalRate * (block.timestamp - lastCheckpoint) / WAD;
     }
 
     /**
@@ -257,7 +255,7 @@ contract GaugeController is Initializable, IGaugeController {
      * It can be seen as minimum amount of reward tokens should be buffered in the gauge controller.
      */
     function claimable() external view returns (uint256) {
-        return totalReward().sub(totalClaimed);
+        return totalReward() - totalClaimed;
     }
 
     /**
@@ -327,7 +325,7 @@ contract GaugeController is Initializable, IGaugeController {
     function setPlusReward(uint256 _plusRewardPerDay) external onlyGovernance {
         uint256 _oldRate = basePlusRate;
         // Base rate is in WAD
-        basePlusRate = _plusRewardPerDay.mul(WAD).div(DAY);
+        basePlusRate = _plusRewardPerDay * WAD / DAY;
         // Need to checkpoint with the base rate update!
         checkpoint();
 
@@ -356,7 +354,7 @@ contract GaugeController is Initializable, IGaugeController {
         require(_gauge != address(0x0), "gauge not set");
         require(!gaugeData[_gauge].isSupported, "gauge exist");
 
-        uint256 _rate = _rewardPerDay.mul(WAD).div(DAY);
+        uint256 _rate = _rewardPerDay * WAD / DAY;
         gauges.push(_gauge);
         gaugeData[_gauge] = Gauge({
             isSupported: true,
@@ -413,7 +411,7 @@ contract GaugeController is Initializable, IGaugeController {
         uint256 _oldWeight = gaugeData[_gauge].weight;
         uint256 _oldRate = gaugeData[_gauge].rate;
 
-        uint256 _rate = _rewardPerDay.mul(WAD).div(DAY);
+        uint256 _rate = _rewardPerDay * WAD / DAY;
         gaugeData[_gauge].weight = _weight;
         gaugeData[_gauge].rate = _rate;
 

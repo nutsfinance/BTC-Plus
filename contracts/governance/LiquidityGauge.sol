@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -23,7 +22,6 @@ import "../interfaces/IVotingEscrow.sol";
  */
 contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     event LiquidityLimitUpdated(address indexed account, uint256 balance, uint256 supply, uint256 oldWorkingBalance,
         uint256 oldWorkingSupply, uint256 newWorkingBalance, uint256 newWorkingSupply);
@@ -107,17 +105,17 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
 
         uint256 _balance = balanceOf(_account);
         uint256 _supply = totalSupply();
-        uint256 _limit = _balance.mul(TOKENLESS_PRODUCTION).div(100);
+        uint256 _limit = _balance * TOKENLESS_PRODUCTION / 100;
         if (_votingTotal > 0) {
-            uint256 _boosting = _supply.mul(_votingBalance).mul(100 - TOKENLESS_PRODUCTION).div(_votingTotal).div(100);
-            _limit = _limit.add(_boosting);
+            uint256 _boosting = _supply * _votingBalance * (100 - TOKENLESS_PRODUCTION) / (_votingTotal * 100);
+            _limit += _boosting;
         }
 
         _limit = MathUpgradeable.min(_balance, _limit);
         uint256 _oldWorkingBalance = workingBalances[_account];
         uint256 _oldWorkingSupply = workingSupply;
         workingBalances[_account] = _limit;
-        uint256 _newWorkingSupply = _oldWorkingSupply.add(_limit).sub(_oldWorkingBalance);
+        uint256 _newWorkingSupply = _oldWorkingSupply + _limit / _oldWorkingBalance;
         workingSupply = _newWorkingSupply;
 
         emit LiquidityLimitUpdated(_account, _balance, _supply, _oldWorkingBalance, _oldWorkingSupply, _limit, _newWorkingSupply);
@@ -145,8 +143,8 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         // Checks balance increment for each reward token
         for (uint256 i = 0; i < _rewardList.length; i++) {
             // Integral is in WAD
-            uint256 _diff = IERC20Upgradeable(_rewardList[i]).balanceOf(address(this)).sub(_rewardBalances[i]).mul(WAD).div(_supply);
-            uint256 _newIntegral = rewardIntegral[_rewardList[i]].add(_diff);
+            uint256 _diff = (IERC20Upgradeable(_rewardList[i]).balanceOf(address(this)) - _rewardBalances[i]) * WAD / _supply;
+            uint256 _newIntegral = rewardIntegral[_rewardList[i]] + _diff;
             if (_diff != 0) {
                 rewardIntegral[_rewardList[i]] = _newIntegral;
             }
@@ -154,7 +152,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
 
             uint256 _userIntegral = rewardIntegralOf[_rewardList[i]][_account];
             if (_userIntegral < _newIntegral) {
-                uint256 _claimable = _balance.mul(_newIntegral.sub(_userIntegral)).div(WAD);
+                uint256 _claimable = _balance * (_newIntegral - _userIntegral) / WAD;
                 rewardIntegralOf[_rewardList[i]][_account] = _newIntegral;
 
                 if (_claimable > 0) {
@@ -178,18 +176,18 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
             return;
         }
 
-        uint256 _diffTime = block.timestamp.sub(lastCheckpoint);
+        uint256 _diffTime = block.timestamp - lastCheckpoint;
         // Both rate and integral are in WAD
-        uint256 _newIntegral = integral.add(rate.mul(_diffTime).div(_workingSupply));
+        uint256 _newIntegral = integral + rate * _diffTime / _workingSupply;
         integral = _newIntegral;
         lastCheckpoint = block.timestamp;
 
         if (_account == address(0x0))   return;
 
-        uint256 _amount = workingBalances[_account].mul(_newIntegral.sub(integralOf[_account])).div(WAD);
+        uint256 _amount = workingBalances[_account] * (_newIntegral - integralOf[_account]) / WAD;
         integralOf[_account] = _newIntegral;
         checkpointOf[_account] = block.timestamp;
-        rewards[_account] = rewards[_account].add(_amount);
+        rewards[_account] += _amount;
     }
 
     /**
@@ -208,7 +206,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @dev Returns the next time user can trigger a direct claim.
      */
     function nextDirectClaim(address _account) external view returns (uint256) {
-        return MathUpgradeable.max(block.timestamp, lastDirectClaim[_account].add(directClaimCooldown));
+        return MathUpgradeable.max(block.timestamp, lastDirectClaim[_account] + directClaimCooldown);
     }
 
     /**
@@ -217,15 +215,15 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      */
     function claimable(address _account) external view override returns (uint256) {
         // Reward claimable until the previous checkpoint
-        uint256 _reward = workingBalances[_account].mul(integral.sub(integralOf[_account])).div(WAD);
+        uint256 _reward = workingBalances[_account] * (integral - integralOf[_account]) / WAD;
         // Add the remaining claimable rewards
-        _reward = _reward.add(rewards[_account]);
+        _reward += rewards[_account];
         if (workingSupply > 0) {
-            uint256 _diffTime = block.timestamp.sub(lastCheckpoint);
+            uint256 _diffTime = block.timestamp - lastCheckpoint;
             // Both rate and integral are in WAD
-            uint256 _additionalReard = rate.mul(_diffTime).mul(workingBalances[_account]).div(workingSupply).div(WAD);
+            uint256 _additionalReard = rate * _diffTime * workingBalances[_account] / (workingSupply * WAD);
 
-            _reward = _reward.add(_additionalReard);
+            _reward += _additionalReard;
         }
 
         return _reward;
@@ -237,7 +235,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
      * @param _rewardToken Address of the reward token
      */
     function claimableReward(address _account, address _rewardToken) external view returns (uint256) {
-        return balanceOf(_account).mul(rewardIntegral[_rewardToken].sub(rewardIntegralOf[_rewardToken][_account])).div(WAD);
+        return balanceOf(_account) * (rewardIntegral[_rewardToken] - rewardIntegralOf[_rewardToken][_account]) / WAD;
     }
 
     /**
@@ -270,7 +268,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
     function _claim(address _account, address _receiver, bool _claimRewards) internal {
         // Direct claim mean user claiming directly to the gauge. Cooldown applies to direct claim.
         // Indirect claim means user claimsing via claimers. There is no cooldown in indirect claim.
-        require((_account == msg.sender && block.timestamp >= lastDirectClaim[_account].add(directClaimCooldown))
+        require((_account == msg.sender && block.timestamp >= lastDirectClaim[_account] + directClaimCooldown)
             || IGaugeController(controller).claimers(msg.sender), "cannot claim");
 
         _checkpoint(_account);
@@ -339,7 +337,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         uint256 _totalSupply = totalSupply();
         uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
 
-        return _totalSupply == 0 ? 0 : balanceOf(_account).mul(_balance).div(_totalSupply);
+        return _totalSupply == 0 ? 0 : balanceOf(_account) * _balance / _totalSupply;
     }
 
     /**
@@ -363,7 +361,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         // 1) There are some leftover due to rounding error after all people withdraws;
         // 2) Someone sends token to the liquidity gauge before there is any deposit.
         // Therefore, when either _totalSupply or _balance is 0, we treat the gauge is empty.
-        uint256 _mintAmount = _totalSupply == 0 || _balance == 0 ? _amount : _amount.mul(_totalSupply).div(_balance);
+        uint256 _mintAmount = _totalSupply == 0 || _balance == 0 ? _amount : _amount * _totalSupply / _balance;
         
         _mint(msg.sender, _mintAmount);
         _updateLiquidityLimit(msg.sender);
@@ -393,7 +391,7 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
             uint256 _totalSupply = totalSupply();
             uint256 _balance = IERC20Upgradeable(token).balanceOf(address(this));
             require(_totalSupply > 0 && _balance > 0, "no balance");
-            _burnAmount = _amount.mul(_totalSupply).div(_balance);
+            _burnAmount = _amount * _totalSupply / _balance;
         }
 
         _checkpoint(msg.sender);
@@ -411,14 +409,14 @@ contract LiquidityGauge is ERC20Upgradeable, ReentrancyGuardUpgradeable, IGauge 
         address _token = token;
         address _controller = controller;
         if (withdrawFee > 0) {
-            _fee = _amount.mul(withdrawFee).div(MAX_PERCENT);
+            _fee = _amount * withdrawFee / MAX_PERCENT;
             IERC20Upgradeable(_token).safeTransfer(_controller, _fee);
             // Donate the withdraw fee for future processing
             // Withdraw fee for plus token is donated to all token holders right away
             IGaugeController(_controller).donate(_token);
         }
 
-        IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount.sub(_fee));
+        IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount - _fee);
         emit Withdrawn(msg.sender, _amount, _fee, _burnAmount);
     }
 
