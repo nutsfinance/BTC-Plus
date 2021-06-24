@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -19,7 +18,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract ForTubeBTCBPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant WBNB = address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
@@ -66,7 +64,7 @@ contract ForTubeBTCBPlus is SinglePlus {
             _path[1] = WBNB;
             _path[2] = BTCB;
 
-            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_for, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_for, uint256(0), _path, address(this), block.timestamp);
         }
         // ForTube: BTCB --> fBTCB
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
@@ -80,7 +78,7 @@ contract ForTubeBTCBPlus is SinglePlus {
         }
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _fbtc.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _fbtc * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(FORTUBE_BTCB).safeTransfer(treasury, _fee);
         }
         // Reinvest to get compound yield.

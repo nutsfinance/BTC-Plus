@@ -2,7 +2,6 @@
 pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -20,7 +19,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract VenusBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     event VaiRatioUpdated(uint256 oldLower, uint256 oldTarget, uint256 oldUpper, uint256 newLower, uint256 newTarget, uint256 newUpper);
 
@@ -67,13 +65,13 @@ contract VenusBTCPlus is SinglePlus {
 
         if (_liquidity > 0) {
             // Account liquidity is in excess of collateral requirement
-            _collateral = _vai.add(_liquidity);
+            _collateral = _vai + _liquidity;
         } else {
             // Account shortfall below collateral requirement
-            _collateral = _vai.sub(_shortfall);
+            _collateral = _vai - _shortfall;
         }
 
-        return (_collateral, _vai, _vai.mul(PERCENT_MAX).div(_collateral));
+        return (_collateral, _vai, _vai * PERCENT_MAX / _collateral);
     }
 
     /**
@@ -105,11 +103,11 @@ contract VenusBTCPlus is SinglePlus {
         uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
         // vaiMintRate is scaled with 10000
-        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lowerRatio).div(PERCENT_MAX).div(10000);
-        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(targetRatio).div(PERCENT_MAX).div(10000);
-        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upperRatio).div(PERCENT_MAX).div(10000);
+        uint256 _lowerDebt = _collateral * _vaiMintRate * lowerRatio / (PERCENT_MAX * 10000);
+        uint256 _targetDebt = _collateral * _vaiMintRate * targetRatio / (PERCENT_MAX * 10000);
+        uint256 _upperDebt = _collateral * _vaiMintRate * upperRatio / (PERCENT_MAX * 10000);
 
-        return _debt < _lowerDebt ? _targetDebt.sub(_debt) : (_debt > _upperDebt ? _debt.sub(_targetDebt) : 0);
+        return _debt < _lowerDebt ? _targetDebt - _debt : (_debt > _upperDebt ? _debt - _targetDebt : 0);
     }
 
     /**
@@ -120,14 +118,14 @@ contract VenusBTCPlus is SinglePlus {
         uint256 _vaiMintRate = IVenusComptroller(VENUS_COMPTROLLER).vaiMintRate();
 
         // vaiMintRate is scaled with 10000
-        uint256 _lowerDebt = _collateral.mul(_vaiMintRate).mul(lowerRatio).div(PERCENT_MAX).div(10000);
-        uint256 _targetDebt = _collateral.mul(_vaiMintRate).mul(targetRatio).div(PERCENT_MAX).div(10000);
-        uint256 _upperDebt = _collateral.mul(_vaiMintRate).mul(upperRatio).div(PERCENT_MAX).div(10000);
+        uint256 _lowerDebt = _collateral * _vaiMintRate * lowerRatio / (PERCENT_MAX * 10000);
+        uint256 _targetDebt = _collateral * _vaiMintRate * targetRatio / (PERCENT_MAX * 10000);
+        uint256 _upperDebt = _collateral * _vaiMintRate * upperRatio / (PERCENT_MAX * 10000);
 
         if (_debt < _lowerDebt) {
             // We need to mint more VAI!
             // Mints maximum VAI using vBTC as collateral
-            IVAIController(VAI_CONTROLLER).mintVAI(_targetDebt.sub(_debt));
+            IVAIController(VAI_CONTROLLER).mintVAI(_targetDebt - _debt);
             uint256 _vai = IERC20Upgradeable(VAI).balanceOf(address(this));
 
             IERC20Upgradeable(VAI).approve(VAI_VAULT, _vai);
@@ -136,7 +134,7 @@ contract VenusBTCPlus is SinglePlus {
             IVAIVault(VAI_VAULT).deposit(_vai);
         } else if (_debt > _upperDebt) {
             // We need to repay some VAI!
-            uint256 _shortfall = _debt.sub(_targetDebt);
+            uint256 _shortfall = _debt - _targetDebt;
             IVAIVault(VAI_VAULT).withdraw(_shortfall);
             IERC20Upgradeable(VAI).approve(VAI_CONTROLLER, _shortfall);
             IVAIController(VAI_CONTROLLER).repayVAI(_shortfall);
@@ -183,7 +181,7 @@ contract VenusBTCPlus is SinglePlus {
             _path[1] = WBNB;
             _path[2] = BTCB;
 
-            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_venus, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_venus, uint256(0), _path, address(this), block.timestamp);
         }
         // Venus: BTCB --> vBTC
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
@@ -192,9 +190,9 @@ contract VenusBTCPlus is SinglePlus {
         // If there is performance fee, charged in BTCB
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _btcb.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _btcb * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(BTCB).safeTransfer(treasury, _fee);
-            _btcb = _btcb.sub(_fee);
+            _btcb -= _fee;
         }
 
         IERC20Upgradeable(BTCB).approve(VENUS_BTC, _btcb);

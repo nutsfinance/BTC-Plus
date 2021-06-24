@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -16,7 +15,6 @@ import "../../interfaces/acbtc/IACoconutMaker.sol";
  */
 contract ACoconutBTCBscPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
     address public constant ACOCONUT_BTC_BSC = address(0xCEF9Ddbf860551cC8505C0BcfF0Bc8C10d59e229);
@@ -81,7 +79,7 @@ contract ACoconutBTCBscPlus is SinglePlus {
         uint256 _exchangeRate = IACoconutMaker(ACOCONUT_MAKER).exchangeRate();
 
         // _exchangeRate is already in WAD.
-        return _acbtc.mul(WAD).add(_acbtcx.mul(_exchangeRate));
+        return _acbtc * WAD + _acbtcx * _exchangeRate;
     }
 
     /**
@@ -94,7 +92,7 @@ contract ACoconutBTCBscPlus is SinglePlus {
         uint256 _balance = _token.balanceOf(address(this));
         if (_balance < _amount) {
             // Redeem from acBTCx
-            uint256 _share = _amount.sub(_balance).mul(WAD).div(_conversionRate());
+            uint256 _share = (_amount - _balance) * WAD / _conversionRate();
             IACoconutMaker(ACOCONUT_MAKER).redeem(_share);
 
             // In case of rounding errors

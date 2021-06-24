@@ -3,7 +3,6 @@ pragma solidity 0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -18,7 +17,6 @@ import "../../interfaces/uniswap/IUniswapRouter.sol";
  */
 contract BeltBTCPlus is SinglePlus {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     uint256 public constant PID = 7;
     address public constant BTCB = address(0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c);
@@ -95,7 +93,7 @@ contract BeltBTCPlus is SinglePlus {
             _path[1] = WBNB;
             _path[2] = BTCB;
 
-            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_belt, uint256(0), _path, address(this), block.timestamp.add(1800));
+            IUniswapRouter(PANCAKE_SWAP_ROUTER).swapExactTokensForTokens(_belt, uint256(0), _path, address(this), block.timestamp);
         }
         // Belt: BTCB --> beltBTCB
         uint256 _btcb = IERC20Upgradeable(BTCB).balanceOf(address(this));
@@ -104,9 +102,9 @@ contract BeltBTCPlus is SinglePlus {
         // If there is performance fee, charged in BTCB
         uint256 _fee = 0;
         if (performanceFee > 0) {
-            _fee = _btcb.mul(performanceFee).div(PERCENT_MAX);
+            _fee = _btcb * performanceFee / PERCENT_MAX;
             IERC20Upgradeable(BTCB).safeTransfer(treasury, _fee);
-            _btcb = _btcb.sub(_fee);
+            _btcb -= _fee;
         }
 
         IERC20Upgradeable(BTCB).approve(BELT_BTC, _btcb);
@@ -137,7 +135,7 @@ contract BeltBTCPlus is SinglePlus {
         uint256 _staked = IMasterBelt(MASTER_BELT).stakedWantTokens(PID, address(this));
 
         // Conversion rate is the amount of single plus token per underlying token, in WAD.
-        return _balance.add(_staked).mul(_conversionRate());
+        return (_balance + _staked) * _conversionRate();
     }
 
     /**
@@ -149,7 +147,7 @@ contract BeltBTCPlus is SinglePlus {
         IERC20Upgradeable _token = IERC20Upgradeable(BELT_BTC);
         uint256 _balance = _token.balanceOf(address(this));
         if (_balance < _amount) {
-            IMasterBelt(MASTER_BELT).withdraw(PID, _amount.sub(_balance));
+            IMasterBelt(MASTER_BELT).withdraw(PID, _amount - _balance);
             // In case of rounding errors
             _amount = MathUpgradeable.min(_amount, _token.balanceOf(address(this)));
         }
